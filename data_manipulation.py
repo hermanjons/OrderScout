@@ -22,56 +22,56 @@ label_datas_list = []  # sipariş etiketlerinin veritabanına kayıt edilmeye ha
 stock_datas_list = []  # xlsx dosyasından gelen stok verilerinin tutulduğu tuple verilerin tutulduğu liste
 
 
-def find_orders_to_list(mode: str, final_ep_time: int, start_ep_time: int, comp_api_account_list: list, start_page=0):
+async def find_orders_to_list(
+    mode: str,
+    final_ep_time: int,
+    start_ep_time: int,
+    comp_api_account_list: list,
+    start_page: int = 0
+) -> tuple[list, list]:
     """
-    sipariş verileri ve sipariş edilen ürünleri ayrı birer listeye koyacaktır
-    :param comp_api_account_list:  veri çekilmesi istenen hesapların api bilgilerini içeren bir liste
-    :param start_ep_time: aranacak en yeni tarihin epoch time tipinden değeri
-    :param mode: Created,Shipped,Delivered  vb. girdiler verilerek sipariş araması yapılır
-    :param final_ep_time: aranacak en eski tarihin epoch time tipinden değeri
-    :param start_page: arama yapmaya hangi sayfadan başlayacağınızı belirtin
-    :return: sipariş verileri ve sipariş edilen ürünleri ayrı ayrı listeleyecektir
+    Tüm hesaplar için sipariş verilerini ve ürünlerini listelere döker.
+    Global liste KULLANMAZ. Asenkron çalışır.
     """
+    all_order_data = []
+    all_order_items = []
 
     for comp_api_account in comp_api_account_list:
         page_counter = start_page
         trendy_api = TrendyolApi(comp_api_account[1], comp_api_account[2], comp_api_account[0])
-        """
-        trendyol api nesnesi
-        """
 
         while True:
+            content, _, _, _, status_code = await trendy_api.find_orders(
+                mode, final_ep_time, start_ep_time, page_counter
+            )
 
-            whole_order_data = trendy_api.find_orders(mode, final_ep_time, start_ep_time, page_counter)
-            page_counter += 1
-
-            if len(whole_order_data[0]) == 0:
+            if not content:
                 break
 
-            else:
+            for order_data in content:
+                if len(order_data.get("packageHistories", [])) == 1:
+                    order_data["packageHistories"].insert(0, {"createdDate": 0, "status": "Awaiting"})
 
-                for order_data in whole_order_data[0]:
+                all_order_data.append(order_data)
 
-                    if len(order_data["packageHistories"]) == 1:
-                        order_data["packageHistories"].insert(0, {"createdDate": 0, "status": "Awaiting"})
+                for order_item in order_data["lines"]:
+                    order_item["orderNumber"] = order_data["orderNumber"]
+                    order_item["id"] = order_data["id"]
+                    order_item["packageHistories"] = order_data["packageHistories"]
 
+                    for history in order_data["packageHistories"]:
+                        if history["status"] == order_data["status"]:
+                            order_item["taskDate"] = history["createdDate"]
+                            break
                     else:
-                        pass
+                        order_item["taskDate"] = 0
 
-                    order_data_list.append(order_data)
+                    all_order_items.append(order_item)
 
-                    for order_item in order_data["lines"]:
+            page_counter += 1
 
-                        order_item["orderNumber"] = order_data["orderNumber"]
-                        order_item["id"] = order_data["id"]
-                        order_item["packageHistories"] = order_data["packageHistories"]
-                        for history_data in order_data["packageHistories"]:
-                            if history_data["status"] == order_data["status"]:
-                                order_item["taskDate"] = history_data["createdDate"]
+    return all_order_data, all_order_items
 
-                            else:
-                                order_item["taskDate"] = 0
-                        order_item_list.append(order_item)
 
 
 def get_label_datas_from_list(order_data):
