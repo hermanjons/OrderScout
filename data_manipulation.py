@@ -1,7 +1,6 @@
-from Api_engine import TrendyolApi
-from time_tasks import epoch_to_datetime, time_stamp_calculator, time_for_now
-from dbase_set import get_last_scrap_date, get_order_numbers_from_dbase, \
-    get_product_sc_from_dbase, get_product_price_from_dbase
+from Core.api.Api_engine import TrendyolApi
+from Core.utils.time_utils import time_stamp_calculator, time_for_now
+from dbase_set import get_last_scrap_date, get_product_sc_from_dbase, get_product_price_from_dbase
 from profit_calculates import calculate_profit
 import pandas as pd
 from encode_tasks import encode_code_128

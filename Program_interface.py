@@ -1,33 +1,26 @@
-import datetime
 import os.path
-import random
 import sys
 import time
 import traceback
-import Api_engine
-import math
+from Core.api import Api_engine
 
-import dbase_set
-from time_tasks import time_for_now_tr, time_stamp_calculator, time_for_now
+from Core.utils.time_utils import time_stamp_calculator, time_for_now
 
-from PyQt6.QtCore import QRunnable, QThreadPool, pyqtSlot, QObject, pyqtSignal, QSize, QRect, Qt, QRegularExpression, \
-    QTimer, QPoint, QRectF
+from PyQt6.QtCore import QRunnable, QThreadPool, pyqtSlot, QObject, pyqtSignal, QSize, Qt, QRegularExpression
 
-from PyQt6.QtWidgets import QMainWindow, QApplication, QPushButton, QWidget, QSlider, QHBoxLayout, QProgressBar, \
-    QVBoxLayout, QCheckBox, QLCDNumber, QSpinBox, QToolBar, QFormLayout, QLineEdit, QMessageBox, QGroupBox, QListWidget, \
-    QListWidgetItem, QTabWidget, QFileDialog, QCalendarWidget, QCompleter, QButtonGroup, QLabel, QTableWidget, \
+from PyQt6.QtWidgets import QMainWindow, QApplication, QPushButton, QWidget, QSlider, QHBoxLayout, QVBoxLayout, QCheckBox, QLCDNumber, QSpinBox, QToolBar, QFormLayout, QLineEdit, QMessageBox, QGroupBox, QListWidget, \
+    QListWidgetItem, QTabWidget, QFileDialog, QCalendarWidget, QCompleter, QLabel, QTableWidget, \
     QHeaderView, \
     QTableWidgetItem
 
 from PyQt6.QtGui import QIcon, QAction, QIntValidator, QRegularExpressionValidator, QStandardItemModel, \
-    QStandardItem, QDoubleValidator, QPainter, QColor, QFont, QPen, QFontMetrics
+    QStandardItem, QPainter, QColor, QFont, QPen, QFontMetrics
 
 import data_manipulation as data_tasks
 
 import pyqtgraph as pg
 
-from dbase_set import push_order_items_to_dbase, push_orders_to_dbase, create_order_dbase, \
-    create_comp_info_db, \
+from dbase_set import push_order_items_to_dbase, push_orders_to_dbase, create_comp_info_db, \
     push_scrap_datas_to_dbase, get_last_scrap_date, push_company_infos_to_dbase, get_seller_id_from_dbase, \
     get_comp_datas_from_dbase, get_selected_comps_datas_from_dbase, push_label_datas_to_dbase, get_ready_order_labels, \
     create_stock_datas_db, get_product_name_from_dbase, get_purchase_place_from_dbase, push_stock_datas_to_dbase, \
@@ -35,16 +28,12 @@ from dbase_set import push_order_items_to_dbase, push_orders_to_dbase, create_or
     drop_license_info_db, update_label_printing_status, get_printed_order_labels, \
     create_label_datas_dbase, database_directory_name, get_waiting_order_items
 
-import Api_engine
-
 import license_check_tasks
 
 from openpyxl import Workbook, load_workbook
 
 import update_check_tasks
 import subprocess
-
-import pandas as pd
 
 quit_turn = [1]
 
