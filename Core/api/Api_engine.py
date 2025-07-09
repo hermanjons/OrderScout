@@ -1,4 +1,4 @@
-from request_utils import async_make_request
+from Core.utils.request_utils import async_make_request
 
 
 class TrendyolApi:

@@ -45,6 +45,7 @@ class OrderData(SQLModel, table=True):
 
 
 class OrderItem(SQLModel, table=True):
+    pk: int = Field(default=None, primary_key=True)
     quantity: int
     productSize: Optional[str] = None
     merchantSku: Optional[str] = None
