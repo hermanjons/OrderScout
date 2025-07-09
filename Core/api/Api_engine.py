@@ -15,18 +15,28 @@ class TrendyolApi:
         self.auth = (self.api_key_id, self.api_key_secret)
 
     async def find_orders(self, status: str, start_date: int, end_date: int, page: int):
-        url = f"https://api.trendyol.com/sapigw/suppliers/{self.supplier_id}/orders"
+        # Yeni API endpoint (apigw.trendyol.com ve sellers/{sellerId})
+        url = f"https://apigw.trendyol.com/integration/order/sellers/{self.supplier_id}/orders"
+
+        # Trendyol yeni API milisaniye epoch ister (13 hane)
         params = {
             "status": status,
-            "startDate": start_date,
+            "startDate": start_date,  # saniyeyi milisaniyeye çevir
             "endDate": end_date,
             "orderByField": "PackageLastModifiedDate",
             "orderByDirection": "DESC",
             "page": page,
-            "size": 200
+            "size": 50
         }
 
-        result, status_code = await async_make_request("GET", url, headers=self.header, auth=self.auth, params=params)
+        result, status_code = await async_make_request(
+            method="GET",
+            url=url,
+            headers=self.header,
+            auth=self.auth,
+            params=params
+        )
+        print(result,status_code)
         return (
             result.get("content", []),
             result.get("totalPages", 0),
