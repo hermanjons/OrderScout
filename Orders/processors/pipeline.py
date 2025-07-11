@@ -30,7 +30,6 @@ async def fetch_orders_all(
             if not content:
                 break
             for order_data in content:
-                print(order_data)
                 if len(order_data.get("packageHistories", [])) == 1:
                     order_data["packageHistories"].insert(0, {"createdDate": 0, "status": "Awaiting"})
                 orders.append(order_data)
@@ -49,7 +48,6 @@ async def fetch_orders_all(
         return orders, items
 
     for comp_api_account in comp_api_account_list:
-        print(comp_api_account[1])
         api = TrendyolApi(comp_api_account[0], comp_api_account[1], comp_api_account[2])
         tasks = [fetch_orders_for_status(api, status) for status in status_list]
         results = await asyncio.gather(*tasks)

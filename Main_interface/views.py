@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QMainWindow, QTabWidget
 from PyQt6.QtGui import QIcon
-from Orders.views import OrdersTab
+from Orders.views.views import OrdersTab
 import os
 from settings import MEDIA_ROOT
 

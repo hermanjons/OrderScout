@@ -36,7 +36,6 @@ class TrendyolApi:
             auth=self.auth,
             params=params
         )
-        print(result,status_code)
         return (
             result.get("content", []),
             result.get("totalPages", 0),
