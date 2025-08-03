@@ -1,7 +1,7 @@
 from Core.api.Api_engine import TrendyolApi
 from Core.utils.time_utils import time_stamp_calculator, time_for_now
 import asyncio
-
+from typing import List
 
 
 async def fetch_orders_all(
@@ -25,8 +25,7 @@ async def fetch_orders_all(
         page = start_page
         while True:
             content, _, _, _, status_code = await api.find_orders(status, final_ep_time, start_ep_time, page)
-            print(content)
-            print(status_code)
+
             if not content:
                 break
             for order_data in content:
@@ -56,3 +55,27 @@ async def fetch_orders_all(
             all_items.extend(items)
 
     return all_orders, all_items
+
+
+
+def save_orders_to_db(result):
+    print("sonuç:", result)
+def save_orders_to_db_final(result, order_data_list: List[dict], order_item_list: List[dict], db_name: str = "orders.db"):
+
+    engine = get_engine(db_name)
+    with Session(engine) as session:
+        for data in order_data_list:
+            try:
+                order = OrderData(**data)
+                session.merge(order)
+            except Exception as e:
+                print(f"[OrderData Hatası] {e}")
+
+        for data in order_item_list:
+            try:
+                item = OrderItem(**data)
+                session.merge(item)
+            except Exception as e:
+                print(f"[OrderItem Hatası] {e}")
+
+        session.commit()

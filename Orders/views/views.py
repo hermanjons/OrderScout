@@ -26,5 +26,5 @@ class OrdersTab(QWidget):
         except Exception as e:
             print(e)
 
-    def on_orders_fetched(self, result):
+    def on_orders_fetched(self):
         self.info_label.setText("Siparişler alındı.")
