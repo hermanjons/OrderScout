@@ -8,13 +8,13 @@ from Core.utils.time_utils import time_for_now, time_stamp_calculator
 # Bu fonksiyon view içinden çağrılır
 def fetch_with_worker(view_instance):
     try:
-        search_range_hour = 24
+        search_range_hour = 72
         start_ep_time = time_for_now()
         final_ep_time = time_for_now() - time_stamp_calculator(search_range_hour)
 
         # Test için dummy hesap: supplier_id, key, secret
         comp_api_account_list = [
-            ["rRXjlMWHLkIGWXb91X1R", "25V4gxNM7XuOHMmvybUb","784195"]
+            ["rRXjlMWHLkIGWXb91X1R", "25V4gxNM7XuOHMmvybUb", "784195"]
         ]
 
         # 🔥 BURASI KRİTİK — referansı view_instance içinde tutuyoruz

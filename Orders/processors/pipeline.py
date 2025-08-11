@@ -1,15 +1,18 @@
 from Core.api.Api_engine import TrendyolApi
 from Core.utils.time_utils import time_stamp_calculator, time_for_now
+from Core.utils.model_utils import get_engine,create_records,make_normalizer
 import asyncio
 from typing import List
+from sqlmodel import Session
+from Orders.models import OrderItem, OrderData, ScrapData
 
 
 async def fetch_orders_all(
-    status_list: list,
-    final_ep_time: int,
-    start_ep_time: int,
-    comp_api_account_list: list,
-    start_page: int = 0
+        status_list: list,
+        final_ep_time: int,
+        start_ep_time: int,
+        comp_api_account_list: list,
+        start_page: int = 0
 ) -> tuple[list, list]:
     """
     Şirketleri sırayla dolaşır.
@@ -57,25 +60,58 @@ async def fetch_orders_all(
     return all_orders, all_items
 
 
+ORDERDATA_UNIQ = ["orderNumber"]
+ORDERITEM_UNIQ = ["id", "orderNumber", "productCode", "orderLineItemStatusName"]
 
-def save_orders_to_db(result):
-    print("sonuç:", result)
-def save_orders_to_db_final(result, order_data_list: List[dict], order_item_list: List[dict], db_name: str = "orders.db"):
+# OrderData: metinleri temizle
+orderdata_normalizer = make_normalizer(strip_strings=True)
 
-    engine = get_engine(db_name)
-    with Session(engine) as session:
-        for data in order_data_list:
-            try:
-                order = OrderData(**data)
-                session.merge(order)
-            except Exception as e:
-                print(f"[OrderData Hatası] {e}")
+# OrderItem: unique anahtarlar için None/"" değerleri toparla + metinleri temizle
+orderitem_normalizer = make_normalizer(
+    coalesce_none={
+        "productCode": 0,
+        "orderLineItemStatusName": "Unknown",
+    },
+    strip_strings=True,
+)
 
-        for data in order_item_list:
-            try:
-                item = OrderItem(**data)
-                session.merge(item)
-            except Exception as e:
-                print(f"[OrderItem Hatası] {e}")
 
-        session.commit()
+def save_orders_to_db(result, db_name: str = "orders.db"):
+    """
+    worker.result_ready -> (order_data_list, order_item_list)
+    """
+    if not result:
+        return
+
+    order_data_list, order_item_list = result
+
+    # 1) OrderData → upsert (orderNumber çakışırsa güncelle)
+    if order_data_list:
+        create_records(
+            model=OrderData,
+            data_list=order_data_list,
+            db_name=db_name,
+            conflict_keys=ORDERDATA_UNIQ,
+            mode="update",
+            normalizer=orderdata_normalizer,
+            chunk_size=300,
+            drop_unknown=True,          # modelde olmayan kolonları at
+            rename_map={}                # gerekirse buraya ekle: {"apiKey":"modelKey"}
+        )
+
+    # 2) OrderItem → insert-ignore (4'lü aynıysa ekleme)
+    if order_item_list:
+        create_records(
+            model=OrderItem,
+            data_list=order_item_list,
+            db_name=db_name,
+            conflict_keys=ORDERITEM_UNIQ,
+            mode="ignore",
+            normalizer=orderitem_normalizer,
+            chunk_size=500,
+            drop_unknown=True,           # modelde olmayan kolonları at
+            rename_map={
+                # API’den gelen key → modeldeki alan adı
+                "3pByTrendyol": "byTrendyol3"
+            }
+        )
