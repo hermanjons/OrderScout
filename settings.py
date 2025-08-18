@@ -7,4 +7,4 @@ DB_NAME = "orders.db"
 DEFAULT_DATABASE_DIR = "databases"
 
 # MEDİA
-MEDIA_ROOT = os.path.join(BASE_DIR, "images")
+MEDIA_ROOT = os.path.join(BASE_DIR, "Core/images")

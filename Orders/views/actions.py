@@ -8,7 +8,7 @@ from Core.utils.time_utils import time_for_now, time_stamp_calculator
 # Bu fonksiyon view içinden çağrılır
 def fetch_with_worker(view_instance):
     try:
-        search_range_hour = 72
+        search_range_hour = 120
         start_ep_time = time_for_now()
         final_ep_time = time_for_now() - time_stamp_calculator(search_range_hour)
 

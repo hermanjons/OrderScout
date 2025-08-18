@@ -1,3 +1,3 @@
-status_list = ["Created", "Delivered", "unDelivered", "Invoiced", "Picking",
-               "Shipped", "AtCollectionPoint", "UnDeliveredAndReturned",
+status_list = ["Created", "Delivered", "UnDelivered", "Invoiced", "Picking",
+               "Shipped", "AtCollectionPoint",
                "Cancelled"]  # aranacak statü listesi
