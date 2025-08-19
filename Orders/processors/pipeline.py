@@ -1,6 +1,6 @@
 from Core.api.Api_engine import TrendyolApi
 from Core.utils.time_utils import time_stamp_calculator, time_for_now
-from Core.utils.model_utils import get_engine,create_records,make_normalizer
+from Core.utils.model_utils import get_engine, create_records, make_normalizer
 import asyncio
 from typing import List
 from sqlmodel import Session
@@ -60,7 +60,7 @@ async def fetch_orders_all(
     return all_orders, all_items
 
 
-ORDERDATA_UNIQ = ["orderNumber"]
+ORDERDATA_UNIQ = ["orderNumber", "status", "taskDate"]
 ORDERITEM_UNIQ = ["id", "orderNumber", "productCode", "orderLineItemStatusName"]
 
 # OrderData: metinleri temizle
@@ -92,11 +92,11 @@ def save_orders_to_db(result, db_name: str = "orders.db"):
             data_list=order_data_list,
             db_name=db_name,
             conflict_keys=ORDERDATA_UNIQ,
-            mode="update",
+            mode="ignore",  # DO NOTHING (append-only)
             normalizer=orderdata_normalizer,
             chunk_size=300,
-            drop_unknown=True,          # modelde olmayan kolonları at
-            rename_map={}                # gerekirse buraya ekle: {"apiKey":"modelKey"}
+            drop_unknown=True,
+            rename_map={},
         )
 
     # 2) OrderItem → insert-ignore (4'lü aynıysa ekleme)
@@ -109,7 +109,7 @@ def save_orders_to_db(result, db_name: str = "orders.db"):
             mode="ignore",
             normalizer=orderitem_normalizer,
             chunk_size=500,
-            drop_unknown=True,           # modelde olmayan kolonları at
+            drop_unknown=True,  # modelde olmayan kolonları at
             rename_map={
                 # API’den gelen key → modeldeki alan adı
                 "3pByTrendyol": "byTrendyol3"

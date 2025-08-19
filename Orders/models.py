@@ -1,33 +1,33 @@
-from typing import Optional
-from sqlmodel import SQLModel, Field
-from sqlalchemy import Column, JSON,UniqueConstraint
+from typing import Optional, Dict
+from datetime import datetime
+from sqlmodel import SQLModel, Field, Column, JSON
+from sqlalchemy import UniqueConstraint, Index
 
 
 class OrderData(SQLModel, table=True):
-    # Trendyol'da çok büyük olabildiği için str PK
-    orderNumber: str = Field(primary_key=True)
-    id: int
+    pk: Optional[int] = Field(default=None, primary_key=True)
 
+    orderNumber: str = Field(index=True)
+    status: Optional[str] = Field(default=None, index=True)
+    taskDate: int = Field(index=True)  # olay zamanı
+
+    # Orijinal alanlar (kısaltıyorum)
+    id: int
     cargoTrackingNumber: Optional[str] = None
     cargoProviderName: Optional[str] = None
     customerId: Optional[int] = None
     customerFirstName: Optional[str] = None
     customerLastName: Optional[str] = None
-
-    # API dict döndürüyor → JSON kolon
-    shipmentAddress: Optional[dict] = Field(default=None, sa_column=Column(JSON))
-    invoiceAddress: Optional[dict] = Field(default=None, sa_column=Column(JSON))
-
+    shipmentAddress: Optional[Dict] = Field(default=None, sa_column=Column(JSON))
+    invoiceAddress: Optional[Dict] = Field(default=None, sa_column=Column(JSON))
     grossAmount: Optional[float] = None
     totalDiscount: Optional[float] = None
     totalTyDiscount: Optional[float] = None
-    totalPrice: Optional[float] = None  # int değil, float
-
+    totalPrice: Optional[float] = None
     tcIdentityNumber: Optional[str] = None
     orderDate: Optional[int] = None
     currencyCode: Optional[str] = None
     shipmentPackageStatus: Optional[str] = None
-    status: Optional[str] = None
     deliveryType: Optional[str] = None
     timeSlotId: Optional[int] = None
     scheduledDeliveryStoreId: Optional[int] = None
@@ -35,14 +35,11 @@ class OrderData(SQLModel, table=True):
     estimatedDeliveryEndDate: Optional[int] = None
     deliveryAddressType: Optional[str] = None
     agreedDeliveryDate: Optional[str] = None
-
-    # payload bool döndürüyor
     fastDelivery: Optional[bool] = None
     commercial: Optional[bool] = None
     deliveredByService: Optional[bool] = None
     agreedDeliveryDateExtendible: Optional[bool] = None
     groupDeal: Optional[bool] = None
-
     originShipmentDate: Optional[int] = None
     lastModifiedDate: int
     fastDeliveryType: Optional[str] = None
@@ -53,13 +50,22 @@ class OrderData(SQLModel, table=True):
     warehouseId: Optional[int] = None
     totalProfit: Optional[float] = None
 
+    # Yeni alan
+    printed_date: Optional[datetime] = None
+
+    __table_args__ = (
+        UniqueConstraint("orderNumber", "status", "taskDate",
+                         name="uq_orderdata_orderno_status_taskdate"),
+        Index("ix_orderdata_orderno_taskdate", "orderNumber", "taskDate"),
+    )
+
 
 class OrderItem(SQLModel, table=True):
     # Yapay PK (auto increment) — FK ve ORM işleri çok kolay olur
     pk: Optional[int] = Field(default=None, primary_key=True)
 
     # Doğal alanlar
-    id: int                                     # Trendyol lineItemId
+    id: int  # Trendyol lineItemId
     orderNumber: str = Field(foreign_key="orderdata.orderNumber", index=True)
     productCode: int
     orderLineItemStatusName: str
