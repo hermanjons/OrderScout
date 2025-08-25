@@ -1,7 +1,7 @@
 # Orders/views/actions.py
 from Core.threads.async_worker import AsyncWorker
-from Orders.processors.pipeline import fetch_orders_all, save_orders_to_db
-from Orders.constants.constants import status_list
+from Orders.processors.trendyol_pipeline import fetch_orders_all, save_orders_to_db
+from Orders.constants.trendyol_constants import trendyol_status_list
 from Core.utils.time_utils import time_for_now, time_stamp_calculator
 
 
@@ -18,7 +18,7 @@ def fetch_with_worker(view_instance):
         ]
 
         # 🔥 BURASI KRİTİK — referansı view_instance içinde tutuyoruz
-        view_instance.worker = AsyncWorker(fetch_orders_all, status_list, final_ep_time, start_ep_time, comp_api_account_list, parent=view_instance)
+        view_instance.worker = AsyncWorker(fetch_orders_all, trendyol_status_list, final_ep_time, start_ep_time, comp_api_account_list, parent=view_instance)
         view_instance.worker.result_ready.connect(save_orders_to_db)
         view_instance.worker.finished.connect(view_instance.on_orders_fetched)
         view_instance.worker.start()

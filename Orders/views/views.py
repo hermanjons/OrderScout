@@ -1,6 +1,5 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel
-from Orders.processors.pipeline import fetch_orders_all
-from Orders.constants.constants import status_list
+from Orders.processors.trendyol_pipeline import fetch_orders_all
 import asyncio
 from Core.threads.async_worker import AsyncWorker
 from Orders.views.actions import fetch_with_worker

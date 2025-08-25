@@ -4,7 +4,7 @@ from Core.utils.model_utils import get_engine, create_records, make_normalizer
 import asyncio
 from typing import List
 from sqlmodel import Session
-from Orders.models import OrderItem, OrderData, ScrapData
+from Orders.models import OrderItem, OrderData, ScrapData,OrderHeader
 
 
 async def fetch_orders_all(
@@ -116,4 +116,24 @@ def save_orders_to_db(result, db_name: str = "orders.db"):
                 # API’den gelen key → modeldeki alan adı
                 "3pByTrendyol": "byTrendyol3"
             }
+        )
+
+    # 3) OrderHeader → sadece orderNumber alanı var
+    all_order_numbers = set()
+
+    for od in order_data_list:
+        if "orderNumber" in od and od["orderNumber"]:
+            all_order_numbers.add(od["orderNumber"])
+
+    for oi in order_item_list:
+        if "orderNumber" in oi and oi["orderNumber"]:
+            all_order_numbers.add(oi["orderNumber"])
+
+    if all_order_numbers:
+        create_records(
+            model=OrderHeader,
+            data_list=[{"orderNumber": no} for no in all_order_numbers],
+            db_name=db_name,
+            conflict_keys=["orderNumber"],
+            mode="ignore",  # varsa ekleme
         )
