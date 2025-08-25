@@ -1,31 +1,47 @@
-from typing import Optional, Dict
+from typing import Optional, Dict,Any,List
 from datetime import datetime
-from sqlmodel import SQLModel, Field, Column, JSON
 from sqlalchemy import UniqueConstraint, Index
+from sqlmodel import SQLModel, Field, Column, UniqueConstraint, Index, JSON,Relationship
 
 
+# ---- ROOT: Tekil sipariş kimliği ----
+class OrderHeader(SQLModel, table=True):
+    # orderNumber her sipariş için tekil kök anahtar
+    orderNumber: str = Field(primary_key=True, index=True)
+
+    # ilişkiler
+    items: List["OrderItem"] = Relationship(back_populates="order")
+    snapshots: List["OrderData"] = Relationship(back_populates="header")
+
+
+# ---- SNAPSHOT/EVENT: Siparişin zamana bağlı halleri ----
 class OrderData(SQLModel, table=True):
     pk: Optional[int] = Field(default=None, primary_key=True)
 
-    orderNumber: str = Field(index=True)
-    status: Optional[str] = Field(default=None, index=True)
-    taskDate: int = Field(index=True)  # olay zamanı
+    # köke FK
+    orderNumber: str = Field(foreign_key="orderheader.orderNumber", index=True)
+    header: Optional[OrderHeader] = Relationship(back_populates="snapshots")
 
-    # Orijinal alanlar (kısaltıyorum)
+    status: Optional[str] = Field(default=None, index=True)
+
+    # Trendyol alanları (kısaltılmış)
     id: int
     cargoTrackingNumber: Optional[str] = None
     cargoProviderName: Optional[str] = None
     customerId: Optional[int] = None
     customerFirstName: Optional[str] = None
     customerLastName: Optional[str] = None
-    shipmentAddress: Optional[Dict] = Field(default=None, sa_column=Column(JSON))
-    invoiceAddress: Optional[Dict] = Field(default=None, sa_column=Column(JSON))
+    shipmentAddress: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    invoiceAddress: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
     grossAmount: Optional[float] = None
     totalDiscount: Optional[float] = None
     totalTyDiscount: Optional[float] = None
     totalPrice: Optional[float] = None
     tcIdentityNumber: Optional[str] = None
-    orderDate: Optional[int] = None
+
+    # orderDate raporlama/filtre için dursun (eşsizlikte kullanılmıyor)
+    orderDate: Optional[int] = Field(index=True)
+
     currencyCode: Optional[str] = None
     shipmentPackageStatus: Optional[str] = None
     deliveryType: Optional[str] = None
@@ -41,7 +57,10 @@ class OrderData(SQLModel, table=True):
     agreedDeliveryDateExtendible: Optional[bool] = None
     groupDeal: Optional[bool] = None
     originShipmentDate: Optional[int] = None
-    lastModifiedDate: int
+
+    # EN KRİTİK: en güncel snapshot'ı belirler
+    lastModifiedDate: int = Field(index=True)
+
     fastDeliveryType: Optional[str] = None
     encodedCtNumber: Optional[str] = None
     extendedAgreedDeliveryDate: Optional[str] = None
@@ -50,32 +69,32 @@ class OrderData(SQLModel, table=True):
     warehouseId: Optional[int] = None
     totalProfit: Optional[float] = None
 
-    # Yeni alan
     printed_date: Optional[datetime] = None
 
     __table_args__ = (
-        UniqueConstraint("orderNumber", "status", "taskDate",
-                         name="uq_orderdata_orderno_status_taskdate"),
-        Index("ix_orderdata_orderno_taskdate", "orderNumber", "taskDate"),
+        # aynı siparişin her event'i tekil
+        UniqueConstraint("orderNumber", "lastModifiedDate", name="uq_orderno_lastmod"),
+        Index("ix_orderno_lastmod", "orderNumber", "lastModifiedDate"),
+        Index("ix_orderno_status_lastmod", "orderNumber", "status", "lastModifiedDate"),
     )
 
 
+# ---- ITEMS: Sipariş satırları (bire-çok) ----
 class OrderItem(SQLModel, table=True):
-    # Yapay PK (auto increment) — FK ve ORM işleri çok kolay olur
-    pk: Optional[int] = Field(default=None, primary_key=True)
+    # Trendyol line item id genelde tekil; PK olarak kullan
+    id: int = Field(primary_key=True)
 
-    # Doğal alanlar
-    id: int  # Trendyol lineItemId
-    orderNumber: str = Field(foreign_key="orderdata.orderNumber", index=True)
-    productCode: int
-    orderLineItemStatusName: str
+    # köke FK (tek siparişe ait)
+    orderNumber: str = Field(foreign_key="orderheader.orderNumber", index=True)
+    order: Optional[OrderHeader] = Relationship(back_populates="items")
 
-    # Diğer alanlar
-    quantity: Optional[int] = None
+    # diğer alanlar
+    quantity: int
     productSize: Optional[str] = None
     merchantSku: Optional[str] = None
     salesCampaignId: Optional[str] = None
     productName: Optional[str] = None
+    productCode: Optional[int] = None
     merchantId: Optional[int] = None
 
     amount: Optional[float] = None
@@ -87,11 +106,12 @@ class OrderItem(SQLModel, table=True):
     currencyCode: Optional[str] = None
     sku: Optional[str] = None
     barcode: Optional[str] = None
-    taskDate: Optional[int] = None
+    orderLineItemStatusName: Optional[str] = None
+    taskDate: Optional[int] = None  # (varsa kullan; yoksa kaldırabilirsin)
 
     __table_args__ = (
-        UniqueConstraint("id", "orderNumber", "productCode", "orderLineItemStatusName",
-                         name="uq_item_id_order_prod_status"),
+        # join ve sorgu performansı
+        Index("ix_orderitem_orderno_id", "orderNumber", "id"),
     )
 
 

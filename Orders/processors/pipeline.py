@@ -60,8 +60,8 @@ async def fetch_orders_all(
     return all_orders, all_items
 
 
-ORDERDATA_UNIQ = ["orderNumber", "status", "taskDate"]
-ORDERITEM_UNIQ = ["id", "orderNumber", "productCode", "orderLineItemStatusName"]
+ORDERDATA_UNIQ = ["orderNumber", "lastModifiedDate"]
+ORDERITEM_UNIQ = ["id"]
 
 # OrderData: metinleri temizle
 orderdata_normalizer = make_normalizer(strip_strings=True)
@@ -84,7 +84,9 @@ def save_orders_to_db(result, db_name: str = "orders.db"):
         return
 
     order_data_list, order_item_list = result
-
+    for i in order_data_list:
+        if i["orderNumber"] == "10450987047":
+            print(i)
     # 1) OrderData → upsert (orderNumber çakışırsa güncelle)
     if order_data_list:
         create_records(
