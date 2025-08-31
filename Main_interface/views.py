@@ -1,8 +1,10 @@
-from PyQt6.QtWidgets import QMainWindow, QTabWidget
-from PyQt6.QtGui import QIcon
+from PyQt6.QtWidgets import QMainWindow, QTabWidget, QToolBar
+from PyQt6.QtGui import QIcon, QAction
 from Orders.views.views import OrdersTab
+from Account.views.views import CompanyRegisterDialog
 import os
 from settings import MEDIA_ROOT
+from Account.views.actions import get_company_register_action
 
 
 class MainInterface(QMainWindow):
@@ -17,7 +19,20 @@ class MainInterface(QMainWindow):
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
 
+        self.init_toolbar()  # ✅ Yeni toolbar
         self.init_tabs()
+
+    def init_toolbar(self):
+        self.toolBar = QToolBar("Ana Toolbar")
+        self.addToolBar(self.toolBar)
+
+        # Şirket kayıt aksiyonunu dışardan getiriyoruz (prensibe uygun!)
+        company_action = get_company_register_action(self)
+        self.toolBar.addAction(company_action)
+
+    def open_company_register(self):
+        dialog = CompanyRegisterDialog()
+        dialog.exec()
 
     def init_tabs(self):
         self.orders_tab = OrdersTab()

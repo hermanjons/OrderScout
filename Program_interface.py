@@ -405,11 +405,11 @@ class CompAddWindow(QWidget):
         super().__init__()
         self.setWindowTitle("ŞİRKET EKLEME ALANI")
 
-        self.setWindowIcon(QIcon("Core/images/sniper_icon.png"))
+        self.setWindowIcon(QIcon("images/sniper_icon.png"))
 
         self.save_button = QPushButton()
         self.save_button.setFixedSize(32, 32)
-        self.save_button.setIcon(QIcon("Core/images/save_button_32.png"))
+        self.save_button.setIcon(QIcon("images/save_button_32.png"))
         self.save_button.setIconSize(self.save_button.size())
         self.save_button.setFlat(True)
         self.save_button.setStyleSheet('''
@@ -613,7 +613,7 @@ class PrintedOrderWindow(QWidget):
 class WaitingOrderWindow(QWidget):
     def __init__(self, waiting_orders):
         super().__init__()
-        self.extract_xlsx_icon = QIcon("Core/images/xlsx_extract.ico")
+        self.extract_xlsx_icon = QIcon("images/xlsx_extract.ico")
 
         self.excel_file_path_for_extract_orders = None
 
@@ -918,7 +918,7 @@ class MainWindow(QMainWindow):
         self.total_sell_price_label = QLabel()
 
         self.setWindowTitle("OrderScout")
-        self.setWindowIcon(QIcon("Core/images/sniper_icon.png"))
+        self.setWindowIcon(QIcon("images/sniper_icon.png"))
         self.showMaximized()
 
         self.comp_api_list = []
@@ -953,15 +953,15 @@ class MainWindow(QMainWindow):
 
         self.addToolBar(toolbar)
 
-        company_add_action = QAction(QIcon("Core/images/add_button.png"), "ŞİRKET EKLE", self)
+        company_add_action = QAction(QIcon("images/add_button.png"), "ŞİRKET EKLE", self)
         company_add_action.setStatusTip("Şirket eklemek için tıkla!")
         company_add_action.triggered.connect(self.show_comp_add_window)
 
-        license_action = QAction(QIcon("Core/images/license_icon.png"), "Lisans Bilgileri", self)
+        license_action = QAction(QIcon("images/license_icon.png"), "Lisans Bilgileri", self)
         license_action.setStatusTip("Lisans bilgilerini görüntülemek için tıkla!")
         license_action.triggered.connect(self.license_check_wind.show)
 
-        update_action = QAction(QIcon("Core/images/update_icon.png"), "GÜNCELLEME İŞLEMLERİ", self)
+        update_action = QAction(QIcon("images/update_icon.png"), "GÜNCELLEME İŞLEMLERİ", self)
         update_action.setStatusTip("Güncelleme işlemleri için tıkla!")
         update_action.triggered.connect(self.update_program)
 
@@ -969,9 +969,9 @@ class MainWindow(QMainWindow):
         toolbar.addAction(company_add_action)
         toolbar.addAction(update_action)  # Güncelleme işlemlerini toolbar'a ekleyin
 
-        self.run_icon = QIcon("Core/images/circle-start-button.png")
-        self.loop_icon = QIcon("Core/images/loop-image.png")
-        self.stop_icon = QIcon("Core/images/stop-hand-icon.png")
+        self.run_icon = QIcon("images/circle-start-button.png")
+        self.loop_icon = QIcon("images/loop-image.png")
+        self.stop_icon = QIcon("images/stop-hand-icon.png")
 
         self.plot_widget = pg.PlotWidget()
         self.d_item_pos = pg.PlotDataItem()
