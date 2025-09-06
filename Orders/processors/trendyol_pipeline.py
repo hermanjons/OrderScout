@@ -80,13 +80,12 @@ def save_orders_to_db(result, db_name: str = "orders.db"):
     """
     worker.result_ready -> (order_data_list, order_item_list)
     """
+    print("sonuçlar kaydediliyor")
     if not result:
         return
 
     order_data_list, order_item_list = result
-    for i in order_data_list:
-        if i["orderNumber"] == "10450987047":
-            print(i)
+
     # 1) OrderData → upsert (orderNumber çakışırsa güncelle)
     if order_data_list:
         create_records(
@@ -96,7 +95,7 @@ def save_orders_to_db(result, db_name: str = "orders.db"):
             conflict_keys=ORDERDATA_UNIQ,
             mode="ignore",  # DO NOTHING (append-only)
             normalizer=orderdata_normalizer,
-            chunk_size=300,
+            chunk_size=1,
             drop_unknown=True,
             rename_map={},
         )
