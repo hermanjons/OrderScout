@@ -1,10 +1,11 @@
 from Core.api.Api_engine import TrendyolApi
 from Core.utils.time_utils import time_stamp_calculator, time_for_now
-from Core.utils.model_utils import get_engine, create_records, make_normalizer
+from Core.utils.model_utils import get_engine, create_records, make_normalizer, get_records
 import asyncio
-from typing import List
+from typing import List,Optional,Callable
 from sqlmodel import Session
-from Orders.models import OrderItem, OrderData, ScrapData,OrderHeader
+from Orders.models import OrderItem, OrderData, ScrapData, OrderHeader
+from Account.models import ApiAccount
 
 
 async def fetch_orders_all(
@@ -12,29 +13,30 @@ async def fetch_orders_all(
         final_ep_time: int,
         start_ep_time: int,
         comp_api_account_list: list,
-        start_page: int = 0
+        start_page: int = 0,
+        progress_callback: Optional[Callable[[int, int], None]] = None
 ) -> tuple[list, list]:
-    """
-    Şirketleri sırayla dolaşır.
-    Her şirket için status_list'teki statülere paralel istek atar.
-    Tüm sipariş ve ürünleri toplar ve döner.
-    """
     all_orders = []
     all_items = []
+    total_steps = len(comp_api_account_list) * len(status_list)
+    current_step = 0
 
     async def fetch_orders_for_status(api, status):
+        nonlocal current_step
         orders = []
         items = []
         page = start_page
+
         while True:
             content, _, _, _, status_code = await api.find_orders(status, final_ep_time, start_ep_time, page)
-
             if not content:
                 break
+
             for order_data in content:
                 if len(order_data.get("packageHistories", [])) == 1:
                     order_data["packageHistories"].insert(0, {"createdDate": 0, "status": "Awaiting"})
                 orders.append(order_data)
+
                 for order_item in order_data["lines"]:
                     order_item["orderNumber"] = order_data["orderNumber"]
                     order_item["id"] = order_data["id"]
@@ -47,6 +49,12 @@ async def fetch_orders_all(
                         order_item["taskDate"] = 0
                     items.append(order_item)
             page += 1
+
+        # ✅ Her statü işlemi bitince ilerleme bildir
+        current_step += 1
+        if progress_callback:
+            progress_callback(current_step, total_steps)
+
         return orders, items
 
     for comp_api_account in comp_api_account_list:
@@ -58,6 +66,7 @@ async def fetch_orders_all(
             all_items.extend(items)
 
     return all_orders, all_items
+
 
 
 ORDERDATA_UNIQ = ["orderNumber", "lastModifiedDate"]
@@ -136,3 +145,6 @@ def save_orders_to_db(result, db_name: str = "orders.db"):
             conflict_keys=["orderNumber"],
             mode="ignore",  # varsa ekleme
         )
+
+
+

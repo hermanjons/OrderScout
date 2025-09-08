@@ -3,14 +3,14 @@ import asyncio
 
 
 class AsyncWorker(QThread):
-    finished = pyqtSignal()           # sadece "işlem bitti" mesajı
-    result_ready = pyqtSignal(object) # veri taşıyan sinyal
+    finished = pyqtSignal()            # sadece "işlem bitti" mesajı
+    result_ready = pyqtSignal(object)  # veri taşıyan sinyal
 
-    def __init__(self, async_func, *args, parent=None):
+    def __init__(self, async_func, *args, parent=None, kwargs=None):
         super().__init__(parent)
         self.async_func = async_func
         self.args = args
-        self.kwargs = {}
+        self.kwargs = kwargs or {}  # Ekstra named argümanlar (örnek: progress_callback)
 
     def run(self):
         print("run etti")
