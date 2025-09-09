@@ -6,27 +6,31 @@ from datetime import datetime
 class ApiAccount(SQLModel, table=True):
     __tablename__ = "apiaccount"
     __table_args__ = (
-        UniqueConstraint("comp_name", "platform"),  # İsim + platform birlikte unique
+        UniqueConstraint("comp_name", "platform", "seller_id",
+                         name="uq_apiaccount_comp_platform_seller"),
     )
 
+    # Surrogate PK
+    id: Optional[int] = Field(default=None, primary_key=True)
+
     # TEMEL BİLGİLER
-    seller_id: int = Field(primary_key=True)  # Özgün satıcı ID'si (örn: Trendyol ID)
-    comp_name: str                            # Firma adı (UI için)
+    seller_id: int = Field(index=True)  # Artık PK değil, index'li alan
+    comp_name: str  # Firma adı (UI için)
 
     # API GİRİŞ BİLGİLERİ
-    api_key: str                              # API erişim anahtarı
-    api_secret: str                           # API şifresi
+    api_key: str
+    api_secret: str
 
     # PLATFORM BİLGİSİ
-    platform: str = Field(default="trendyol")  # Örn: trendyol, amazon, hepsiburada
+    platform: str = Field(default="trendyol", index=True)
 
     # TAKİP VE KULLANIM ZAMANLARI
-    created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
-    last_used_at: Optional[datetime] = None   # En son sipariş çekilen zaman
+    created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
+    last_used_at: Optional[datetime] = None
 
     # GÜVENLİK & ŞİFRELEME (opsiyonel)
-    encrypted: Optional[bool] = False         # Şifreleme kullanıldı mı?
-    token_valid: Optional[bool] = True        # Token geçerli mi?
+    encrypted: bool = False
+    token_valid: bool = True
 
     # AKTİFLİK DURUMU
-    is_active: bool = True                    # Kullanımda mı?
+    is_active: bool = True

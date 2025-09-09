@@ -33,7 +33,7 @@ def save_company_data(dialog_instance, form_values: dict, db_name="orders.db"):
             model=ApiAccount,
             data_list=[data],
             db_name=db_name,
-            conflict_keys=["seller_id"]
+            conflict_keys=["seller_id", "comp_name", "platform"]
         )
 
         QMessageBox.information(dialog_instance, "Başarılı", "Şirket başarıyla kaydedildi.")
