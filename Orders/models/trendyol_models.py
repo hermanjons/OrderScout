@@ -2,15 +2,23 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime
 from sqlalchemy import Column, UniqueConstraint, Index
 from sqlmodel import SQLModel, Field, Relationship, JSON
+from Account.models import ApiAccount
 
 
 # ---- ROOT: Siparişin temel kaydı ----
 class OrderHeader(SQLModel, table=True):
-    orderNumber: str = Field(primary_key=True, index=True)
+    id: Optional[int] = Field(default=None, primary_key=True)  # ✅ Otomatik birincil anahtar
 
-    # İlişkiler
+    orderNumber: str = Field(index=True)
+    api_account_id: Optional[int] = Field(default=None, foreign_key="apiaccount.id", index=True)
+    api_account: Optional[ApiAccount] = Relationship()
+
     snapshots: List["OrderData"] = Relationship(back_populates="header")
     items: List["OrderItem"] = Relationship(back_populates="header")
+
+    __table_args__ = (
+        UniqueConstraint("orderNumber", "api_account_id", name="uq_orderheader_orderno_accountid"),
+    )
 
 
 # ---- ZAMAN DAMGALI HAL: Siparişin snapshot'ı ----
@@ -19,6 +27,7 @@ class OrderData(SQLModel, table=True):
 
     orderNumber: str = Field(foreign_key="orderheader.orderNumber", index=True)
     header: Optional[OrderHeader] = Relationship(back_populates="snapshots")
+    api_account_id: Optional[int] = Field(default=None, foreign_key="apiaccount.id", index=True)
 
     status: Optional[str] = Field(default=None, index=True)
 
@@ -62,7 +71,7 @@ class OrderData(SQLModel, table=True):
     printed_date: Optional[datetime] = None
 
     __table_args__ = (
-        UniqueConstraint("orderNumber", "lastModifiedDate", name="uq_orderno_lastmod"),
+        UniqueConstraint("orderNumber", "lastModifiedDate", "api_account_id", name="uq_orderno_lastmod_accountid"),
         Index("ix_orderno_lastmod", "orderNumber", "lastModifiedDate"),
         Index("ix_orderno_status_lastmod", "orderNumber", "status", "lastModifiedDate"),
     )
@@ -88,6 +97,7 @@ class OrderItem(SQLModel, table=True):
     vatBaseAmount: Optional[float] = None
     price: Optional[float] = None
     discount: Optional[float] = None
+    commission: Optional[float] = Field(default=None)  # 🔥 EKLENDİ
 
     currencyCode: Optional[str] = None
     sku: Optional[str] = None

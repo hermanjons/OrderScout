@@ -22,13 +22,15 @@ def get_company_names_from_db() -> list[str]:
 
 def get_api_credentials_by_names(names: list[str]) -> list[list[str]]:
     """
-    Belirtilen şirket isimlerine karşılık gelen api_key, api_secret ve seller_id'yi getirir.
+    Belirtilen şirket isimlerine karşılık gelen api hesabı bilgilerini getirir.
+    Geriye [pk, api_key, api_secret, seller_id] sırasıyla bir liste döner.
     """
     engine = get_engine("orders.db")
     all_records = get_records(model=ApiAccount, db_engine=engine)
 
-    selected = [r for r in all_records if r.comp_name in names]  # 👈 burada liste filtrelemesi
-    return [[r.api_key, r.api_secret, str(r.seller_id)] for r in selected]
+    selected = [r for r in all_records if r.comp_name in names]
+
+    return [[r.id, r.api_key, r.api_secret, str(r.seller_id)] for r in selected]
 
 
 # Bu fonksiyon view içinden çağrılır
