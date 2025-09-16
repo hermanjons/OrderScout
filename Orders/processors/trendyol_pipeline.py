@@ -36,8 +36,9 @@ async def fetch_orders_all(
                 orders.append(order_data)
 
                 for order_item in order_data["lines"]:
+                    order_item["api_account_id"] = comp_api_account_id
                     order_item["orderNumber"] = order_data["orderNumber"]
-                    order_item["id"] = order_data["id"]
+                    order_item["order_data_id"] = order_data["id"]
                     order_item["packageHistories"] = order_data["packageHistories"]
                     for history in order_data["packageHistories"]:
                         if history["status"] == order_data["status"]:
@@ -69,7 +70,7 @@ async def fetch_orders_all(
 
 
 ORDERDATA_UNIQ = ["orderNumber", "lastModifiedDate", "api_account_id"]
-ORDERITEM_UNIQ = ["id"]
+ORDERITEM_UNIQ = ["orderNumber", "productCode","orderLineItemStatusName","api_account_id"]
 
 # OrderData: metinleri temizle
 orderdata_normalizer = make_normalizer(strip_strings=True)

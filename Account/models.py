@@ -11,7 +11,7 @@ class ApiAccount(SQLModel, table=True):
     )
 
     # Surrogate PK
-    id: Optional[int] = Field(default=None, primary_key=True)
+    pk: Optional[int] = Field(default=None, primary_key=True)
 
     # TEMEL BİLGİLER
     seller_id: int = Field(index=True)  # Artık PK değil, index'li alan

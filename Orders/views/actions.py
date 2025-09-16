@@ -30,7 +30,7 @@ def get_api_credentials_by_names(names: list[str]) -> list[list[str]]:
 
     selected = [r for r in all_records if r.comp_name in names]
 
-    return [[r.id, r.api_key, r.api_secret, str(r.seller_id)] for r in selected]
+    return [[r.pk, r.api_key, r.api_secret, str(r.seller_id)] for r in selected]
 
 
 # Bu fonksiyon view içinden çağrılır

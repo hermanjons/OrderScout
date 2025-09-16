@@ -7,10 +7,10 @@ from Account.models import ApiAccount
 
 # ---- ROOT: Siparişin temel kaydı ----
 class OrderHeader(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)  # ✅ Otomatik birincil anahtar
+    pk: Optional[int] = Field(default=None, primary_key=True)  # ✅ Otomatik birincil anahtar
 
     orderNumber: str = Field(index=True)
-    api_account_id: Optional[int] = Field(default=None, foreign_key="apiaccount.id", index=True)
+    api_account_id: Optional[int] = Field(default=None, foreign_key="apiaccount.pk", index=True)
     api_account: Optional[ApiAccount] = Relationship()
 
     snapshots: List["OrderData"] = Relationship(back_populates="header")
@@ -27,7 +27,7 @@ class OrderData(SQLModel, table=True):
 
     orderNumber: str = Field(foreign_key="orderheader.orderNumber", index=True)
     header: Optional[OrderHeader] = Relationship(back_populates="snapshots")
-    api_account_id: Optional[int] = Field(default=None, foreign_key="apiaccount.id", index=True)
+    api_account_id: Optional[int] = Field(default=None, foreign_key="apiaccount.pk", index=True)
 
     status: Optional[str] = Field(default=None, index=True)
 
@@ -79,10 +79,14 @@ class OrderData(SQLModel, table=True):
 
 # ---- SATIR VERİSİ: Siparişin içeriği ----
 class OrderItem(SQLModel, table=True):
-    id: int = Field(primary_key=True)
+    pk: Optional[int] = Field(default=None, primary_key=True)  # ✅ Auto PK
 
     orderNumber: str = Field(foreign_key="orderheader.orderNumber", index=True)
     header: Optional[OrderHeader] = Relationship(back_populates="items")
+
+    # 🔁 Ek alanlar
+    order_data_id: Optional[int] = None  # eski 'id', ama artık item değil snapshot ID'si
+    api_account_id: Optional[int] = Field(default=None, foreign_key="apiaccount.pk", index=True)  # ✅ Eklendi
 
     quantity: int
     productSize: Optional[str] = None
@@ -97,7 +101,7 @@ class OrderItem(SQLModel, table=True):
     vatBaseAmount: Optional[float] = None
     price: Optional[float] = None
     discount: Optional[float] = None
-    commission: Optional[float] = Field(default=None)  # 🔥 EKLENDİ
+    commission: Optional[float] = Field(default=None)
 
     currencyCode: Optional[str] = None
     sku: Optional[str] = None
@@ -106,8 +110,14 @@ class OrderItem(SQLModel, table=True):
     taskDate: Optional[int] = None
 
     __table_args__ = (
-        Index("ix_orderitem_orderno_id", "orderNumber", "id"),
+        UniqueConstraint(
+            "orderNumber", "productCode", "orderLineItemStatusName", "api_account_id",
+            name="uq_item_orderno_productcode_status_api"
+        ),
+        Index("ix_orderitem_orderno_productcode", "orderNumber", "productCode"),
     )
+
+
 
 
 # ---- Dış Veri: Kırpılmış veriler (opsiyonel) ----
