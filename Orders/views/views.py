@@ -1,11 +1,17 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QGroupBox, QHBoxLayout,
-    QListWidget, QListWidgetItem
+    QListWidget, QListWidgetItem,QTableView, QLineEdit,QHeaderView ,QPushButton,QAbstractItemView, QStyledItemDelegate
 )
-from PyQt6.QtCore import Qt
-from Core.views.views import CircularProgressButton, SwitchButton, ListSmartItemWidget
+from PyQt6.QtCore import Qt,QAbstractTableModel, QModelIndex, QSortFilterProxyModel
+from Core.views.views import CircularProgressButton, SwitchButton, ListSmartItemWidget,PackageButton
 from Orders.views.actions import fetch_with_worker, populate_company_list, get_company_names_from_db, \
     get_api_credentials_by_names
+
+from sqlmodel import Session, select
+
+from Core.utils.model_utils import get_engine
+from Orders.models.trendyol_models import OrderData
+
 
 
 
@@ -13,74 +19,26 @@ from Orders.views.actions import fetch_with_worker, populate_company_list, get_c
 
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QTableView, QLineEdit, QHBoxLayout,
-    QGroupBox, QHeaderView
+    QWidget, QVBoxLayout, QListWidget, QListWidgetItem,
+    QPushButton, QHBoxLayout, QGroupBox
 )
-from PyQt6.QtCore import Qt, QAbstractTableModel, QModelIndex, QSortFilterProxyModel
 from sqlmodel import Session, select
 from Core.utils.model_utils import get_engine
 from Orders.models.trendyol_models import OrderData
-from collections import defaultdict
+from Core.views.views import SwitchButton, ListSmartItemWidget
 
 
-# 🔹 ORM verisini tabloya bağlayan model
-class SQLModelTableModel(QAbstractTableModel):
-    def __init__(self, records, columns, parent=None):
-        super().__init__(parent)
-        self.records = records
-        self.columns = columns
-
-    def rowCount(self, parent=QModelIndex()):
-        return len(self.records)
-
-    def columnCount(self, parent=QModelIndex()):
-        return len(self.columns)
-
-    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
-        if not index.isValid():
-            return None
-        if role == Qt.ItemDataRole.DisplayRole:
-            record = self.records[index.row()]
-            col_name = self.columns[index.column()]
-            return str(getattr(record, col_name, ""))
-        return None
-
-    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
-        if role == Qt.ItemDataRole.DisplayRole and orientation == Qt.Orientation.Horizontal:
-            return self.columns[section]
-        return None
-
-
-# 🔹 Çoklu filtre desteği
-class MultiFilterProxyModel(QSortFilterProxyModel):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.filters = {}
-
-    def setFilterForColumn(self, column, text):
-        self.filters[column] = text.lower()
-        self.invalidateFilter()
-
-    def filterAcceptsRow(self, source_row, source_parent):
-        for column, text in self.filters.items():
-            if text:
-                index = self.sourceModel().index(source_row, column, source_parent)
-                data = str(self.sourceModel().data(index, Qt.ItemDataRole.DisplayRole)).lower()
-                if text not in data:
-                    return False
-        return True
-
-
-# 🔹 Pencere sınıfı
 class OrdersListWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Kargoya Hazır Siparişler")
-        self.setGeometry(200, 200, 1000, 600)
+        self.setGeometry(200, 200, 900, 600)
+
+        self.selected_orders = set()
 
         layout = QVBoxLayout(self)
 
-        # ✅ Veriyi çek ve filtrele
+        # ✅ Snapshot’ları çek → filtrele
         with Session(get_engine("orders.db")) as session:
             raw_data = session.exec(select(OrderData)).all()
 
@@ -93,57 +51,81 @@ class OrdersListWindow(QWidget):
             ):
                 latest_snapshots[key] = record
 
-        # ✅ shipmentPackageStatus filtresi
         filtered_data = [
             rec for rec in latest_snapshots.values()
             if rec.shipmentPackageStatus == "ReadyToShip"
         ]
 
-        # ✅ Gösterilecek kolonlar
-        columns = [
-            "orderNumber",
-            "status",
-            "shipmentPackageStatus",
-            "cargoTrackingNumber",
-            "cargoProviderName",
-            "customerId",
-            "lastModifiedDate",
-            "price",
-            "vatBaseAmount",
-            "tyDiscount",
-            "amount",
-        ]
+        self.orders = filtered_data
 
-        # ✅ Model oluştur
-        self.model = SQLModelTableModel(filtered_data, columns)
+        # ✅ Liste
+        self.list_widget = QListWidget()
+        # seçim highlight kapatılıyor, sadece hover/klik stili gözüksün
+        self.list_widget.setSelectionMode(QListWidget.SelectionMode.NoSelection)
+        layout.addWidget(self.list_widget)
 
-        # ✅ Proxy
-        self.proxy_model = MultiFilterProxyModel(self)
-        self.proxy_model.setSourceModel(self.model)
-
-        # ✅ Tablo
-        self.table = QTableView()
-        self.table.setModel(self.proxy_model)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        layout.addWidget(self.table)
-
-        # ✅ Filtre kutuları
-        filter_box = QGroupBox("Filtreler")
-        filter_layout = QHBoxLayout(filter_box)
-
-        for col in range(len(columns)):
-            input_field = QLineEdit()
-            input_field.setPlaceholderText(columns[col])
-            input_field.textChanged.connect(
-                lambda text, c=col: self.proxy_model.setFilterForColumn(c, text)
+        # Satırları doldur
+        for order in self.orders:
+            switch = SwitchButton()
+            item_widget = ListSmartItemWidget(
+                title=f"Order: {order.orderNumber}",
+                subtitle=f"Müşteri: {getattr(order, 'customerFirstName', '—')} {getattr(order, 'customerLastName', '')}",
+                extra=f"Kargo: {order.cargoProviderName or '-'} | Tutar: {getattr(order, 'totalPrice', 0)} ₺",
+                identifier=order.orderNumber,
+                icon_path="images/orders_img.png",
+                optional_widget=switch
             )
-            filter_layout.addWidget(input_field)
 
-        layout.insertWidget(0, filter_box)
+            item_widget.interaction.connect(self.on_item_interaction)
+            item_widget.selectionRequested.connect(self.clear_other_selections)  # 🔴 ekle
 
+            item = QListWidgetItem(self.list_widget)
+            item.setSizeHint(item_widget.sizeHint())
+            self.list_widget.setItemWidget(item, item_widget)
 
+        # ✅ Toplu işlem butonları
+        control_box = QGroupBox("Toplu İşlemler")
+        control_layout = QHBoxLayout(control_box)
 
+        select_all_btn = QPushButton("Tümünü Seç")
+        deselect_all_btn = QPushButton("Seçimi Kaldır")
 
+        select_all_btn.clicked.connect(self.select_all)
+        deselect_all_btn.clicked.connect(self.deselect_all)
+
+        control_layout.addStretch()
+        control_layout.addWidget(select_all_btn)
+        control_layout.addWidget(deselect_all_btn)
+        layout.addWidget(control_box)
+
+    # 🔘 Switch toggle edildiğinde
+    def on_item_interaction(self, identifier, value):
+        if value:  # switch açık
+            self.selected_orders.add(identifier)
+        else:
+            self.selected_orders.discard(identifier)
+
+    # 🔘 Tümünü seç
+    def select_all(self):
+        for i in range(self.list_widget.count()):
+            widget = self.list_widget.itemWidget(self.list_widget.item(i))
+            if isinstance(widget.right_widget, SwitchButton):
+                widget.right_widget.setChecked(True)
+                self.selected_orders.add(widget.identifier)
+
+    # 🔘 Seçimi kaldır
+    def deselect_all(self):
+        for i in range(self.list_widget.count()):
+            widget = self.list_widget.itemWidget(self.list_widget.item(i))
+            if isinstance(widget.right_widget, SwitchButton):
+                widget.right_widget.setChecked(False)
+        self.selected_orders.clear()
+
+    def clear_other_selections(self, keep_widget):
+        for i in range(self.list_widget.count()):
+            widget = self.list_widget.itemWidget(self.list_widget.item(i))
+            if widget is not keep_widget:
+                widget.set_selected(False)
 
 
 
@@ -154,7 +136,11 @@ class OrdersTab(QWidget):
 
         # 🟡 Üst bilgilendirme yazısı
         self.info_label = QLabel("Siparişleri buradan yönetebilirsin.")
+        self.order_btn = PackageButton("Siparişler", icon_path="images/orders_img.png")
+        self.order_btn.clicked.connect(self.open_orders_window)
+        layout.addWidget(self.order_btn)
         layout.addWidget(self.info_label)
+
 
         # 🟢 Başlatma butonu
         self.fetch_button = CircularProgressButton("BAŞLAT")
@@ -169,6 +155,7 @@ class OrdersTab(QWidget):
         self.bottom_panel = QGroupBox("Veri Çekme Paneli")
         self.bottom_panel.setFixedHeight(200)
         bottom_layout = QHBoxLayout(self.bottom_panel)
+
 
         company_box = QGroupBox("Şirketler")
         company_layout = QVBoxLayout(company_box)
@@ -187,6 +174,7 @@ class OrdersTab(QWidget):
         comp_list = get_company_names_from_db()
         # ✅ Şirketleri yükle
         populate_company_list(self.company_list, comp_list, self.toggle_company)  # ← kendi şirketlerini ekle
+
 
 
     def toggle_company(self, name: str, active: bool):
@@ -220,10 +208,14 @@ class OrdersTab(QWidget):
         except Exception as e:
             print("Hata:", e)
             self.info_label.setText("❌ Hata oluştu!")
-    def on_orders_fetched(self):
-        self.info_label.setText("✅ Siparişler başarıyla alındı.")
+
+    def open_orders_window(self):
         self.orders_window = OrdersListWindow()
         self.orders_window.show()
+
+    def on_orders_fetched(self):
+        self.info_label.setText("✅ Siparişler başarıyla alındı.")
+
 
     def update_progress(self, current, total):
         percent = int(current / total * 100)

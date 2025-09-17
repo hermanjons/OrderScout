@@ -12,6 +12,8 @@ from Account.models import ApiAccount
 from Core.utils.model_utils import get_engine  # engine değişkeni nerede tanımlıysa onu import et
 
 
+
+
 def get_company_names_from_db() -> list[str]:
     """
     Veritabanından tüm şirket isimlerini çeker.
@@ -58,7 +60,17 @@ def fetch_with_worker(view_instance, comp_api_account_list):
         print("fetch_with_worker hatası:", e)
 
 
+
+
+
+
+
+
+
+
+
 def populate_company_list(list_widget, company_names: list[str], interaction_callback):
+
     list_widget.clear()
 
     for name in company_names:
@@ -76,13 +88,13 @@ def populate_company_list(list_widget, company_names: list[str], interaction_cal
             identifier=name,
             icon_path=icon_path,
             optional_widget=switch,
-            initial_active=True
         )
         widget.interaction.connect(interaction_callback)
-
         item.setSizeHint(widget.sizeHint())
         list_widget.addItem(item)
         list_widget.setItemWidget(item, widget)
 
         # 🔥 EKLENDİ: başlangıçta aktif olduğunu sinyalle!
         interaction_callback(name, True)
+
+

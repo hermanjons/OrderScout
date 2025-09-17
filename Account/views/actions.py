@@ -7,12 +7,6 @@ from settings import MEDIA_ROOT  # icon dosyası burada
 from Account.models import ApiAccount
 from Core.utils.model_utils import create_records
 import datetime
-# accounts/views/actions.py
-
-
-
-
-
 
 
 def save_company_data(dialog_instance, form_values: dict, db_name="orders.db"):
@@ -67,3 +61,8 @@ def get_company_register_action(parent=None):
 
     action.triggered.connect(open_register_dialog)
     return action
+
+
+
+
+
