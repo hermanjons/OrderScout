@@ -4,7 +4,7 @@ from Orders.views.views import OrdersTab
 from Account.views.views import CompanyRegisterDialog
 import os
 from settings import MEDIA_ROOT
-from Account.views.actions import get_company_register_action
+from Account.views.views import create_company_register_action
 
 
 class MainInterface(QMainWindow):
@@ -27,12 +27,9 @@ class MainInterface(QMainWindow):
         self.addToolBar(self.toolBar)
 
         # Şirket kayıt aksiyonunu dışardan getiriyoruz (prensibe uygun!)
-        company_action = get_company_register_action(self)
+        company_action = create_company_register_action(self)
         self.toolBar.addAction(company_action)
 
-    def open_company_register(self):
-        dialog = CompanyRegisterDialog()
-        dialog.exec()
 
     def init_tabs(self):
         self.orders_tab = OrdersTab()

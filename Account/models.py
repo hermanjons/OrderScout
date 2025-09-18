@@ -1,4 +1,4 @@
-from sqlmodel import SQLModel, Field, UniqueConstraint
+from sqlmodel import SQLModel, Field, UniqueConstraint, Column, JSON
 from typing import Optional
 from datetime import datetime
 
@@ -6,31 +6,36 @@ from datetime import datetime
 class ApiAccount(SQLModel, table=True):
     __tablename__ = "apiaccount"
     __table_args__ = (
-        UniqueConstraint("comp_name", "platform", "seller_id",
-                         name="uq_apiaccount_comp_platform_seller"),
+        UniqueConstraint("comp_name", "platform", "account_id",
+                         name="uq_apiaccount_comp_platform_account"),
     )
 
-    # Surrogate PK
     pk: Optional[int] = Field(default=None, primary_key=True)
 
-    # TEMEL BİLGİLER
-    seller_id: int = Field(index=True)  # Artık PK değil, index'li alan
-    comp_name: str  # Firma adı (UI için)
+    # TEMEL
+    account_id: str = Field(index=True)
+    comp_name: str
+    platform: str = Field(index=True)
 
-    # API GİRİŞ BİLGİLERİ
-    api_key: str
-    api_secret: str
+    # GÖRSEL (LOGO)
+    logo_path: Optional[str] = None  # company_logos klasöründe dosya yolu
 
-    # PLATFORM BİLGİSİ
-    platform: str = Field(default="trendyol", index=True)
+    # API KİMLİK
+    integration_code: Optional[str] = None
+    api_key: Optional[str] = None
+    api_secret: Optional[str] = None
+    token: Optional[str] = None
 
-    # TAKİP VE KULLANIM ZAMANLARI
+    # PLATFORM ÖZEL
+    extra_config: Optional[dict] = Field(
+        sa_column=Column(JSON), default=None
+    )
+
+    # ZAMAN
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
     last_used_at: Optional[datetime] = None
 
-    # GÜVENLİK & ŞİFRELEME (opsiyonel)
+    # DURUM
     encrypted: bool = False
     token_valid: bool = True
-
-    # AKTİFLİK DURUMU
     is_active: bool = True

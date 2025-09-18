@@ -32,13 +32,13 @@ def get_api_credentials_by_names(names: list[str]) -> list[list[str]]:
 
     selected = [r for r in all_records if r.comp_name in names]
 
-    return [[r.pk, r.api_key, r.api_secret, str(r.seller_id)] for r in selected]
+    return [[r.pk, r.api_key, r.api_secret, str(r.account_id)] for r in selected]
 
 
 # Bu fonksiyon view içinden çağrılır
 def fetch_with_worker(view_instance, comp_api_account_list):
     try:
-        search_range_hour = 200
+        search_range_hour = 240
         start_ep_time = time_for_now()
         final_ep_time = time_for_now() - time_stamp_calculator(search_range_hour)
 

@@ -1,0 +1,942 @@
+2025-09-17 17:52:03 [ERROR] [IntegrityError] (sqlite3.IntegrityError) UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('784195', 'mdb', 'TRENDYOL', None, None, 'gaspodfkapods', 'dsgplosmdofsdfsdfs', None, 'null', '2025-09-17 14:52:02.842053', None, 0, 1, 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.IntegrityError: UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 32, in handle_company_save
+    create_records(
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Core\utils\model_utils.py", line 154, in create_records
+    session.add(model(**r))
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 149, in __exit__
+    self.rollback()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 145, in __exit__
+    self.commit()
+  File "<string>", line 2, in commit
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1313, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1288, in _prepare_impl
+    self.session.flush()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4345, in flush
+    self._flush(objects)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4481, in _flush
+    transaction.rollback(_capture_exception=True)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4441, in _flush
+    flush_context.execute()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1415, in execute
+    return meth(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\sql\elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1637, in _execute_clauseelement
+    ret = self._execute_context(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1842, in _execute_context
+    return self._exec_single_context(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1982, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 2351, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('784195', 'mdb', 'TRENDYOL', None, None, 'gaspodfkapods', 'dsgplosmdofsdfsdfs', None, 'null', '2025-09-17 14:52:02.842053', None, 0, 1, 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-09-17 17:52:05 [ERROR] [IntegrityError] (sqlite3.IntegrityError) UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('784195', 'mdb', 'TRENDYOL', None, None, 'gaspodfkapods', 'dsgplosmdofsdfsdfs', None, 'null', '2025-09-17 14:52:04.713869', None, 0, 1, 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.IntegrityError: UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 32, in handle_company_save
+    create_records(
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Core\utils\model_utils.py", line 154, in create_records
+    session.add(model(**r))
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 149, in __exit__
+    self.rollback()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 145, in __exit__
+    self.commit()
+  File "<string>", line 2, in commit
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1313, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1288, in _prepare_impl
+    self.session.flush()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4345, in flush
+    self._flush(objects)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4481, in _flush
+    transaction.rollback(_capture_exception=True)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4441, in _flush
+    flush_context.execute()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1415, in execute
+    return meth(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\sql\elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1637, in _execute_clauseelement
+    ret = self._execute_context(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1842, in _execute_context
+    return self._exec_single_context(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1982, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 2351, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('784195', 'mdb', 'TRENDYOL', None, None, 'gaspodfkapods', 'dsgplosmdofsdfsdfs', None, 'null', '2025-09-17 14:52:04.713869', None, 0, 1, 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-09-17 17:52:06 [ERROR] [IntegrityError] (sqlite3.IntegrityError) UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('784195', 'mdb', 'TRENDYOL', None, None, 'gaspodfkapods', 'dsgplosmdofsdfsdfs', None, 'null', '2025-09-17 14:52:06.001912', None, 0, 1, 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.IntegrityError: UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 32, in handle_company_save
+    create_records(
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Core\utils\model_utils.py", line 154, in create_records
+    session.add(model(**r))
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 149, in __exit__
+    self.rollback()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 145, in __exit__
+    self.commit()
+  File "<string>", line 2, in commit
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1313, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1288, in _prepare_impl
+    self.session.flush()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4345, in flush
+    self._flush(objects)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4481, in _flush
+    transaction.rollback(_capture_exception=True)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4441, in _flush
+    flush_context.execute()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1415, in execute
+    return meth(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\sql\elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1637, in _execute_clauseelement
+    ret = self._execute_context(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1842, in _execute_context
+    return self._exec_single_context(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1982, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 2351, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('784195', 'mdb', 'TRENDYOL', None, None, 'gaspodfkapods', 'dsgplosmdofsdfsdfs', None, 'null', '2025-09-17 14:52:06.001912', None, 0, 1, 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-09-17 17:54:31 [ERROR] [IntegrityError] (sqlite3.IntegrityError) UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('784195', 'mdb', 'TRENDYOL', None, None, 'plasdafmbsdmd', 'plgdsöfpsdfdsfmf', None, 'null', '2025-09-17 14:54:30.056178', None, 0, 1, 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.IntegrityError: UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 32, in handle_company_save
+    create_records(
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Core\utils\model_utils.py", line 154, in create_records
+    session.add(model(**r))
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 149, in __exit__
+    self.rollback()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 145, in __exit__
+    self.commit()
+  File "<string>", line 2, in commit
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1313, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1288, in _prepare_impl
+    self.session.flush()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4345, in flush
+    self._flush(objects)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4481, in _flush
+    transaction.rollback(_capture_exception=True)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4441, in _flush
+    flush_context.execute()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1415, in execute
+    return meth(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\sql\elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1637, in _execute_clauseelement
+    ret = self._execute_context(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1842, in _execute_context
+    return self._exec_single_context(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1982, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 2351, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('784195', 'mdb', 'TRENDYOL', None, None, 'plasdafmbsdmd', 'plgdsöfpsdfdsfmf', None, 'null', '2025-09-17 14:54:30.056178', None, 0, 1, 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-09-17 18:00:53 [ERROR] [IntegrityError] (sqlite3.IntegrityError) UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('784195', 'mdb', 'TRENDYOL', None, None, 'lasnasfnasndan', 'kodsmfosfnsfsd', None, 'null', '2025-09-17 15:00:51.233617', None, 0, 1, 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.IntegrityError: UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 32, in handle_company_save
+    create_records(
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Core\utils\model_utils.py", line 154, in create_records
+    session.add(model(**r))
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 149, in __exit__
+    self.rollback()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 145, in __exit__
+    self.commit()
+  File "<string>", line 2, in commit
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1313, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1288, in _prepare_impl
+    self.session.flush()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4345, in flush
+    self._flush(objects)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4481, in _flush
+    transaction.rollback(_capture_exception=True)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4441, in _flush
+    flush_context.execute()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1415, in execute
+    return meth(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\sql\elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1637, in _execute_clauseelement
+    ret = self._execute_context(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1842, in _execute_context
+    return self._exec_single_context(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1982, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 2351, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('784195', 'mdb', 'TRENDYOL', None, None, 'lasnasfnasndan', 'kodsmfosfnsfsd', None, 'null', '2025-09-17 15:00:51.233617', None, 0, 1, 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-09-17 18:01:00 [ERROR] [IntegrityError] (sqlite3.IntegrityError) UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('784195', 'mdb', 'TRENDYOL', None, None, 'lasnasfnasndan', 'kodsmfosfnsfsd', None, 'null', '2025-09-17 15:00:54.378293', None, 0, 1, 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.IntegrityError: UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 32, in handle_company_save
+    create_records(
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Core\utils\model_utils.py", line 154, in create_records
+    session.add(model(**r))
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 149, in __exit__
+    self.rollback()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 145, in __exit__
+    self.commit()
+  File "<string>", line 2, in commit
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1313, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1288, in _prepare_impl
+    self.session.flush()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4345, in flush
+    self._flush(objects)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4481, in _flush
+    transaction.rollback(_capture_exception=True)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4441, in _flush
+    flush_context.execute()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1415, in execute
+    return meth(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\sql\elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1637, in _execute_clauseelement
+    ret = self._execute_context(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1842, in _execute_context
+    return self._exec_single_context(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1982, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 2351, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('784195', 'mdb', 'TRENDYOL', None, None, 'lasnasfnasndan', 'kodsmfosfnsfsd', None, 'null', '2025-09-17 15:00:54.378293', None, 0, 1, 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-09-17 18:01:01 [ERROR] [IntegrityError] (sqlite3.IntegrityError) UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('784195', 'mdb', 'TRENDYOL', None, None, 'lasnasfnasndan', 'kodsmfosfnsfsd', None, 'null', '2025-09-17 15:01:01.066667', None, 0, 1, 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.IntegrityError: UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 32, in handle_company_save
+    create_records(
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Core\utils\model_utils.py", line 154, in create_records
+    session.add(model(**r))
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 149, in __exit__
+    self.rollback()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 145, in __exit__
+    self.commit()
+  File "<string>", line 2, in commit
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1313, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1288, in _prepare_impl
+    self.session.flush()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4345, in flush
+    self._flush(objects)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4481, in _flush
+    transaction.rollback(_capture_exception=True)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4441, in _flush
+    flush_context.execute()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1415, in execute
+    return meth(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\sql\elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1637, in _execute_clauseelement
+    ret = self._execute_context(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1842, in _execute_context
+    return self._exec_single_context(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1982, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 2351, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('784195', 'mdb', 'TRENDYOL', None, None, 'lasnasfnasndan', 'kodsmfosfnsfsd', None, 'null', '2025-09-17 15:01:01.066667', None, 0, 1, 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-09-17 18:01:02 [ERROR] [IntegrityError] (sqlite3.IntegrityError) UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('784195', 'mdb', 'TRENDYOL', None, None, 'lasnasfnasndan', 'kodsmfosfnsfsd', None, 'null', '2025-09-17 15:01:02.226984', None, 0, 1, 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.IntegrityError: UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 32, in handle_company_save
+    create_records(
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Core\utils\model_utils.py", line 154, in create_records
+    session.add(model(**r))
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 149, in __exit__
+    self.rollback()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 145, in __exit__
+    self.commit()
+  File "<string>", line 2, in commit
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1313, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1288, in _prepare_impl
+    self.session.flush()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4345, in flush
+    self._flush(objects)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4481, in _flush
+    transaction.rollback(_capture_exception=True)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4441, in _flush
+    flush_context.execute()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1415, in execute
+    return meth(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\sql\elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1637, in _execute_clauseelement
+    ret = self._execute_context(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1842, in _execute_context
+    return self._exec_single_context(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1982, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 2351, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('784195', 'mdb', 'TRENDYOL', None, None, 'lasnasfnasndan', 'kodsmfosfnsfsd', None, 'null', '2025-09-17 15:01:02.226984', None, 0, 1, 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-09-17 18:01:04 [ERROR] [IntegrityError] (sqlite3.IntegrityError) UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('784195', 'mdb', 'TRENDYOL', None, None, 'lasnasfnasndan', 'kodsmfosfnsfsd', None, 'null', '2025-09-17 15:01:03.802870', None, 0, 1, 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.IntegrityError: UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 32, in handle_company_save
+    create_records(
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Core\utils\model_utils.py", line 154, in create_records
+    session.add(model(**r))
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 149, in __exit__
+    self.rollback()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 145, in __exit__
+    self.commit()
+  File "<string>", line 2, in commit
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1313, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1288, in _prepare_impl
+    self.session.flush()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4345, in flush
+    self._flush(objects)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4481, in _flush
+    transaction.rollback(_capture_exception=True)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4441, in _flush
+    flush_context.execute()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1415, in execute
+    return meth(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\sql\elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1637, in _execute_clauseelement
+    ret = self._execute_context(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1842, in _execute_context
+    return self._exec_single_context(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1982, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 2351, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('784195', 'mdb', 'TRENDYOL', None, None, 'lasnasfnasndan', 'kodsmfosfnsfsd', None, 'null', '2025-09-17 15:01:03.802870', None, 0, 1, 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-09-17 18:03:37 [ERROR] [IntegrityError] (sqlite3.IntegrityError) UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('784195', 'mdb', 'TRENDYOL', None, None, 'pmgsıdmaısdom', 'fsdlfmsdfıdsmfsdf', None, 'null', '2025-09-17 15:03:36.644555', None, 0, 1, 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.IntegrityError: UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 32, in handle_company_save
+    create_records(
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Core\utils\model_utils.py", line 154, in create_records
+    session.add(model(**r))
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 149, in __exit__
+    self.rollback()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 145, in __exit__
+    self.commit()
+  File "<string>", line 2, in commit
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1313, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1288, in _prepare_impl
+    self.session.flush()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4345, in flush
+    self._flush(objects)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4481, in _flush
+    transaction.rollback(_capture_exception=True)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4441, in _flush
+    flush_context.execute()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1415, in execute
+    return meth(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\sql\elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1637, in _execute_clauseelement
+    ret = self._execute_context(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1842, in _execute_context
+    return self._exec_single_context(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1982, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 2351, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('784195', 'mdb', 'TRENDYOL', None, None, 'pmgsıdmaısdom', 'fsdlfmsdfıdsmfsdf', None, 'null', '2025-09-17 15:03:36.644555', None, 0, 1, 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-09-17 19:18:00 [ERROR] [StatementError] (builtins.TypeError) SQLite DateTime type only accepts Python datetime and date objects as input.
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: [{'encrypted': False, 'account_id': '784195', 'platform': 'TRENDYOL', 'api_key': 'yYCIZzMYlGSVxfOONWyh', 'comp_name': 'mdb-eski', 'logo_path': 'C:\\Use ... (129 characters truncated) ... ': True, 'extra_config': None, 'api_secret': 'p4alR1uRJoLzYixdCHaY', 'is_active': True, 'token': None, 'last_used_at': None, 'integration_code': None}]]
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1811, in _execute_context
+    context = constructor(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 1483, in _init_compiled
+    l_param: List[Any] = [
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 1485, in <listcomp>
+    flattened_processors[key](compiled_params[key])
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\dialects\sqlite\base.py", line 1187, in process
+    raise TypeError(
+TypeError: SQLite DateTime type only accepts Python datetime and date objects as input.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 34, in handle_company_save
+    create_records(
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Core\utils\model_utils.py", line 154, in create_records
+    session.add(model(**r))
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 149, in __exit__
+    self.rollback()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 145, in __exit__
+    self.commit()
+  File "<string>", line 2, in commit
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1313, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1288, in _prepare_impl
+    self.session.flush()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4345, in flush
+    self._flush(objects)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4481, in _flush
+    transaction.rollback(_capture_exception=True)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4441, in _flush
+    flush_context.execute()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1415, in execute
+    return meth(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\sql\elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1637, in _execute_clauseelement
+    ret = self._execute_context(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1817, in _execute_context
+    self._handle_dbapi_exception(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 2351, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1811, in _execute_context
+    context = constructor(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 1483, in _init_compiled
+    l_param: List[Any] = [
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 1485, in <listcomp>
+    flattened_processors[key](compiled_params[key])
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\dialects\sqlite\base.py", line 1187, in process
+    raise TypeError(
+sqlalchemy.exc.StatementError: (builtins.TypeError) SQLite DateTime type only accepts Python datetime and date objects as input.
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: [{'encrypted': False, 'account_id': '784195', 'platform': 'TRENDYOL', 'api_key': 'yYCIZzMYlGSVxfOONWyh', 'comp_name': 'mdb-eski', 'logo_path': 'C:\\Use ... (129 characters truncated) ... ': True, 'extra_config': None, 'api_secret': 'p4alR1uRJoLzYixdCHaY', 'is_active': True, 'token': None, 'last_used_at': None, 'integration_code': None}]]
+2025-09-17 19:18:06 [ERROR] [StatementError] (builtins.TypeError) SQLite DateTime type only accepts Python datetime and date objects as input.
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: [{'encrypted': False, 'account_id': '784195', 'platform': 'TRENDYOL', 'api_key': 'yYCIZzMYlGSVxfOONWyh', 'comp_name': 'mdb-eski', 'logo_path': 'C:\\Use ... (129 characters truncated) ... ': True, 'extra_config': None, 'api_secret': 'p4alR1uRJoLzYixdCHaY', 'is_active': True, 'token': None, 'last_used_at': None, 'integration_code': None}]]
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1811, in _execute_context
+    context = constructor(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 1483, in _init_compiled
+    l_param: List[Any] = [
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 1485, in <listcomp>
+    flattened_processors[key](compiled_params[key])
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\dialects\sqlite\base.py", line 1187, in process
+    raise TypeError(
+TypeError: SQLite DateTime type only accepts Python datetime and date objects as input.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 34, in handle_company_save
+    create_records(
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Core\utils\model_utils.py", line 154, in create_records
+    session.add(model(**r))
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 149, in __exit__
+    self.rollback()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 145, in __exit__
+    self.commit()
+  File "<string>", line 2, in commit
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1313, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1288, in _prepare_impl
+    self.session.flush()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4345, in flush
+    self._flush(objects)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4481, in _flush
+    transaction.rollback(_capture_exception=True)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4441, in _flush
+    flush_context.execute()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1415, in execute
+    return meth(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\sql\elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1637, in _execute_clauseelement
+    ret = self._execute_context(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1817, in _execute_context
+    self._handle_dbapi_exception(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 2351, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1811, in _execute_context
+    context = constructor(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 1483, in _init_compiled
+    l_param: List[Any] = [
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 1485, in <listcomp>
+    flattened_processors[key](compiled_params[key])
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\dialects\sqlite\base.py", line 1187, in process
+    raise TypeError(
+sqlalchemy.exc.StatementError: (builtins.TypeError) SQLite DateTime type only accepts Python datetime and date objects as input.
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: [{'encrypted': False, 'account_id': '784195', 'platform': 'TRENDYOL', 'api_key': 'yYCIZzMYlGSVxfOONWyh', 'comp_name': 'mdb-eski', 'logo_path': 'C:\\Use ... (129 characters truncated) ... ': True, 'extra_config': None, 'api_secret': 'p4alR1uRJoLzYixdCHaY', 'is_active': True, 'token': None, 'last_used_at': None, 'integration_code': None}]]
+2025-09-17 19:18:24 [ERROR] [StatementError] (builtins.TypeError) SQLite DateTime type only accepts Python datetime and date objects as input.
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: [{'comp_name': 'gasda', 'token_valid': True, 'extra_config': None, 'api_secret': 'dsfgsdfsdf', 'created_at': 1758136703000, 'api_key': 'dsfdsfsd', 'enc ... (14 characters truncated) ... , 'is_active': True, 'account_id': '784195', 'platform': 'TRENDYOL', 'last_used_at': None, 'logo_path': None, 'token': None, 'integration_code': None}]]
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1811, in _execute_context
+    context = constructor(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 1483, in _init_compiled
+    l_param: List[Any] = [
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 1485, in <listcomp>
+    flattened_processors[key](compiled_params[key])
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\dialects\sqlite\base.py", line 1187, in process
+    raise TypeError(
+TypeError: SQLite DateTime type only accepts Python datetime and date objects as input.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 34, in handle_company_save
+    create_records(
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Core\utils\model_utils.py", line 154, in create_records
+    session.add(model(**r))
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 149, in __exit__
+    self.rollback()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 145, in __exit__
+    self.commit()
+  File "<string>", line 2, in commit
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1313, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1288, in _prepare_impl
+    self.session.flush()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4345, in flush
+    self._flush(objects)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4481, in _flush
+    transaction.rollback(_capture_exception=True)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4441, in _flush
+    flush_context.execute()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1415, in execute
+    return meth(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\sql\elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1637, in _execute_clauseelement
+    ret = self._execute_context(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1817, in _execute_context
+    self._handle_dbapi_exception(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 2351, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1811, in _execute_context
+    context = constructor(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 1483, in _init_compiled
+    l_param: List[Any] = [
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 1485, in <listcomp>
+    flattened_processors[key](compiled_params[key])
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\dialects\sqlite\base.py", line 1187, in process
+    raise TypeError(
+sqlalchemy.exc.StatementError: (builtins.TypeError) SQLite DateTime type only accepts Python datetime and date objects as input.
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: [{'comp_name': 'gasda', 'token_valid': True, 'extra_config': None, 'api_secret': 'dsfgsdfsdf', 'created_at': 1758136703000, 'api_key': 'dsfdsfsd', 'enc ... (14 characters truncated) ... , 'is_active': True, 'account_id': '784195', 'platform': 'TRENDYOL', 'last_used_at': None, 'logo_path': None, 'token': None, 'integration_code': None}]]
+2025-09-17 19:21:53 [ERROR] [NameError] name 'datetime' is not defined
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 31, in handle_company_save
+    "created_at": datetime.datetime.utcnow(),
+NameError: name 'datetime' is not defined
+2025-09-17 19:33:16 [ERROR] [NameError] name 'datetime' is not defined
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\processors\pipeline.py", line 14, in handle_company_save
+    "created_at": datetime.datetime.utcnow(),
+NameError: name 'datetime' is not defined
+2025-09-17 19:34:32 [ERROR] [NameError] name 'create_records' is not defined
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\processors\pipeline.py", line 18, in handle_company_save
+    create_records(
+NameError: name 'create_records' is not defined
+2025-09-17 19:35:13 [ERROR] [NameError] name 'ApiAccount' is not defined
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\processors\pipeline.py", line 20, in handle_company_save
+    model=ApiAccount,
+NameError: name 'ApiAccount' is not defined

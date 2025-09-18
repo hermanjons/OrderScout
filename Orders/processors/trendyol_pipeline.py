@@ -1,4 +1,4 @@
-from Core.api.Api_engine import TrendyolApi
+from Orders.api.trendyol_api import TrendyolApi
 from Core.utils.model_utils import create_records, make_normalizer
 import asyncio
 from typing import Optional,Callable
