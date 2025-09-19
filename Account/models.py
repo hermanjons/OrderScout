@@ -12,13 +12,13 @@ class ApiAccount(SQLModel, table=True):
 
     pk: Optional[int] = Field(default=None, primary_key=True)
 
-    # TEMEL
-    account_id: str = Field(index=True)
-    comp_name: str
-    platform: str = Field(index=True)
+    # TEMEL (zorunlu)
+    account_id: str = Field(index=True, nullable=False)
+    comp_name: str = Field(nullable=False)
+    platform: str = Field(index=True, nullable=False)
 
-    # GÖRSEL (LOGO)
-    logo_path: Optional[str] = None  # company_logos klasöründe dosya yolu
+    # GÖRSEL
+    logo_path: Optional[str] = None
 
     # API KİMLİK
     integration_code: Optional[str] = None
@@ -27,9 +27,7 @@ class ApiAccount(SQLModel, table=True):
     token: Optional[str] = None
 
     # PLATFORM ÖZEL
-    extra_config: Optional[dict] = Field(
-        sa_column=Column(JSON), default=None
-    )
+    extra_config: Optional[dict] = Field(sa_column=Column(JSON), default=None)
 
     # ZAMAN
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)

@@ -1,7 +1,6 @@
 from PyQt6.QtWidgets import QMainWindow, QTabWidget, QToolBar
 from PyQt6.QtGui import QIcon, QAction
 from Orders.views.views import OrdersTab
-from Account.views.views import CompanyRegisterDialog
 import os
 from settings import MEDIA_ROOT
 from Account.views.views import create_company_register_action

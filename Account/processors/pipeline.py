@@ -1,48 +1,42 @@
-from Feedback.processors.pipeline import map_error_to_message
-from Feedback.processors.pipeline import Result
+# Account/processors/pipeline.py
 import datetime
-from Core.utils.model_utils import create_records
-from Account.models import ApiAccount
-from PyQt6.QtGui import QIcon, QAction, QPixmap
+import os, shutil
+from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt
-import os
-from settings import MEDIA_ROOT  # icon dosyası burada
-import shutil
+from settings import MEDIA_ROOT
+from Account.models import ApiAccount
+from Core.utils.model_utils import create_records, make_normalizer
+from Feedback.processors.pipeline import Result, map_error_to_message
 
 
-def handle_company_save(dialog_instance):
+
+account_normalizer = make_normalizer(
+    coalesce_none={
+        "account_id": None,
+        "comp_name": None,
+        "platform": None,
+    },
+    strip_strings=True
+)
+
+
+def save_company_to_db(form_values: dict) -> Result:
     try:
-        form_values = {
-            "account_id": dialog_instance.seller_id_input.text(),
-            "comp_name": dialog_instance.comp_name_input.text(),
-            "api_key": dialog_instance.api_key_input.text(),
-            "api_secret": dialog_instance.api_secret_input.text(),
-            "platform": dialog_instance.platform_input.currentText(),
-            "logo_path": dialog_instance.logo_path,
-            "created_at": datetime.datetime.utcnow(),
-        }
-
         create_records(
             model=ApiAccount,
             mode="plain",
             data_list=[form_values],
             db_name="orders.db",
-            conflict_keys=["account_id", "comp_name", "platform"]
-        )
+            conflict_keys=["account_id", "comp_name", "platform"],
+            normalizer=account_normalizer
 
+        )
         return Result.ok("Şirket başarıyla kaydedildi.")
     except Exception as e:
-
-        user_message = map_error_to_message(e)
-        return Result.fail(user_message, error=e)
-
+        return Result.fail(map_error_to_message(e), error=e)
 
 
 def process_logo(file_path: str, max_size: int = 256) -> tuple[str, QPixmap]:
-    """
-    Seçilen logo dosyasını company_logos klasörüne kopyalar,
-    gerekirse küçültür ve (save_path, pixmap) döner.
-    """
     if not file_path:
         return None, None
 
@@ -52,6 +46,7 @@ def process_logo(file_path: str, max_size: int = 256) -> tuple[str, QPixmap]:
 
     logos_dir = os.path.join(MEDIA_ROOT, "company_logos")
     os.makedirs(logos_dir, exist_ok=True)
+
     file_name = os.path.basename(file_path)
     save_path = os.path.join(logos_dir, file_name)
     shutil.copy(file_path, save_path)
