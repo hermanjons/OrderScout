@@ -3,7 +3,7 @@ from PyQt6.QtGui import QIcon, QAction
 from Orders.views.views import OrdersTab
 import os
 from settings import MEDIA_ROOT
-from Account.views.views import create_company_register_action
+from Account.views.views import CompanyManagerButton
 
 
 class MainInterface(QMainWindow):
@@ -25,9 +25,8 @@ class MainInterface(QMainWindow):
         self.toolBar = QToolBar("Ana Toolbar")
         self.addToolBar(self.toolBar)
 
-        # Şirket kayıt aksiyonunu dışardan getiriyoruz (prensibe uygun!)
-        company_action = create_company_register_action(self)
-        self.toolBar.addAction(company_action)
+        self.company_ui = CompanyManagerButton(self)
+        self.toolBar.addAction(self.company_ui.create_action())
 
 
     def init_tabs(self):

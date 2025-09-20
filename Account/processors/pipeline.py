@@ -1,4 +1,6 @@
 # Account/processors/pipeline.py
+from __future__ import annotations
+
 import datetime
 import os, shutil
 from PyQt6.QtGui import QPixmap
@@ -36,13 +38,10 @@ def save_company_to_db(form_values: dict) -> Result:
         return Result.fail(map_error_to_message(e), error=e)
 
 
-def process_logo(file_path: str, max_size: int = 256) -> tuple[str, QPixmap]:
+def process_logo(file_path: str) -> str | None:
+    """Seçilen dosyayı company_logos klasörüne kopyalar, yeni path döner."""
     if not file_path:
-        return None, None
-
-    pixmap = QPixmap(file_path)
-    if pixmap.width() > max_size or pixmap.height() > max_size:
-        pixmap = pixmap.scaled(max_size, max_size, Qt.AspectRatioMode.KeepAspectRatio)
+        return None
 
     logos_dir = os.path.join(MEDIA_ROOT, "company_logos")
     os.makedirs(logos_dir, exist_ok=True)
@@ -51,4 +50,14 @@ def process_logo(file_path: str, max_size: int = 256) -> tuple[str, QPixmap]:
     save_path = os.path.join(logos_dir, file_name)
     shutil.copy(file_path, save_path)
 
-    return save_path, pixmap
+    return save_path
+
+
+def get_all_companies():
+    from Account.models import ApiAccount
+    from sqlmodel import Session, select
+    from Core.utils.model_utils import get_engine
+
+    engine = get_engine("orders.db")
+    with Session(engine) as session:
+        return session.exec(select(ApiAccount)).all()
