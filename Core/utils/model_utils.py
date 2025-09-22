@@ -254,3 +254,34 @@ def update_records(
 
     except Exception as e:
         print(f"[HATA] Kayıt güncellenemedi: {e}")
+
+
+
+def delete_records(
+        model: Type[SQLModel],
+        db_engine: Engine,
+        filters: dict
+) -> object:
+    """
+    Genel amaçlı delete fonksiyonu.
+
+    - `model`: Silme yapılacak SQLModel sınıfı
+    - `db_engine`: SQLAlchemy engine objesi
+    - `filters`: Silinecek kayıtların filtreleri (örn: {"orderNumber": "123"})
+    """
+    try:
+        with Session(db_engine) as session:
+            stmt = select(model)
+            for attr, value in filters.items():
+                stmt = stmt.where(getattr(model, attr) == value)
+
+            results = session.exec(stmt).all()
+
+            for item in results:
+                session.delete(item)
+
+            session.commit()
+            print(f"[OK] {len(results)} kayıt silindi.")
+
+    except Exception as e:
+        print(f"[HATA] Kayıt silinemedi: {e}")

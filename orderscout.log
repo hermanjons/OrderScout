@@ -1430,3 +1430,481 @@ sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed
 [SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
 [parameters: ('784195', 'mdb', 'TRENDYOL', 'C:\\Users\\hermanjons\\PycharmProjects\\orderScout\\images\\company_logos\\onlinecustoms.png', None, 'rRXjlMWHLkIGWXb91X1R', '25V4gxNM7XuOHMmvybUb', None, 'null', '2025-09-19 13:55:48.858401', None, 0, 1, 1)]
 (Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-09-20 23:51:36 [ERROR] [IntegrityError] (sqlite3.IntegrityError) UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('7841955', 'mdb', 'TRENDYOL', 'C:\\Users\\hermanjons\\PycharmProjects\\orderScout\\images\\company_logos\\modo-di-bellezza-final-logo.png', None, 'rRXjlMWHLkIGWXb91X1R', '25V4gxNM7XuOHMmvybUb', None, 'null', '2025-09-20 20:51:35.194735', None, 0, 1, 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+sqlite3.IntegrityError: UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\processors\pipeline.py", line 27, in save_company_to_db
+    create_records(
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Core\utils\model_utils.py", line 154, in create_records
+    session.add(model(**r))
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 149, in __exit__
+    self.rollback()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\util.py", line 145, in __exit__
+    self.commit()
+  File "<string>", line 2, in commit
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1313, in commit
+    self._prepare_impl()
+  File "<string>", line 2, in _prepare_impl
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\state_changes.py", line 139, in _go
+    ret_value = fn(self, *arg, **kw)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 1288, in _prepare_impl
+    self.session.flush()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4345, in flush
+    self._flush(objects)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4481, in _flush
+    transaction.rollback(_capture_exception=True)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\util\langhelpers.py", line 224, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\session.py", line 4441, in _flush
+    flush_context.execute()
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 466, in execute
+    rec.execute(self)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\unitofwork.py", line 642, in execute
+    util.preloaded.orm_persistence.save_obj(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 93, in save_obj
+    _emit_insert_statements(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\orm\persistence.py", line 1233, in _emit_insert_statements
+    result = connection.execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1415, in execute
+    return meth(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\sql\elements.py", line 523, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1637, in _execute_clauseelement
+    ret = self._execute_context(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1842, in _execute_context
+    return self._exec_single_context(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1982, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 2351, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\base.py", line 1963, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\sqlalchemy\engine\default.py", line 943, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed: apiaccount.comp_name, apiaccount.platform, apiaccount.account_id
+[SQL: INSERT INTO apiaccount (account_id, comp_name, platform, logo_path, integration_code, api_key, api_secret, token, extra_config, created_at, last_used_at, encrypted, token_valid, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('7841955', 'mdb', 'TRENDYOL', 'C:\\Users\\hermanjons\\PycharmProjects\\orderScout\\images\\company_logos\\modo-di-bellezza-final-logo.png', None, 'rRXjlMWHLkIGWXb91X1R', '25V4gxNM7XuOHMmvybUb', None, 'null', '2025-09-20 20:51:35.194735', None, 0, 1, 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-09-21 01:28:17 [ERROR] [AttributeError] 'ApiAccount' object has no attribute 'id'
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 30, in build_company_table
+    item_logo.setData(Qt.ItemDataRole.UserRole, acc.id)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\pydantic\main.py", line 991, in __getattr__
+    raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+AttributeError: 'ApiAccount' object has no attribute 'id'
+2025-09-21 01:28:40 [ERROR] [AttributeError] 'ApiAccount' object has no attribute 'id'
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 30, in build_company_table
+    item_logo.setData(Qt.ItemDataRole.UserRole, acc.id)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\pydantic\main.py", line 991, in __getattr__
+    raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+AttributeError: 'ApiAccount' object has no attribute 'id'
+2025-09-21 01:28:42 [ERROR] [AttributeError] 'ApiAccount' object has no attribute 'id'
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 30, in build_company_table
+    item_logo.setData(Qt.ItemDataRole.UserRole, acc.id)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\pydantic\main.py", line 991, in __getattr__
+    raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+AttributeError: 'ApiAccount' object has no attribute 'id'
+2025-09-21 01:28:48 [ERROR] [AttributeError] 'ApiAccount' object has no attribute 'id'
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 30, in build_company_table
+    item_logo.setData(Qt.ItemDataRole.UserRole, acc.id)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\pydantic\main.py", line 991, in __getattr__
+    raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+AttributeError: 'ApiAccount' object has no attribute 'id'
+2025-09-21 01:28:51 [ERROR] [AttributeError] 'ApiAccount' object has no attribute 'id'
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 30, in build_company_table
+    item_logo.setData(Qt.ItemDataRole.UserRole, acc.id)
+  File "C:\Users\hermanjons\PycharmProjects\OrderScout\venv\lib\site-packages\pydantic\main.py", line 991, in __getattr__
+    raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+AttributeError: 'ApiAccount' object has no attribute 'id'
+2025-09-21 15:58:04 [ERROR] [JSONDecodeError] Expecting value: line 1 column 1 (char 0)
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 161, in collect_form_values
+    values["extra_config"] = json.loads(text) if text else None
+  File "C:\Users\hermanjons\AppData\Local\Programs\Python\Python39\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Users\hermanjons\AppData\Local\Programs\Python\Python39\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Users\hermanjons\AppData\Local\Programs\Python\Python39\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2025-09-21 15:58:06 [ERROR] [JSONDecodeError] Expecting value: line 1 column 1 (char 0)
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 161, in collect_form_values
+    values["extra_config"] = json.loads(text) if text else None
+  File "C:\Users\hermanjons\AppData\Local\Programs\Python\Python39\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Users\hermanjons\AppData\Local\Programs\Python\Python39\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Users\hermanjons\AppData\Local\Programs\Python\Python39\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2025-09-21 18:17:03 [ERROR] [TypeError] 'Result' object is not iterable
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 39, in build_company_table
+    for row, acc in enumerate(records):
+TypeError: 'Result' object is not iterable
+2025-09-21 18:17:08 [ERROR] [TypeError] 'Result' object is not iterable
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 39, in build_company_table
+    for row, acc in enumerate(records):
+TypeError: 'Result' object is not iterable
+2025-09-21 18:18:48 [ERROR] [TypeError] 'Result' object is not iterable
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 39, in build_company_table
+    for row, acc in enumerate(records):
+TypeError: 'Result' object is not iterable
+2025-09-21 18:32:04 [ERROR] [TypeError] cannot unpack non-iterable Result object
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 298, in delete_company_and_refresh
+    success, message = delete_company_from_db(pk)
+TypeError: cannot unpack non-iterable Result object
+2025-09-21 18:32:37 [ERROR] [TypeError] cannot unpack non-iterable Result object
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 298, in delete_company_and_refresh
+    success, message = delete_company_from_db(pk)
+TypeError: cannot unpack non-iterable Result object
+2025-09-21 20:55:33 [INFO] [OK] Şirketler başarıyla getirildi.
+2025-09-21 20:55:33 [INFO] [OK] Şirketler başarıyla yüklendi.
+2025-09-21 20:55:35 [INFO] [OK] Şirket bulundu.
+2025-09-21 20:55:35 [INFO] [OK] Form dolduruldu.
+2025-09-21 20:55:38 [ERROR] [FAIL] Satıcı ID boş bırakılamaz.
+2025-09-21 20:55:48 [INFO] [OK] Şirket (id=1) başarıyla silindi.
+2025-09-21 20:55:48 [INFO] [OK] Şirketler başarıyla getirildi.
+2025-09-21 20:55:48 [INFO] [OK] Şirketler başarıyla yüklendi.
+2025-09-21 20:55:48 [INFO] [OK] Şirket başarıyla silindi.
+2025-09-21 20:56:33 [INFO] [OK] Validasyon başarılı.
+2025-09-21 20:56:33 [INFO] [OK] Şirket başarıyla kaydedildi.
+2025-09-21 20:56:34 [INFO] [OK] Şirketler başarıyla getirildi.
+2025-09-21 20:56:34 [INFO] [OK] Şirketler başarıyla yüklendi.
+2025-09-21 20:56:37 [INFO] [OK] Şirket bulundu.
+2025-09-21 20:56:37 [INFO] [OK] Form dolduruldu.
+2025-09-21 20:56:42 [INFO] [OK] Logo başarıyla kaydedildi.
+2025-09-21 20:56:42 [INFO] [OK] Logo başarıyla yüklendi.
+2025-09-21 20:56:43 [INFO] [OK] Validasyon başarılı.
+2025-09-21 20:56:43 [INFO] [OK] Şirket başarıyla güncellendi.
+2025-09-21 20:56:43 [INFO] [OK] Şirket güncellendi.
+2025-09-21 20:56:44 [INFO] [OK] Şirketler başarıyla getirildi.
+2025-09-21 20:56:44 [INFO] [OK] Şirketler başarıyla yüklendi.
+2025-09-21 20:56:47 [INFO] [OK] Şirketler başarıyla getirildi.
+2025-09-21 20:56:47 [INFO] [OK] Şirketler başarıyla yüklendi.
+2025-09-21 20:56:57 [INFO] [OK] Şirketler başarıyla getirildi.
+2025-09-21 20:56:57 [INFO] [OK] Şirketler başarıyla yüklendi.
+2025-09-21 20:56:59 [INFO] [OK] Şirket bulundu.
+2025-09-21 20:56:59 [INFO] [OK] Form dolduruldu.
+2025-09-21 20:57:01 [INFO] [OK] Validasyon başarılı.
+2025-09-21 20:57:01 [INFO] [OK] Şirket başarıyla güncellendi.
+2025-09-21 20:57:01 [INFO] [OK] Şirket güncellendi.
+2025-09-21 20:57:01 [INFO] [OK] Şirketler başarıyla getirildi.
+2025-09-21 20:57:01 [INFO] [OK] Şirketler başarıyla yüklendi.
+2025-09-21 20:57:02 [INFO] [OK] Şirket bulundu.
+2025-09-21 20:57:02 [INFO] [OK] Form dolduruldu.
+2025-09-21 20:57:04 [INFO] [OK] Validasyon başarılı.
+2025-09-21 20:57:04 [INFO] [OK] Şirket başarıyla güncellendi.
+2025-09-21 20:57:04 [INFO] [OK] Şirket güncellendi.
+2025-09-21 20:57:05 [INFO] [OK] Şirketler başarıyla getirildi.
+2025-09-21 20:57:05 [INFO] [OK] Şirketler başarıyla yüklendi.
+2025-09-21 21:04:01 [INFO] [OK] Şirketler başarıyla getirildi.
+2025-09-21 21:04:01 [INFO] [OK] Şirketler başarıyla yüklendi.
+2025-09-21 21:04:02 [INFO] [OK] Şirket bulundu.
+2025-09-21 21:04:02 [INFO] [OK] Form dolduruldu.
+2025-09-21 21:04:11 [INFO] [OK] Validasyon başarılı.
+2025-09-21 21:04:11 [INFO] [OK] Şirket başarıyla güncellendi.
+2025-09-21 21:04:11 [INFO] [OK] Şirket güncellendi.
+2025-09-21 21:04:12 [INFO] [OK] Şirketler başarıyla getirildi.
+2025-09-21 21:04:12 [INFO] [OK] Şirketler başarıyla yüklendi.
+2025-09-21 21:04:16 [INFO] [OK] Şirket (id=1) başarıyla silindi.
+2025-09-21 21:04:16 [INFO] [OK] Şirketler başarıyla getirildi.
+2025-09-21 21:04:16 [INFO] [OK] Şirketler başarıyla yüklendi.
+2025-09-21 21:04:16 [INFO] [OK] Şirket başarıyla silindi.
+2025-09-21 21:04:21 [INFO] [OK] Şirketler başarıyla getirildi.
+2025-09-21 21:04:21 [INFO] [OK] Şirketler başarıyla yüklendi.
+2025-09-21 21:05:08 [INFO] [OK] Logo başarıyla kaydedildi.
+2025-09-21 21:05:08 [INFO] [OK] Logo başarıyla yüklendi.
+2025-09-21 21:05:09 [INFO] [OK] Validasyon başarılı.
+2025-09-21 21:05:09 [INFO] [OK] Şirket başarıyla kaydedildi.
+2025-09-21 21:05:10 [INFO] [OK] Şirketler başarıyla getirildi.
+2025-09-21 21:05:10 [INFO] [OK] Şirketler başarıyla yüklendi.
+2025-09-21 21:05:14 [INFO] [OK] Şirketler başarıyla getirildi.
+2025-09-21 21:05:14 [INFO] [OK] Şirketler başarıyla yüklendi.
+2025-09-21 21:05:16 [INFO] [OK] Şirket bulundu.
+2025-09-21 21:05:16 [INFO] [OK] Form dolduruldu.
+2025-09-21 21:05:17 [INFO] [OK] Validasyon başarılı.
+2025-09-21 21:05:17 [INFO] [OK] Şirket başarıyla güncellendi.
+2025-09-21 21:05:17 [INFO] [OK] Şirket güncellendi.
+2025-09-21 21:05:18 [INFO] [OK] Şirketler başarıyla getirildi.
+2025-09-21 21:05:18 [INFO] [OK] Şirketler başarıyla yüklendi.
+2025-09-21 21:05:19 [INFO] [OK] Şirket bulundu.
+2025-09-21 21:05:19 [INFO] [OK] Form dolduruldu.
+2025-09-21 21:05:21 [INFO] [OK] Validasyon başarılı.
+2025-09-21 21:05:21 [INFO] [OK] Şirket başarıyla güncellendi.
+2025-09-21 21:05:21 [INFO] [OK] Şirket güncellendi.
+2025-09-21 21:05:22 [INFO] [OK] Şirketler başarıyla getirildi.
+2025-09-21 21:05:22 [INFO] [OK] Şirketler başarıyla yüklendi.
+2025-09-21 21:05:24 [INFO] [OK] Şirket bulundu.
+2025-09-21 21:05:24 [INFO] [OK] Form dolduruldu.
+2025-09-21 21:05:26 [ERROR] [FAIL] Extra Config JSON formatı geçersiz.
+2025-09-21 21:05:26 [ERROR] [JSONDecodeError] Expecting value: line 1 column 1 (char 0)
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 173, in collect_form_values
+    values["extra_config"] = json.loads(text) if text else None
+  File "C:\Users\hermanjons\AppData\Local\Programs\Python\Python39\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Users\hermanjons\AppData\Local\Programs\Python\Python39\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Users\hermanjons\AppData\Local\Programs\Python\Python39\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2025-09-21 21:31:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:36:44 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:36:44 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:42:28 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:42:28 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:42:48 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:42:48 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:43:17 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:43:17 [ERROR] [FAIL] Worker Exception: name 'map_error_to_message' is not defined
+2025-09-21 21:43:17 [ERROR] [NameError] name 'map_error_to_message' is not defined
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Orders\processors\trendyol_pipeline.py", line 84, in fetch_orders_all
+    results = await asyncio.gather(*tasks)
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Orders\processors\trendyol_pipeline.py", line 35, in fetch_orders_for_status
+    content, _, _, _, status_code = await api.find_orders(
+TypeError: cannot unpack non-iterable Result object
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Core\threads\async_worker.py", line 21, in run
+    result = loop.run_until_complete(self.async_func(*self.args, **self.kwargs))
+  File "C:\Users\hermanjons\AppData\Local\Programs\Python\Python39\lib\asyncio\base_events.py", line 647, in run_until_complete
+    return future.result()
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Orders\processors\trendyol_pipeline.py", line 99, in fetch_orders_all
+    return Result.fail(map_error_to_message(e), error=e)
+NameError: name 'map_error_to_message' is not defined
+2025-09-21 21:43:39 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:43:39 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:43:39 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:43:39 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:43:39 [ERROR] [FAIL] Worker Exception: name 'map_error_to_message' is not defined
+2025-09-21 21:43:39 [ERROR] [NameError] name 'map_error_to_message' is not defined
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Orders\processors\trendyol_pipeline.py", line 84, in fetch_orders_all
+    results = await asyncio.gather(*tasks)
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Orders\processors\trendyol_pipeline.py", line 35, in fetch_orders_for_status
+    content, _, _, _, status_code = await api.find_orders(
+TypeError: cannot unpack non-iterable Result object
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Core\threads\async_worker.py", line 21, in run
+    result = loop.run_until_complete(self.async_func(*self.args, **self.kwargs))
+  File "C:\Users\hermanjons\AppData\Local\Programs\Python\Python39\lib\asyncio\base_events.py", line 647, in run_until_complete
+    return future.result()
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Orders\processors\trendyol_pipeline.py", line 99, in fetch_orders_all
+    return Result.fail(map_error_to_message(e), error=e)
+NameError: name 'map_error_to_message' is not defined
+2025-09-21 21:44:25 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:44:26 [ERROR] [FAIL] Beklenmeyen veri tipi. Lütfen giriş bilgilerinizi kontrol edin.
+2025-09-21 21:44:26 [ERROR] [TypeError] cannot unpack non-iterable Result object
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Orders\processors\trendyol_pipeline.py", line 84, in fetch_orders_all
+    results = await asyncio.gather(*tasks)
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Orders\processors\trendyol_pipeline.py", line 35, in fetch_orders_for_status
+    content, _, _, _, status_code = await api.find_orders(
+TypeError: cannot unpack non-iterable Result object
+2025-09-21 21:44:47 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:44:47 [ERROR] [FAIL] Beklenmeyen veri tipi. Lütfen giriş bilgilerinizi kontrol edin.
+2025-09-21 21:44:47 [ERROR] [TypeError] cannot unpack non-iterable Result object
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Orders\processors\trendyol_pipeline.py", line 84, in fetch_orders_all
+    results = await asyncio.gather(*tasks)
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Orders\processors\trendyol_pipeline.py", line 35, in fetch_orders_for_status
+    content, _, _, _, status_code = await api.find_orders(
+TypeError: cannot unpack non-iterable Result object
+2025-09-21 21:46:46 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:46:46 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:46:46 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:46:46 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:46:46 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:46:46 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:46:46 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:46:46 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:46:46 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-21 21:46:46 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-21 21:47:01 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:47:01 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:47:02 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:47:02 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:47:02 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:47:02 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:47:02 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:47:02 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 21:47:02 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-21 21:47:02 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-21 22:47:18 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 22:47:18 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 22:47:18 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 22:47:18 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 22:47:18 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 22:47:18 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 22:47:18 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 22:47:18 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 22:47:18 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-21 22:47:18 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-21 22:48:19 [ERROR] [FAIL] Bilinmeyen bir hata oluştu. Lütfen tekrar deneyin.
+2025-09-21 22:48:19 [ERROR] [NameError] name 'get_records' is not defined
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Orders\processors\trendyol_pipeline.py", line 202, in get_latest_ready_to_ship_orders
+    raw_data = get_records(
+NameError: name 'get_records' is not defined
+2025-09-21 22:48:58 [ERROR] [FAIL] Bilinmeyen bir hata oluştu. Lütfen tekrar deneyin.
+2025-09-21 22:48:58 [ERROR] [NameError] name 'get_engine' is not defined
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Orders\processors\trendyol_pipeline.py", line 204, in get_latest_ready_to_ship_orders
+    db_engine=get_engine("orders.db")
+NameError: name 'get_engine' is not defined
+2025-09-21 22:49:18 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-21 22:49:22 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-21 23:30:52 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 23:30:52 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 23:30:52 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 23:30:52 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 23:30:52 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 23:30:52 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 23:30:52 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 23:30:52 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 23:30:52 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-21 23:30:52 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-21 23:30:56 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 23:30:56 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 23:30:56 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 23:30:56 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 23:30:56 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 23:30:56 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 23:30:56 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 23:30:56 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 23:30:56 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-21 23:30:56 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-21 23:31:01 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-21 23:31:22 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-21 23:31:25 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 23:31:25 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 23:31:25 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 23:31:25 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 23:31:25 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 23:31:25 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 23:31:25 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 23:31:25 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-21 23:31:25 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-21 23:31:25 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-21 23:31:33 [INFO] [OK] Şirketler başarıyla getirildi.
+2025-09-21 23:31:33 [INFO] [OK] Şirketler başarıyla yüklendi.
+2025-09-21 23:31:35 [INFO] [OK] Şirket bulundu.
+2025-09-21 23:31:35 [INFO] [OK] Form dolduruldu.
+2025-09-21 23:36:45 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-21 23:36:49 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-21 23:37:02 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-21 23:38:56 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-21 23:54:37 [INFO] [OK] Şirketler başarıyla getirildi.
+2025-09-21 23:54:37 [INFO] [OK] Şirketler başarıyla yüklendi.
+2025-09-21 23:54:39 [INFO] [OK] Şirket bulundu.
+2025-09-21 23:54:39 [INFO] [OK] Form dolduruldu.
+2025-09-21 23:54:56 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-22 01:10:49 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-22 01:11:01 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-22 01:21:20 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-22 01:21:45 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-22 01:22:00 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:22:00 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:22:00 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:22:00 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:22:00 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:22:00 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:22:00 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:22:00 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:22:00 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-22 01:22:00 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-22 01:22:25 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:22:25 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:22:25 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:22:25 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:22:25 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:22:25 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:22:25 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:22:25 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:22:25 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-22 01:22:25 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-22 01:22:31 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:22:31 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:22:31 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:22:31 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:22:31 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:22:31 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:22:31 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:22:31 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:22:31 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-22 01:22:31 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-22 01:22:32 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-22 01:23:14 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-22 01:23:38 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-22 01:24:07 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:24:07 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:24:07 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:24:07 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:24:07 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:24:07 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:24:07 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:24:07 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-22 01:24:07 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-22 01:24:07 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-22 01:28:17 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-22 01:31:25 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-22 01:32:37 [INFO] [OK] Şirketler başarıyla getirildi.
+2025-09-22 01:32:37 [INFO] [OK] Şirketler başarıyla yüklendi.
+2025-09-22 01:34:09 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-22 01:35:02 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-22 01:41:24 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-22 01:44:02 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-22 01:44:02 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-22 01:45:09 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-22 01:45:09 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-22 01:45:11 [INFO] [OK] Seçili sipariş sayısı güncellendi: 1
+2025-09-22 01:45:11 [INFO] [OK] Seçili sipariş sayısı güncellendi: 0
+2025-09-22 01:49:24 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-22 01:49:24 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-22 01:49:26 [INFO] [OK] Seçili sipariş sayısı güncellendi: 1
+2025-09-22 01:49:26 [INFO] [OK] Seçili sipariş sayısı güncellendi: 0
+2025-09-22 01:49:28 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-22 01:49:28 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-22 01:49:29 [INFO] [OK] Seçili sipariş sayısı güncellendi: 1
+2025-09-22 01:49:30 [INFO] [OK] Seçili sipariş sayısı güncellendi: 2
+2025-09-22 01:49:30 [INFO] [OK] Seçili sipariş sayısı güncellendi: 3
+2025-09-22 01:49:31 [INFO] [OK] Seçili sipariş sayısı güncellendi: 4
+2025-09-22 01:53:21 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-22 01:53:21 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-22 01:53:27 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-22 01:53:27 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-22 01:53:59 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-22 01:53:59 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-22 01:54:02 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-22 01:54:02 [INFO] [OK] Siparişler başarıyla listeye eklendi.

@@ -22,24 +22,32 @@ if not logger.handlers:  # tekrar tekrar handler eklenmesin
 # -------------------------------------------------
 class Result:
     def __init__(
-            self,
-            success: bool,
-            message: str = "",
-            error: Exception = None,
-            close_dialog: bool = True,
+        self,
+        success: bool,
+        message: str = "",
+        error: Exception = None,
+        close_dialog: bool = True,
+        data: dict = None,
     ):
         self.success = success
         self.message = message
         self.error = error
         self.close_dialog = close_dialog
+        self.data = data or {}  # ✅ ek: yan veriler için düzenli alan
 
     @classmethod
-    def ok(cls, message="", close_dialog=True):
-        return cls(True, message, close_dialog=close_dialog)
+    def ok(cls, message: str = "", close_dialog: bool = True, data: dict = None):
+        res = cls(True, message, close_dialog=close_dialog, data=data)
+        logger.info(f"[OK] {message}")
+        return res
 
     @classmethod
-    def fail(cls, message="", error=None, close_dialog=False):
-        return cls(False, message, error=error, close_dialog=close_dialog)
+    def fail(cls, message: str = "", error: Exception = None, close_dialog: bool = False, data: dict = None):
+        res = cls(False, message, error=error, close_dialog=close_dialog, data=data)
+        logger.error(f"[FAIL] {message}")
+        if error:
+            logger.exception(f"[{type(error).__name__}] {error}", exc_info=error)
+        return res
 
 
 # -------------------------------------------------
@@ -47,25 +55,27 @@ class Result:
 # -------------------------------------------------
 class MessageHandler:
     @staticmethod
-    def show(dialog, result: Result):
+    def show(dialog, result: Result, only_errors: bool = False, ui_enabled: bool = True):
         """
-        İşlem sonucunu kullanıcıya gösterir ve hataları loglar.
+        İşlem sonucunu kullanıcıya gösterir ve loglar.
+        - only_errors=True → sadece hata durumunda popup çıkar.
+        - ui_enabled=False → sadece log atılır, popup açılmaz (test/headless ortamlar için).
         """
+        if not ui_enabled:
+            return  # UI devre dışıysa popup çıkarma
+
         if result.success:
-            QMessageBox.information(dialog, "Başarılı", result.message)
+            if not only_errors:
+                QMessageBox.information(dialog, "Başarılı", result.message)
             if result.close_dialog:
                 dialog.accept()
         else:
             QMessageBox.critical(dialog, "Hata", result.message)
-            if result.error:
-                # traceback dahil logla
-                logger.exception(
-                    f"[{type(result.error).__name__}] {result.error}",
-                    exc_info=result.error
-                )
 
 
-# feedback/processors/pipeline.py içine ekle
+# -------------------------------------------------
+# 🔎 Hata Mesajı Haritalama
+# -------------------------------------------------
 def map_error_to_message(error: Exception) -> str:
     """
     Exception tipine göre kullanıcıya gösterilecek anlamlı mesaj döner.
@@ -89,8 +99,22 @@ def map_error_to_message(error: Exception) -> str:
     elif isinstance(error, TimeoutError):
         return "İşlem zaman aşımına uğradı. Daha sonra tekrar deneyin."
 
+    # Ek: aiohttp ve requests hataları
+    try:
+        import aiohttp
+        if isinstance(error, aiohttp.ClientError):
+            return "Sunucuya bağlanırken ağ hatası oluştu."
+    except ImportError:
+        pass
+    try:
+        import requests
+        if isinstance(error, requests.exceptions.RequestException):
+            return "HTTP isteği başarısız oldu. İnternet bağlantınızı kontrol edin."
+    except ImportError:
+        pass
+
     # Dosya / IO hataları
-    elif isinstance(error, FileNotFoundError):
+    if isinstance(error, FileNotFoundError):
         return "Gerekli dosya bulunamadı. Lütfen dosya yolunu kontrol edin."
     elif isinstance(error, PermissionError):
         return "Bu işlem için izin yok. Lütfen yetkilerinizi kontrol edin."

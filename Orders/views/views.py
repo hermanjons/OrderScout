@@ -1,32 +1,25 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QGroupBox, QHBoxLayout,
-    QListWidget, QListWidgetItem,QTableView, QLineEdit,QHeaderView ,QPushButton,QAbstractItemView, QStyledItemDelegate
+    QListWidget, QListWidgetItem, QPushButton
 )
-from PyQt6.QtCore import Qt,QAbstractTableModel, QModelIndex, QSortFilterProxyModel
-from Core.views.views import CircularProgressButton, SwitchButton, ListSmartItemWidget,PackageButton
-from Orders.views.actions import fetch_with_worker, populate_company_list, get_company_names_from_db, \
-    get_api_credentials_by_names
+from PyQt6.QtCore import Qt
 
-from sqlmodel import Session, select
+from Core.views.views import (
+    CircularProgressButton, SwitchButton,
+    ListSmartItemWidget, PackageButton
+)
+
+from Orders.views.actions import (
+    fetch_with_worker, populate_company_list,
+    get_company_names_from_db, get_api_credentials_by_names,
+    get_orders_from_companies, collect_selected_orders,
+    update_selected_count_label,fetch_ready_to_ship_orders, build_orders_list
+)
 
 from Core.utils.model_utils import get_engine
 from Orders.models.trendyol_models import OrderData
 
-
-
-
-
-
-
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QListWidget, QListWidgetItem,
-    QPushButton, QHBoxLayout, QGroupBox
-)
-from sqlmodel import Session, select
-from Core.utils.model_utils import get_engine
-from Orders.models.trendyol_models import OrderData
-from Core.views.views import SwitchButton, ListSmartItemWidget
-
+from Feedback.processors.pipeline import MessageHandler,Result
 
 class OrdersListWindow(QWidget):
     def __init__(self):
@@ -34,54 +27,28 @@ class OrdersListWindow(QWidget):
         self.setWindowTitle("Kargoya Hazır Siparişler")
         self.setGeometry(200, 200, 900, 600)
 
-        self.selected_orders = set()
-
         layout = QVBoxLayout(self)
 
-        # ✅ Snapshot’ları çek → filtrele
-        with Session(get_engine("orders.db")) as session:
-            raw_data = session.exec(select(OrderData)).all()
+        # ✅ Snapshot’ları çek
+        self.orders = fetch_ready_to_ship_orders(self)  # DB’den snapshotları çekiyor
 
-        latest_snapshots = {}
-        for record in raw_data:
-            key = record.orderNumber
-            if (
-                key not in latest_snapshots or
-                record.lastModifiedDate > latest_snapshots[key].lastModifiedDate
-            ):
-                latest_snapshots[key] = record
+        # ✅ Seçili sipariş sayısı label
+        self.selected_count_label = QLabel("Seçili sipariş sayısı: 0")
+        layout.addWidget(self.selected_count_label)
 
-        filtered_data = [
-            rec for rec in latest_snapshots.values()
-            if rec.shipmentPackageStatus == "ReadyToShip"
-        ]
-
-        self.orders = filtered_data
-
-        # ✅ Liste
+        # ✅ Liste widget
         self.list_widget = QListWidget()
-        # seçim highlight kapatılıyor, sadece hover/klik stili gözüksün
         self.list_widget.setSelectionMode(QListWidget.SelectionMode.NoSelection)
         layout.addWidget(self.list_widget)
 
-        # Satırları doldur
-        for order in self.orders:
-            switch = SwitchButton()
-            item_widget = ListSmartItemWidget(
-                title=f"Order: {order.orderNumber}",
-                subtitle=f"Müşteri: {getattr(order, 'customerFirstName', '—')} {getattr(order, 'customerLastName', '')}",
-                extra=f"Kargo: {order.cargoProviderName or '-'} | Tutar: {getattr(order, 'totalPrice', 0)} ₺",
-                identifier=order.orderNumber,
-                icon_path="images/orders_img.png",
-                optional_widget=switch
-            )
-
-            item_widget.interaction.connect(self.on_item_interaction)
-            item_widget.selectionRequested.connect(self.clear_other_selections)  # 🔴 ekle
-
-            item = QListWidgetItem(self.list_widget)
-            item.setSizeHint(item_widget.sizeHint())
-            self.list_widget.setItemWidget(item, item_widget)
+        # ✅ Siparişleri listeye inşa et
+        res = build_orders_list(
+            self.list_widget,
+            self.orders,
+            self.on_item_interaction,
+            self.clear_other_selections
+        )
+        MessageHandler.show(self, res, only_errors=True)  # sadece hata varsa popup göster
 
         # ✅ Toplu işlem butonları
         control_box = QGroupBox("Toplu İşlemler")
@@ -99,33 +66,46 @@ class OrdersListWindow(QWidget):
         layout.addWidget(control_box)
 
     # 🔘 Switch toggle edildiğinde
-    def on_item_interaction(self, identifier, value):
-        if value:  # switch açık
-            self.selected_orders.add(identifier)
-        else:
-            self.selected_orders.discard(identifier)
+    def on_item_interaction(self, identifier, value: bool):
+        res = update_selected_count_label(self.list_widget, self.selected_count_label)
+        MessageHandler.show(self, res, only_errors=True)
 
     # 🔘 Tümünü seç
     def select_all(self):
         for i in range(self.list_widget.count()):
             widget = self.list_widget.itemWidget(self.list_widget.item(i))
-            if isinstance(widget.right_widget, SwitchButton):
+            if widget and widget.right_widget.isChecked() is False:
                 widget.right_widget.setChecked(True)
-                self.selected_orders.add(widget.identifier)
+
+        res = update_selected_count_label(self.list_widget, self.selected_count_label)
+        MessageHandler.show(self, res, only_errors=True)
 
     # 🔘 Seçimi kaldır
     def deselect_all(self):
         for i in range(self.list_widget.count()):
             widget = self.list_widget.itemWidget(self.list_widget.item(i))
-            if isinstance(widget.right_widget, SwitchButton):
+            if widget and widget.right_widget.isChecked():
                 widget.right_widget.setChecked(False)
-        self.selected_orders.clear()
 
+        res = update_selected_count_label(self.list_widget, self.selected_count_label)
+        MessageHandler.show(self, res, only_errors=True)
+
+    # 🔘 Tek seçim modu
     def clear_other_selections(self, keep_widget):
         for i in range(self.list_widget.count()):
             widget = self.list_widget.itemWidget(self.list_widget.item(i))
             if widget is not keep_widget:
                 widget.set_selected(False)
+
+    # 🔘 İstendiğinde seçili siparişleri al
+    def get_selected_orders(self):
+        res = collect_selected_orders(self.list_widget)
+        MessageHandler.show(self, res, only_errors=True)
+        if res.success:
+            return res.data.get("selected_orders", [])
+        return []
+
+
 
 
 
@@ -186,28 +166,12 @@ class OrdersTab(QWidget):
         print("Aktif şirketler:", list(self.active_companies))
 
     def get_orders(self):
-        try:
-            if not self.active_companies:
-                self.info_label.setText("⚠️ Hiçbir şirket seçili değil.")
-                return
+        if not self.active_companies:
+            self.info_label.setText("⚠️ Hiçbir şirket seçili değil.")
+            return
 
-            # 👇 1. Etiket: Kullanıcıya bilgi ver
-            self.info_label.setText("⏳ Veri çekiliyor...")
-
-            # 👇 2. Aktif şirket isimlerinden API bilgilerini çek
-            selected_names = list(self.active_companies)  # set → list
-            comp_api_account_list = get_api_credentials_by_names(selected_names)
-
-            if not comp_api_account_list:
-                self.info_label.setText("❌ Seçili şirketler için API bilgisi bulunamadı.")
-                return
-
-            # 👇 3. fetch_with_worker içine gönder
-            fetch_with_worker(self, comp_api_account_list)
-
-        except Exception as e:
-            print("Hata:", e)
-            self.info_label.setText("❌ Hata oluştu!")
+        self.info_label.setText("⏳ Veri çekiliyor...")
+        get_orders_from_companies(self, list(self.active_companies))
 
     def open_orders_window(self):
         self.orders_window = OrdersListWindow()

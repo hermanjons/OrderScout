@@ -1,5 +1,6 @@
 from PyQt6.QtCore import QThread, pyqtSignal
 import asyncio
+from Feedback.processors.pipeline import Result, map_error_to_message
 
 
 class AsyncWorker(QThread):
@@ -18,9 +19,13 @@ class AsyncWorker(QThread):
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             result = loop.run_until_complete(self.async_func(*self.args, **self.kwargs))
+            if not isinstance(result, Result):
+                result = Result.ok("AsyncWorker sonucu", data={"raw": result})
 
-            # 🔥 sonucu önce yay, sonra "bitti" sinyali
             self.result_ready.emit(result)
             self.finished.emit()
         except Exception as e:
-            print("Worker Exception:", e)
+            err_res = Result.fail(f"Worker Exception: {str(e)}", error=e)
+            self.result_ready.emit(err_res)
+            self.finished.emit()
+
