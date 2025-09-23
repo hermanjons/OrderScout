@@ -1,7 +1,8 @@
 # Orders/views/actions.py
 from Core.threads.async_worker import AsyncWorker
+from Core.threads.sync_worker import SyncWorker
 from Orders.processors.trendyol_pipeline import fetch_orders_all, save_orders_to_db, get_latest_ready_to_ship_orders
-from Orders.constants.trendyol_constants import trendyol_status_list
+from Orders.constants.trendyol_constants import TRENDYOL_STATUS_LIST
 from Core.utils.time_utils import time_for_now, time_stamp_calculator
 from PyQt6.QtWidgets import QListWidgetItem
 from Core.views.views import SwitchButton, ListSmartItemWidget
@@ -10,10 +11,9 @@ from settings import MEDIA_ROOT
 from Core.utils.model_utils import get_records
 from Account.models import ApiAccount
 from Core.utils.model_utils import get_engine  # engine değişkeni nerede tanımlıysa onu import et
-from Feedback.processors.pipeline import MessageHandler, Result
+from Feedback.processors.pipeline import MessageHandler, Result, map_error_to_message
 from PyQt6.QtWidgets import QLabel
-
-
+from Account.views.actions import collect_selected_companies,get_company_by_id
 
 
 def fetch_ready_to_ship_orders(parent_widget):
@@ -27,7 +27,6 @@ def fetch_ready_to_ship_orders(parent_widget):
         return []
 
     return result.data.get("orders", [])
-
 
 
 def build_orders_list(list_widget, orders, interaction_cb, selection_cb) -> Result:
@@ -99,7 +98,6 @@ def update_selected_count_label(list_widget, label: QLabel) -> Result:
         return Result.fail(msg, error=e, close_dialog=False)
 
 
-
 def collect_selected_orders(list_widget) -> Result:
     """
     QListWidget içindeki SwitchButton'lara bakarak seçili siparişleri döndürür.
@@ -129,9 +127,6 @@ def collect_selected_orders(list_widget) -> Result:
         return Result.fail(msg, error=e, close_dialog=False)
 
 
-
-
-
 def get_company_names_from_db() -> list[str]:
     """
     Veritabanından tüm şirket isimlerini çeker.
@@ -140,39 +135,49 @@ def get_company_names_from_db() -> list[str]:
     return [c.comp_name for c in company_objs]
 
 
-def get_orders_from_companies(parent_widget, selected_names: list[str]):
-    comp_api_account_list = get_api_credentials_by_names(selected_names)
+# actions.py
+def get_orders_from_companies(parent_widget, company_list_widget):
+    """
+    Seçilen şirketlerden API bilgilerini alır ve worker başlatır.
+    UI ile ilgili mesaj/Popup işlemleri views.py'de yapılmalı.
+    """
+    # 1) Listeden seçilen PK’leri topla
+    result = collect_selected_companies(company_list_widget)
+    if not result.success:
+        return result  # ❌ Hata → views.py handle eder
 
+    selected_company_pks = result.data["selected_company_pks"]
+
+    # 2) API credential’ları pk listesi ile getir
+    res_creds = get_company_by_id(selected_company_pks)
+    if not res_creds.success:
+        return res_creds  # ❌ API bilgisi bulunamadı
+
+    comp_api_account_list = res_creds.data.get("accounts", [])
     if not comp_api_account_list:
-        parent_widget.info_label.setText("❌ Seçili şirketler için API bilgisi bulunamadı.")
-        return
+        return Result.fail("Seçili şirketler için API bilgisi bulunamadı.", close_dialog=False)
 
+    # 3) Worker başlat
     fetch_with_worker(parent_widget, comp_api_account_list)
-
-
-def get_api_credentials_by_names(names: list[str]) -> list[list[str]]:
-    """
-    Belirtilen şirket isimlerine karşılık gelen api hesabı bilgilerini getirir.
-    Geriye [pk, api_key, api_secret, seller_id] sırasıyla bir liste döner.
-    """
-    engine = get_engine("orders.db")
-    all_records = get_records(model=ApiAccount, db_engine=engine)
-
-    selected = [r for r in all_records if r.comp_name in names]
-
-    return [[r.pk, r.api_key, r.api_secret, str(r.account_id)] for r in selected]
+    return Result.ok("Worker başlatıldı.", close_dialog=False)
 
 
 # Bu fonksiyon view içinden çağrılır
 def fetch_with_worker(view_instance, comp_api_account_list):
+    """
+    API'den siparişleri çek → DB'ye kaydet zinciri.
+    1. AsyncWorker -> fetch_orders_all
+    2. SyncWorker  -> save_orders_to_db
+    """
     try:
-        search_range_hour = 240
+        search_range_hour = 10
         start_ep_time = time_for_now()
         final_ep_time = time_for_now() - time_stamp_calculator(search_range_hour)
 
-        view_instance.worker = AsyncWorker(
+        # 1️⃣ API Worker (async)
+        view_instance.api_worker = AsyncWorker(
             fetch_orders_all,
-            trendyol_status_list,
+            TRENDYOL_STATUS_LIST,
             final_ep_time,
             start_ep_time,
             comp_api_account_list,
@@ -180,39 +185,23 @@ def fetch_with_worker(view_instance, comp_api_account_list):
             parent=view_instance
         )
 
-        view_instance.worker.result_ready.connect(
-            lambda res: MessageHandler.show(view_instance, save_orders_to_db(res))
-        )
-        view_instance.worker.finished.connect(view_instance.on_orders_fetched)
-        view_instance.worker.start()
+        def handle_api_result(res: Result):
+            if not res.success:
+                MessageHandler.show(view_instance, res, only_errors=True)
+                return
+
+            # 2️⃣ DB Worker (sync)
+            view_instance.db_worker = SyncWorker(save_orders_to_db, res)
+            view_instance.db_worker.result_ready.connect(
+                lambda db_res: MessageHandler.show(view_instance, db_res)
+            )
+            view_instance.db_worker.finished.connect(view_instance.on_orders_fetched)
+            view_instance.db_worker.start()
+
+        # API Worker tamamlandığında handle_api_result çağrılır
+        view_instance.api_worker.result_ready.connect(handle_api_result)
+        view_instance.api_worker.start()
 
     except Exception as e:
-        print("fetch_with_worker hatası:", e)
-
-
-def populate_company_list(list_widget, company_names: list[str], interaction_callback):
-    list_widget.clear()
-
-    for name in company_names:
-        item = QListWidgetItem()
-        switch = SwitchButton()
-        switch.setChecked(True)
-
-        sanitized_name = name.lower().replace(" ", "_")
-        icon_path = os.path.join(MEDIA_ROOT, f"{sanitized_name}.png")
-        if not os.path.exists(icon_path):
-            icon_path = None
-
-        widget = ListSmartItemWidget(
-            title=name,
-            identifier=name,
-            icon_path=icon_path,
-            optional_widget=switch,
-        )
-        widget.interaction.connect(interaction_callback)
-        item.setSizeHint(widget.sizeHint())
-        list_widget.addItem(item)
-        list_widget.setItemWidget(item, widget)
-
-        # 🔥 EKLENDİ: başlangıçta aktif olduğunu sinyalle!
-        interaction_callback(name, True)
+        res = Result.fail(map_error_to_message(e), error=e, close_dialog=False)
+        MessageHandler.show(view_instance, res, only_errors=True)

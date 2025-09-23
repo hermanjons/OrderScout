@@ -1,15 +1,22 @@
 import httpx
-import logging
-
-logger = logging.getLogger("HttpUtils")
-logger.setLevel(logging.INFO)
-handler = logging.StreamHandler()
-formatter = logging.Formatter('[%(levelname)s] %(asctime)s - %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
+from Feedback.processors.pipeline import Result, map_error_to_message
 
 
-async def async_make_request(method: str, url: str, headers=None, auth=None, params=None, data=None, json=None, timeout=15):
+async def async_make_request(
+    method: str,
+    url: str,
+    headers=None,
+    auth=None,
+    params=None,
+    data=None,
+    json=None,
+    timeout=15
+) -> Result:
+    """
+    Genel amaçlı asenkron HTTP istek fonksiyonu.
+    - Başarılı olursa Result.ok döner → data = {"json": ..., "status_code": ...}
+    - Hata olursa Result.fail döner.
+    """
     try:
         async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.request(
@@ -22,7 +29,22 @@ async def async_make_request(method: str, url: str, headers=None, auth=None, par
                 json=json
             )
             response.raise_for_status()
-            return response.json(), response.status_code
-    except httpx.RequestError as e:
-        logger.error(f"[ASYNC REQUEST ERROR] {method} {url} - {str(e)}", exc_info=True)
-        return {}, 500
+
+            # ✅ Başarıyla sonuç döner
+            return Result.ok(
+                f"{method} {url} isteği başarılı.",
+                close_dialog=False,
+                data={
+                    "json": response.json(),
+                    "status_code": response.status_code
+                }
+            )
+
+    except Exception as e:
+        # ✅ Hata feedback sistemine uyarlanır
+        msg = map_error_to_message(e)
+        return Result.fail(
+            f"{method} {url} isteği başarısız: {msg}",
+            error=e,
+            close_dialog=False
+        )

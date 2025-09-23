@@ -10,16 +10,20 @@ from Core.views.views import (
 )
 
 from Orders.views.actions import (
-    fetch_with_worker, populate_company_list,
-    get_company_names_from_db, get_api_credentials_by_names,
+    fetch_with_worker,
+    get_company_names_from_db,
     get_orders_from_companies, collect_selected_orders,
-    update_selected_count_label,fetch_ready_to_ship_orders, build_orders_list
+    update_selected_count_label, fetch_ready_to_ship_orders, build_orders_list
 )
 
 from Core.utils.model_utils import get_engine
 from Orders.models.trendyol_models import OrderData
 
-from Feedback.processors.pipeline import MessageHandler,Result
+from Feedback.processors.pipeline import MessageHandler, Result
+
+from Account.views.views import CompanyListWidget
+from Account.views.actions import collect_selected_companies
+
 
 class OrdersListWindow(QWidget):
     def __init__(self):
@@ -106,9 +110,6 @@ class OrdersListWindow(QWidget):
         return []
 
 
-
-
-
 class OrdersTab(QWidget):
     def __init__(self):
         super().__init__()
@@ -121,21 +122,18 @@ class OrdersTab(QWidget):
         layout.addWidget(self.order_btn)
         layout.addWidget(self.info_label)
 
-
         # 🟢 Başlatma butonu
         self.fetch_button = CircularProgressButton("BAŞLAT")
         self.fetch_button.clicked.connect(self.get_orders)
 
-        # 🔴 Şirket listesi
-        self.active_companies = set()
-        self.company_list = QListWidget()
+        # 🔴 Şirket listesi → CompanyListWidget
+        self.company_list = CompanyListWidget()
         self.company_list.setFixedWidth(240)
 
         # 🟤 Alt panel: Şirketler + Buton
         self.bottom_panel = QGroupBox("Veri Çekme Paneli")
         self.bottom_panel.setFixedHeight(200)
         bottom_layout = QHBoxLayout(self.bottom_panel)
-
 
         company_box = QGroupBox("Şirketler")
         company_layout = QVBoxLayout(company_box)
@@ -151,36 +149,34 @@ class OrdersTab(QWidget):
         bottom_layout.addWidget(btn_container)
 
         layout.addWidget(self.bottom_panel)
-        comp_list = get_company_names_from_db()
-        # ✅ Şirketleri yükle
-        populate_company_list(self.company_list, comp_list, self.toggle_company)  # ← kendi şirketlerini ekle
 
+        # ✅ Şirketleri DB’den yükle
+        result = self.company_list.build_from_db()
+        MessageHandler.show(self, result, only_errors=True)
 
-
-    def toggle_company(self, name: str, active: bool):
-        if active:
-            self.active_companies.add(name)
-        else:
-            self.active_companies.discard(name)
-
-        print("Aktif şirketler:", list(self.active_companies))
-
+    # 📌 Siparişleri getir
+    # views.py
     def get_orders(self):
-        if not self.active_companies:
-            self.info_label.setText("⚠️ Hiçbir şirket seçili değil.")
+        result = get_orders_from_companies(self, self.company_list)
+
+        if not result.success:
+            # ❌ sadece hata durumunda popup göster
+            MessageHandler.show(self, result, only_errors=True)
             return
 
+        # ⏳ işlem başladı bilgisi UI’ya yazılsın
         self.info_label.setText("⏳ Veri çekiliyor...")
-        get_orders_from_companies(self, list(self.active_companies))
 
+    # 📌 Sipariş penceresi aç
     def open_orders_window(self):
         self.orders_window = OrdersListWindow()
         self.orders_window.show()
 
+    # 📌 İşlem bittiğinde
     def on_orders_fetched(self):
         self.info_label.setText("✅ Siparişler başarıyla alındı.")
 
-
+    # 📌 Progress bar güncelle
     def update_progress(self, current, total):
         percent = int(current / total * 100)
         self.fetch_button.setProgress(percent)

@@ -1,9 +1,85 @@
 from Orders.api.trendyol_api import TrendyolApi
-from Core.utils.model_utils import create_records, make_normalizer,get_records,get_engine
+from Core.utils.model_utils import create_records, make_normalizer, get_records, get_engine
 import asyncio
 from typing import Optional, Callable
 from Orders.models.trendyol_models import OrderItem, OrderData, OrderHeader
 from Feedback.processors.pipeline import Result, map_error_to_message
+from settings import DB_NAME
+from Orders.constants.trendyol_constants import ORDERDATA_UNIQ,ORDERITEM_UNIQ,ORDERDATA_NORMALIZER,ORDERITEM_NORMALIZER
+
+
+async def normalize_order_data(order_data: dict, comp_api_account_id: int):
+    """
+    Tek bir order verisini normalize eder ve (order, items) tuple döner.
+    """
+    orders = []
+    items = []
+
+    # Şirket id ekle
+    order_data["api_account_id"] = comp_api_account_id
+
+    # packageHistories fix
+    if len(order_data.get("packageHistories", [])) == 1:
+        order_data["packageHistories"].insert(
+            0, {"createdDate": 0, "status": "Awaiting"}
+        )
+
+    orders.append(order_data)
+
+    # OrderItem doldurma
+    for order_item in order_data.get("lines", []):
+        order_item["api_account_id"] = comp_api_account_id
+        order_item["orderNumber"] = order_data["orderNumber"]
+        order_item["order_data_id"] = order_data["id"]
+        order_item["packageHistories"] = order_data["packageHistories"]
+
+        # taskDate belirle
+        for history in order_data["packageHistories"]:
+            if history["status"] == order_data["status"]:
+                order_item["taskDate"] = history["createdDate"]
+                break
+        else:
+            order_item["taskDate"] = 0
+
+        items.append(order_item)
+
+    return orders, items
+
+
+async def fetch_orders_for_status(api, status: str, comp_api_account_id: int,
+                                  start_page: int, final_ep_time: int, start_ep_time: int,
+                                  progress_callback=None, total_steps=1, current_step_ref=None):
+    orders, items = [], []
+    page = start_page
+
+    while True:
+        res = await api.find_orders(status, final_ep_time, start_ep_time, page)
+        if not res.success:
+            return Result.fail(f"API hatası ({status}) → {res.message}",
+                               error=res.error, close_dialog=False)
+
+        content = res.data.get("content", [])
+        if not content:
+            break
+
+        for order_data in content:
+            norm_orders, norm_items = await normalize_order_data(order_data, comp_api_account_id)
+            orders.extend(norm_orders)
+            items.extend(norm_items)
+
+        page += 1
+
+    # ✅ Progress bildirimi buraya alındı
+    if current_step_ref is not None:
+        current_step_ref[0] += 1
+        if progress_callback:
+            progress_callback(current_step_ref[0], total_steps)
+
+    return Result.ok(
+        f"{status} için siparişler çekildi.",
+        close_dialog=False,
+        data={"orders": orders, "items": items}
+    )
 
 
 async def fetch_orders_all(
@@ -14,83 +90,28 @@ async def fetch_orders_all(
         start_page: int = 0,
         progress_callback: Optional[Callable[[int, int], None]] = None
 ) -> Result:
-    """
-    Seçili şirket + statü listesi için tüm siparişleri Trendyol API'den çeker.
-    Sonuç: Result.success + data = {"order_data_list": [...], "order_item_list": [...]}
-    """
     try:
-        all_orders = []
-        all_items = []
+        all_orders, all_items = [], []
         total_steps = len(comp_api_account_list) * len(status_list)
-        current_step = 0
+        current_step_ref = [0]  # ✅ referans tutucu
 
-        async def fetch_orders_for_status(api, status, comp_api_account_id):
-            nonlocal current_step
-            orders = []
-            items = []
-            page = start_page
-
-            while True:
-                # Trendyol API çağrısı (Artık Result dönüyor!)
-                res = await api.find_orders(status, final_ep_time, start_ep_time, page)
-
-                if not res.success:
-                    print(f"API hatası: {res.message}")
-                    break
-
-                content = res.data.get("orders", [])
-                if not content:
-                    break
-
-                for order_data in content:
-                    order_data["api_account_id"] = comp_api_account_id
-
-                    # packageHistories fix
-                    if len(order_data.get("packageHistories", [])) == 1:
-                        order_data["packageHistories"].insert(
-                            0, {"createdDate": 0, "status": "Awaiting"}
-                        )
-                    orders.append(order_data)
-
-                    # OrderItem doldurma
-                    for order_item in order_data["lines"]:
-                        order_item["api_account_id"] = comp_api_account_id
-                        order_item["orderNumber"] = order_data["orderNumber"]
-                        order_item["order_data_id"] = order_data["id"]
-                        order_item["packageHistories"] = order_data["packageHistories"]
-
-                        # taskDate belirle
-                        for history in order_data["packageHistories"]:
-                            if history["status"] == order_data["status"]:
-                                order_item["taskDate"] = history["createdDate"]
-                                break
-                        else:
-                            order_item["taskDate"] = 0
-
-                        items.append(order_item)
-
-                page += 1
-
-            # ✅ Her statü işlemi bitince ilerleme bildir
-            current_step += 1
-            if progress_callback:
-                progress_callback(current_step, total_steps)
-
-            return orders, items
-
-        # 🔄 Tüm şirketler için çalıştır
         for comp_api_account in comp_api_account_list:
             api = TrendyolApi(comp_api_account[1], comp_api_account[2], comp_api_account[3])
             tasks = [
-                fetch_orders_for_status(api, status, comp_api_account[0])
+                fetch_orders_for_status(api, status, comp_api_account[0],
+                                        start_page, final_ep_time, start_ep_time,
+                                        progress_callback, total_steps, current_step_ref)
                 for status in status_list
             ]
             results = await asyncio.gather(*tasks)
-            for orders, items in results:
-                all_orders.extend(orders)
-                all_items.extend(items)
 
-        # ✅ Feedback uyumlu dönüş
+            for res in results:
+                if not res.success:
+                    return res
+
+                all_orders.extend(res.data.get("orders", []))
+                all_items.extend(res.data.get("items", []))
+
         return Result.ok(
             "Siparişler başarıyla çekildi.",
             data={
@@ -103,30 +124,11 @@ async def fetch_orders_all(
         return Result.fail(map_error_to_message(e), error=e)
 
 
-
-ORDERDATA_UNIQ = ["orderNumber", "lastModifiedDate", "api_account_id"]
-ORDERITEM_UNIQ = ["orderNumber", "productCode", "orderLineItemStatusName", "api_account_id"]
-
-# OrderData: metinleri temizle
-orderdata_normalizer = make_normalizer(strip_strings=True)
-
-# OrderItem: unique anahtarlar için None/"" değerleri toparla + metinleri temizle
-orderitem_normalizer = make_normalizer(
-    coalesce_none={
-        "productCode": 0,
-        "orderLineItemStatusName": "Unknown",
-    },
-    strip_strings=True,
-)
-
-
-def save_orders_to_db(result: Result, db_name: str = "orders.db") -> Result:
+def save_orders_to_db(result: Result, db_name: str = DB_NAME) -> Result:
     """
     worker.result_ready -> Result.success + Result.data = {"order_data_list": [...], "order_item_list": [...]}
     """
     try:
-        print("sonuçlar kaydediliyor")
-
         # 1) Eğer geçersiz veya başarısız result geldiyse
         if not result or not isinstance(result, Result):
             return Result.fail("Geçersiz result objesi alındı.")
@@ -140,53 +142,56 @@ def save_orders_to_db(result: Result, db_name: str = "orders.db") -> Result:
 
         # 3) OrderData → upsert
         if order_data_list:
-            create_records(
+            res_data = create_records(
                 model=OrderData,
                 data_list=order_data_list,
                 db_name=db_name,
                 conflict_keys=ORDERDATA_UNIQ,
                 mode="ignore",
-                normalizer=orderdata_normalizer,
-                chunk_size=1,
+                normalizer=ORDERDATA_NORMALIZER,
+                chunk_size=100,
                 drop_unknown=True,
                 rename_map={},
             )
+            if not res_data.success:
+                return res_data  # hata varsa direkt dön
 
         # 4) OrderItem → insert-ignore
         if order_item_list:
-            create_records(
+            res_items = create_records(
                 model=OrderItem,
                 data_list=order_item_list,
                 db_name=db_name,
                 conflict_keys=ORDERITEM_UNIQ,
                 mode="ignore",
-                normalizer=orderitem_normalizer,
-                chunk_size=500,
+                normalizer=ORDERITEM_NORMALIZER,
+                chunk_size=200,
                 drop_unknown=True,
                 rename_map={"3pByTrendyol": "byTrendyol3"}
             )
+            if not res_items.success:
+                return res_items
 
         # 5) OrderHeader → orderNumber + api_account_id
         header_map = {
-            od["orderNumber"]: od.get("api_account_id")
+            od.get("orderNumber"): od.get("api_account_id")
             for od in order_data_list
             if od.get("orderNumber") and od.get("api_account_id") is not None
         }
 
         if header_map:
-            create_records(
+            res_headers = create_records(
                 model=OrderHeader,
                 data_list=[
-                    {
-                        "orderNumber": order_number,
-                        "api_account_id": api_account_id
-                    }
+                    {"orderNumber": order_number, "api_account_id": api_account_id}
                     for order_number, api_account_id in header_map.items()
                 ],
                 db_name=db_name,
                 conflict_keys=["orderNumber", "api_account_id"],
                 mode="ignore",
             )
+            if not res_headers.success:
+                return res_headers
 
         return Result.ok("Siparişler başarıyla veritabanına kaydedildi.")
 
@@ -201,15 +206,19 @@ def get_latest_ready_to_ship_orders() -> Result:
     try:
         raw_data = get_records(
             model=OrderData,
-            db_engine=get_engine("orders.db")
+            db_engine=get_engine(DB_NAME)
         )
+        if not raw_data.success:
+            return raw_data
+
+        records = raw_data.data.get("records", [])
 
         latest_snapshots = {}
-        for record in raw_data:
+        for record in records:
             key = record.orderNumber
             if (
-                    key not in latest_snapshots or
-                    record.lastModifiedDate > latest_snapshots[key].lastModifiedDate
+                key not in latest_snapshots or
+                record.lastModifiedDate > latest_snapshots[key].lastModifiedDate
             ):
                 latest_snapshots[key] = record
 
@@ -218,7 +227,11 @@ def get_latest_ready_to_ship_orders() -> Result:
             if rec.shipmentPackageStatus == "ReadyToShip"
         ]
 
-        return Result.ok("ReadyToShip siparişler başarıyla çekildi.", data={"orders": filtered})
+        return Result.ok(
+            "ReadyToShip siparişler başarıyla çekildi.",
+            data={"orders": filtered}
+        )
 
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e)
+

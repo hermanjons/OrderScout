@@ -1,6 +1,6 @@
 # model_utils.py
 from sqlmodel import SQLModel, Session, select
-from typing import Type, Iterable, Callable, Optional, Any, List
+from typing import Type, Iterable, Callable, Optional, Any
 from settings import DB_NAME, DEFAULT_DATABASE_DIR
 from sqlalchemy.engine import Engine
 from sqlalchemy import create_engine
@@ -9,23 +9,24 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert  # PG'ye geçince
 # from sqlalchemy.dialects.postgresql import insert as pg_insert
 import os
 import pandas as pd
+from Feedback.processors.pipeline import Result, map_error_to_message
 
 
+# ---------- Engine ----------
 def get_engine(db_name: str):
     """
     Belirtilen veritabanı ismine göre SQLite engine döner.
-    Örnek: get_engine("orders.db") → sqlite:///databases/orders.db
+    Örn: get_engine("orders.db") → sqlite:///databases/orders.db
     """
     db_path = os.path.join(DEFAULT_DATABASE_DIR, db_name)
     engine = create_engine(f"sqlite:///{db_path}", echo=False)
     return engine
 
 
-# ---------- Genel: büyük listeleri parça parça işlemek ----------
+# ---------- Helper ----------
 def batch_iter(seq: Iterable[Any], size: int = 500) -> Iterable[list[Any]]:
     """
     Büyük listeleri güvenli/parçalı işlemek için generator.
-    - Bellek/SQL statement limitlerini aşmayı önler.
     """
     buf = []
     for item in seq:
@@ -37,7 +38,11 @@ def batch_iter(seq: Iterable[Any], size: int = 500) -> Iterable[list[Any]]:
         yield buf
 
 
-# ---------- Genel: normalize fabrikası ----------
+def get_model_columns(model: Type[SQLModel]) -> set[str]:
+    return {c.name for c in model.__table__.c}
+
+
+# ---------- Normalizer ----------
 def make_normalizer(
         *,
         defaults: Optional[dict[str, Any]] = None,
@@ -48,35 +53,26 @@ def make_normalizer(
         extra: Optional[Callable[[dict], dict]] = None,
 ) -> Callable[[dict], dict]:
     """
-    Tüm modellere uygulanabilir normalize fonksiyonu üretir.
-    - defaults: eksik anahtarlar için varsayılan değer (setdefault)
-    - coalesce_none: None veya "" ise şu değere çek (unique key'ler için kritik)
-    - strip_strings: string alanlarda .strip()
-    - upper_keys / lower_keys: belirli string alanları büyüt/küçült
-    - extra: özel ek dönüştürme (callable)
+    Normalize fonksiyonu üretir.
     """
 
     def _norm(rec: dict) -> dict:
         r = dict(rec)
 
-        # 1) defaults
         if defaults:
             for k, v in defaults.items():
                 r.setdefault(k, v)
 
-        # 2) strip
         if strip_strings:
             for k, v in list(r.items()):
                 if isinstance(v, str):
                     r[k] = v.strip()
 
-        # 3) coalesce None / empty
         if coalesce_none:
             for k, v in coalesce_none.items():
                 if r.get(k) is None or (isinstance(r.get(k), str) and r.get(k) == ""):
                     r[k] = v
 
-        # 4) upper/lower
         if upper_keys:
             for k in upper_keys:
                 if k in r and isinstance(r[k], str):
@@ -86,7 +82,6 @@ def make_normalizer(
                 if k in r and isinstance(r[k], str):
                     r[k] = r[k].lower()
 
-        # 5) extra hook
         if extra:
             r = extra(r)
 
@@ -95,74 +90,91 @@ def make_normalizer(
     return _norm
 
 
-def get_model_columns(model: Type[SQLModel]) -> set[str]:
-    return {c.name for c in model.__table__.c}
-
-
-# ---------- Genel kayıt oluşturma/upsert ----------
+# ---------- Create ----------
 def create_records(
-        model: Type[SQLModel],
-        data_list: list[dict],
-        db_name: str,
-        *,
-        conflict_keys: Optional[list[str]] = None,  # ör: ["id","orderNumber","productCode","orderLineItemStatusName"]
-        mode: str = "ignore",  # "ignore" | "update" | "plain"
-        normalizer: Optional[Callable[[dict], dict]] = None,
-        chunk_size: int = 500,
-        rename_map: Optional[dict[str, str]] = None,  # YENİ: "3pByTrendyol" -> "byTrendyol3" gibi
-        drop_unknown: bool = True,  # YENİ: modelde olmayan key'leri at
-):
+    model: Type[SQLModel],
+    data_list: list[dict],
+    db_name: str = DB_NAME,
+    *,
+    conflict_keys: Optional[list[str]] = None,
+    mode: str = "ignore",  # "ignore" | "update" | "plain"
+    normalizer: Optional[Callable[[dict], dict]] = None,
+    chunk_size: int = 500,
+    rename_map: Optional[dict[str, str]] = None,
+    drop_unknown: bool = True,
+) -> Result:
     """
-    Genel toplu kayıt:
-    - mode="ignore": conflict_keys çakışırsa ekleme (hata fırlatmaz)
-    - mode="update": conflict_keys çakışırsa diğer kolonları güncelle
-    - mode="plain": normal add (unique çakışırsa IntegrityError fırlar)
-    - normalizer: her kaydı DB'ye gitmeden önce normalize eder
-    - rename_map: DB’ye gitmeden önce key yeniden adlandırma
-    - drop_unknown: modelde olmayan anahtarları süz
+    Toplu kayıt ekleme/upsert.
     """
-    engine = get_engine(db_name)
+    try:
+        engine = get_engine(db_name)
 
-    # 0) temizleme: rename + normalize + drop_unknown
-    cols = get_model_columns(model) if drop_unknown else None
-    cleaned: list[dict] = []
-    for d in data_list:
-        r = dict(d)
+        # Temizleme
+        cols = get_model_columns(model) if drop_unknown else None
+        cleaned = []
+        for d in (data_list or []):
+            r = dict(d)
 
-        # rename (opsiyonel)
-        if rename_map:
-            for old, new in list(rename_map.items()):
-                if old in r:
-                    r[new] = r.pop(old)
+            if rename_map:
+                for old, new in list(rename_map.items()):
+                    if old in r:
+                        r[new] = r.pop(old)
 
-        # normalize (opsiyonel)
-        if normalizer:
-            r = normalizer(r)
+            if normalizer:
+                r = normalizer(r)
 
-        # modelde olmayanları at (opsiyonel)
-        if drop_unknown and cols is not None:
-            r = {k: v for k, v in r.items() if k in cols}
+            if drop_unknown and cols is not None:
+                r = {k: v for k, v in r.items() if k in cols}
 
-        if r:  # tamamen boş kalmışsa ekleme
-            cleaned.append(r)
+            if r:
+                cleaned.append(r)
 
-    with Session(engine) as session:
-        try:
+        attempted = len(cleaned)
+        if attempted == 0:
+            return Result.ok(
+                f"{model.__name__}: işlenecek kayıt yok.",
+                close_dialog=False,
+                data={"model": model.__name__, "attempted": 0}
+            )
+
+        with Session(engine) as session:
+            # plain
             if mode == "plain" or not conflict_keys:
-                with session.begin():
-                    for r in cleaned:
-                        session.add(model(**r))
-                return
+                try:
+                    with session.begin():
+                        for r in cleaned:
+                            session.add(model(**r))
+                    return Result.ok(
+                        f"{model.__name__}: {attempted} kayıt eklendi (plain).",
+                        close_dialog=False,
+                        data={"model": model.__name__, "attempted": attempted, "inserted": attempted}
+                    )
+                except IntegrityError as e:
+                    session.rollback()
+                    return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
+                except Exception as e:
+                    session.rollback()
+                    return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
 
             tbl = model.__table__
 
             if mode == "ignore":
+                inserted_total = 0
                 for chunk in batch_iter(cleaned, chunk_size):
                     stmt = sqlite_insert(tbl).values(chunk)
                     stmt = stmt.on_conflict_do_nothing(index_elements=conflict_keys)
-                    session.exec(stmt)
+                    res = session.exec(stmt)
+                    rc = getattr(res, "rowcount", 0) or 0
+                    inserted_total += rc
+                session.commit()
+                return Result.ok(
+                    f"{model.__name__}: {attempted} kaydın {inserted_total} adedi eklendi (ignore).",
+                    close_dialog=False,
+                    data={"model": model.__name__, "attempted": attempted, "inserted": inserted_total}
+                )
 
             elif mode == "update":
+                affected_total = 0
                 for chunk in batch_iter(cleaned, chunk_size):
                     stmt = sqlite_insert(tbl).values(chunk)
                     update_cols = {
@@ -174,69 +186,96 @@ def create_records(
                         index_elements=conflict_keys,
                         set_=update_cols
                     )
-                    session.exec(stmt)
+                    res = session.exec(stmt)
+                    rc = getattr(res, "rowcount", 0) or 0
+                    affected_total += rc
+                session.commit()
+                return Result.ok(
+                    f"{model.__name__}: {attempted} kaydın {affected_total} adedi etkilendi (update).",
+                    close_dialog=False,
+                    data={"model": model.__name__, "attempted": attempted, "affected": affected_total}
+                )
 
-            session.commit()
+            return Result.fail(f"Geçersiz mode='{mode}'.", close_dialog=False)
 
-        except IntegrityError:
-            session.rollback()
-            raise
-        except Exception:
-            session.rollback()
-            raise
+    except Exception as e:
+        return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
 
 
+# ---------- Read ----------
 def get_records(
-        model: Type[SQLModel],
-        db_engine: Engine,
-        filters: Optional[dict] = None,
-        custom_sql: Optional[str] = None,
-        to_dataframe: bool = False
-) -> Any:
+    model: Type[SQLModel],
+    db_engine: Engine,
+    filters: Optional[dict] = None,
+    custom_sql: Optional[str] = None,
+    to_dataframe: bool = False
+) -> Result:
     """
     Genel amaçlı veri çekme fonksiyonu.
-    - `model`: SQLModel tablosu
-    - `db_engine`: SQLAlchemy engine objesi
-    - `filters`: dict olarak filtreler (örn. {"name": "Ali"})
-    - `custom_sql`: Ham SQL sorgusu vermek istersen buradan gir.
-    - `to_dataframe`: True ise sonucu pandas DataFrame olarak döndürür.
+    - filters: dict olarak filtreler (örn: {"name": "Ali"} veya {"pk": [1,2,3]})
+    - custom_sql: Ham SQL sorgusu
+    - to_dataframe: True ise DataFrame döndürür
     """
+    try:
+        # 🔹 Ham SQL modu
+        if custom_sql:
+            with db_engine.connect() as conn:
+                if to_dataframe:
+                    df = pd.read_sql_query(custom_sql, conn)
+                    return Result.ok(
+                        f"{len(df)} kayıt çekildi (custom SQL, DataFrame).",
+                        close_dialog=False,
+                        data={"records": df, "count": len(df)}
+                    )
+                else:
+                    result = conn.execute(custom_sql).fetchall()
+                    return Result.ok(
+                        f"{len(result)} kayıt çekildi (custom SQL).",
+                        close_dialog=False,
+                        data={"records": result, "count": len(result)}
+                    )
 
-    if custom_sql:
-        with db_engine.connect() as conn:
+        # 🔹 Normal SQLModel select
+        with Session(db_engine) as session:
+            stmt = select(model)
+
+            if filters:
+                for attr, value in filters.items():
+                    if isinstance(value, (list, tuple, set)):
+                        stmt = stmt.where(getattr(model, attr).in_(value))
+                    else:
+                        stmt = stmt.where(getattr(model, attr) == value)
+
+            result = session.exec(stmt).all()
+
             if to_dataframe:
-                return pd.read_sql_query(custom_sql, conn)
-            else:
-                result = conn.execute(custom_sql)
-                return result.fetchall()
+                df = pd.DataFrame([r.dict() for r in result])
+                return Result.ok(
+                    f"{len(df)} kayıt çekildi (DataFrame).",
+                    close_dialog=False,
+                    data={"records": df, "count": len(df)}
+                )
 
-    with Session(db_engine) as session:
-        stmt = select(model)
+            return Result.ok(
+                f"{len(result)} kayıt çekildi.",
+                close_dialog=False,
+                data={"records": result, "count": len(result)}
+            )
 
-        # Filtreleri uygula
-        if filters:
-            for attr, value in filters.items():
-                stmt = stmt.where(getattr(model, attr) == value)
-
-        result = session.exec(stmt).all()
-        if to_dataframe:
-            return pd.DataFrame([r.dict() for r in result])
-        return result
+    except Exception as e:
+        return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
 
 
+
+# ---------- Update ----------
 def update_records(
-        model: Type[SQLModel],
-        db_engine: Engine,
-        filters: dict,
-        update_data: dict
-):
+    model: Type[SQLModel],
+    db_engine: Engine,
+    filters: dict,
+    update_data: dict
+) -> Result:
     """
     Genel amaçlı update fonksiyonu.
-
-    - `model`: Güncelleme yapılacak SQLModel sınıfı
-    - `db_engine`: SQLAlchemy engine objesi
-    - `filters`: Güncellenecek kayıtların filtreleri (örn: {"orderNumber": "123"})
-    - `update_data`: Güncellenecek alanlar ve değerleri (örn: {"isPrinted": "True"})
     """
     try:
         with Session(db_engine) as session:
@@ -245,29 +284,30 @@ def update_records(
                 stmt = stmt.where(getattr(model, attr) == value)
 
             results = session.exec(stmt).all()
-
             for item in results:
                 for attr, value in update_data.items():
                     setattr(item, attr, value)
 
             session.commit()
 
+        return Result.ok(
+            f"{len(results)} kayıt güncellendi.",
+            close_dialog=False,
+            data={"count": len(results)}
+        )
+
     except Exception as e:
-        print(f"[HATA] Kayıt güncellenemedi: {e}")
+        return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
 
 
-
+# ---------- Delete ----------
 def delete_records(
-        model: Type[SQLModel],
-        db_engine: Engine,
-        filters: dict
-) -> object:
+    model: Type[SQLModel],
+    db_engine: Engine,
+    filters: dict
+) -> Result:
     """
     Genel amaçlı delete fonksiyonu.
-
-    - `model`: Silme yapılacak SQLModel sınıfı
-    - `db_engine`: SQLAlchemy engine objesi
-    - `filters`: Silinecek kayıtların filtreleri (örn: {"orderNumber": "123"})
     """
     try:
         with Session(db_engine) as session:
@@ -276,12 +316,18 @@ def delete_records(
                 stmt = stmt.where(getattr(model, attr) == value)
 
             results = session.exec(stmt).all()
+            deleted = len(results)
 
             for item in results:
                 session.delete(item)
 
             session.commit()
-            print(f"[OK] {len(results)} kayıt silindi.")
+
+        return Result.ok(
+            f"{deleted} kayıt silindi.",
+            close_dialog=False,
+            data={"count": deleted}
+        )
 
     except Exception as e:
-        print(f"[HATA] Kayıt silinemedi: {e}")
+        return Result.fail(map_error_to_message(e), error=e, close_dialog=False)

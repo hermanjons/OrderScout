@@ -1,4 +1,5 @@
 from Account.constants.constants import PLATFORMS
+from settings import MEDIA_ROOT
 from Feedback.processors.pipeline import Result, MessageHandler, map_error_to_message
 import datetime
 from Account.processors.pipeline import (
@@ -13,9 +14,11 @@ import json
 import os
 from PyQt6.QtGui import QPixmap, QIcon
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem
+from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem, QListWidget, QListWidgetItem
 
 from typing import Optional, Tuple
+
+from Core.views.views import SwitchButton, ListSmartItemWidget
 
 
 # ==========================================================
@@ -27,19 +30,25 @@ def build_company_table(table_widget) -> Result:
     """
     try:
         res = get_all_companies()
+        if not res or not isinstance(res, Result):
+            return Result.fail("Geçersiz result objesi alındı.", close_dialog=False)
+
         if not res.success:
-            return res
+            return res  # doğrudan hata döndür
 
-        # ✅ Yeni Result.data kullanımı
         records = res.data.get("records", [])
-
         table_widget.setRowCount(0)
 
+        if not records:
+            return Result.fail("Tabloya eklenecek şirket bulunamadı.", close_dialog=False)
+
+        added = 0
         for row, acc in enumerate(records):
             table_widget.insertRow(row)
 
+            # Logo sütunu
             item_logo = QTableWidgetItem()
-            if acc.logo_path and os.path.exists(acc.logo_path):
+            if getattr(acc, "logo_path", None) and os.path.exists(acc.logo_path):
                 item_logo.setIcon(QIcon(acc.logo_path))
 
             # pk'yi gizli sakla
@@ -52,17 +61,23 @@ def build_company_table(table_widget) -> Result:
                 QTableWidgetItem(acc.platform or ""),
                 QTableWidgetItem("Aktif" if acc.is_active else "Pasif"),
             ]
+
             for col, item in enumerate(columns):
                 item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 table_widget.setItem(row, col, item)
 
             table_widget.setRowHeight(row, 40)
+            added += 1
 
-        return Result.ok("Şirketler başarıyla yüklendi.", close_dialog=False)
+        return Result.ok(
+            f"Şirketler tabloya yüklendi. (toplam: {added})",
+            close_dialog=False,
+            data={"count": added}
+        )
 
     except Exception as e:
-        msg = map_error_to_message(e)
-        return Result.fail(msg, error=e)
+        return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
+
 
 
 def refresh_table(table, msg: str = "Tablo güncellendi.") -> Result:
@@ -244,3 +259,95 @@ def delete_company_and_refresh(table, pk: int) -> Result:
 
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
+
+
+def build_company_list(list_widget, result: Result, interaction_cb=None) -> Result:
+    """
+    Result içindeki şirket kayıtlarını QListWidget içine doldurur.
+    - result: get_all_companies() gibi Result dönen fonksiyonlardan gelen sonuç
+    - her item içinde pk gizli saklanır (UserRole)
+    """
+    try:
+        if not result or not isinstance(result, Result):
+            return Result.fail("Geçersiz result objesi alındı.", close_dialog=False)
+
+        if not result.success:
+            return result  # hata varsa aynen döndür
+
+        records = result.data.get("records", [])
+        list_widget.clear()
+
+        if not records:
+            return Result.fail("Listelenecek şirket bulunamadı.", close_dialog=False)
+
+        added = 0
+        for acc in records:
+            switch = SwitchButton()
+            switch.setChecked(True)
+
+            icon_name = (acc.comp_name or "").lower().replace(" ", "_")
+            icon_path = os.path.join(MEDIA_ROOT, f"{icon_name}.png")
+
+            item_widget = ListSmartItemWidget(
+                title=acc.comp_name or "—",
+                identifier=str(acc.pk),  # 🔑 identifier artık pk olacak
+                icon_path=icon_path,
+                optional_widget=switch
+            )
+
+            if interaction_cb:
+                item_widget.interaction.connect(interaction_cb)
+
+            # QListWidgetItem içine widget’ı koy
+            item = QListWidgetItem(list_widget)
+            item.setSizeHint(item_widget.sizeHint())
+
+            # 🔑 pk değerini gizli sakla
+            item.setData(Qt.ItemDataRole.UserRole, acc.pk)
+
+            list_widget.setItemWidget(item, item_widget)
+            added += 1
+
+        return Result.ok(
+            f"Şirket listesi başarıyla oluşturuldu. (toplam: {added})",
+            close_dialog=False,
+            data={"count": added}
+        )
+
+    except Exception as e:
+        return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
+
+
+
+def collect_selected_companies(list_widget: QListWidget) -> Result:
+    """
+    QListWidget içindeki SwitchButton'lara bakarak seçili şirket PK'lerini döndürür.
+    """
+    try:
+        if list_widget.count() == 0:
+            return Result.fail("Listede şirket bulunamadı.", close_dialog=False)
+
+        selected_pks = []
+        for i in range(list_widget.count()):
+            item = list_widget.item(i)
+            widget = list_widget.itemWidget(item)
+
+            if widget and isinstance(widget.right_widget, SwitchButton):
+                if widget.right_widget.isChecked():
+                    pk = item.data(Qt.ItemDataRole.UserRole)  # 🔑 PK buradan çekiliyor
+                    if pk is not None:
+                        selected_pks.append(pk)
+
+        if not selected_pks:
+            return Result.fail("Hiçbir şirket seçilmedi.", close_dialog=False)
+
+        return Result.ok(
+            f"{len(selected_pks)} şirket seçildi.",
+            close_dialog=False,
+            data={"selected_company_pks": selected_pks}  # 🔑 isim değil, pk listesi
+        )
+
+    except Exception as e:
+        msg = map_error_to_message(e)
+        return Result.fail(msg, error=e, close_dialog=False)
+

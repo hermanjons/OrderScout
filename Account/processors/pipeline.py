@@ -126,22 +126,40 @@ def get_all_companies() -> Result:
         return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
 
 
-def get_company_by_id(pk: int) -> Result:
+def get_company_by_id(pks: list[int]) -> Result:
     """
-    Bir şirketi primary key (pk) üzerinden getirir.
+    Birden fazla şirketi primary key (pk) listesi üzerinden getirir.
     """
     try:
+
+        if not pks:
+            return Result.fail("Hiçbir şirket seçilmedi.", close_dialog=False)
+        print(pks)
         engine = get_engine("orders.db")
-        result = get_records(
+        res = get_records(
             model=ApiAccount,
             db_engine=engine,
-            filters={"pk": pk}
+            filters={"pk": pks}  # get_records içinde 'pk IN pks' destekleniyorsa
         )
 
-        if result:
-            return Result.ok("Şirket bulundu.", close_dialog=False, data={"record": result[0]})
-        else:
-            return Result.fail("Şirket bulunamadı.", close_dialog=False)
+        if not res.success:
+            return res
+
+        records = res.data.get("records", [])
+        print(records)
+        if not records:
+            return Result.fail("Seçilen şirketler bulunamadı.", close_dialog=False)
+
+        return Result.ok(
+            f"{len(records)} şirket bulundu.",
+            close_dialog=False,
+            data={
+                "records": records,
+                "accounts": [[r.pk, r.api_key, r.api_secret, str(r.account_id)] for r in records]
+            }
+        )
+
 
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
+

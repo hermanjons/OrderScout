@@ -1,5 +1,6 @@
 from PyQt6.QtWidgets import QMessageBox
 import logging
+from PyQt6.QtWidgets import QDialog
 
 # -------------------------------------------------
 # 📂 Logger Yapılandırması
@@ -67,8 +68,11 @@ class MessageHandler:
         if result.success:
             if not only_errors:
                 QMessageBox.information(dialog, "Başarılı", result.message)
-            if result.close_dialog:
+
+            # ✅ dialog gerçekten QDialog ise kapat
+            if result.close_dialog and isinstance(dialog, QDialog):
                 dialog.accept()
+
         else:
             QMessageBox.critical(dialog, "Hata", result.message)
 

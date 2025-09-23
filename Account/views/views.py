@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (
     QDialog, QFormLayout, QLineEdit, QPushButton, QMessageBox, QComboBox, QLabel, QFileDialog, QVBoxLayout, QHBoxLayout,
     QTableWidget,
-    QTableWidgetItem, QSizePolicy, QHeaderView, QPlainTextEdit
+    QTableWidgetItem, QSizePolicy, QHeaderView, QPlainTextEdit,QListWidget
 )
 
 from PyQt6.QtGui import QIcon, QAction
@@ -145,7 +145,7 @@ class CompanyManagerDialog(QDialog):
             return
 
         # ✅ Yeni Result.data kullanımı
-        acc = res.data["record"]
+        acc = res.data["accounts"]
 
         dialog = CompanyFormDialog(account=acc, parent=self)
 
@@ -273,3 +273,31 @@ class CompanyFormDialog(QDialog):
         MessageHandler.show(self, result)
         if result.success:
             self.accept()
+
+
+
+
+class CompanyListWidget(QListWidget):
+    """
+    SwitchButton ile şirket seçimi yapılabilen liste widget.
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setSelectionMode(QListWidget.SelectionMode.NoSelection)
+
+    def build_from_db(self):
+        """
+        DB’den şirketleri çekip listeyi doldurur.
+        """
+        from Account.processors.pipeline import get_all_companies
+        from Account.views.actions import build_company_list
+
+        result = get_all_companies()
+        if not result.success:
+            return result
+
+        records = result.data.get("records", [])
+        return build_company_list(self, records)
+
+
+
