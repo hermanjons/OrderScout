@@ -3932,3 +3932,2565 @@ TypeError: 'Result' object is not iterable
 2025-09-23 01:15:14 [INFO] [OK] OrderItem: 93 kaydın 0 adedi eklendi (ignore).
 2025-09-23 01:15:14 [INFO] [OK] OrderHeader: 86 kaydın 0 adedi eklendi (ignore).
 2025-09-23 01:15:14 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 11:50:57 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 11:50:57 [INFO] [OK] Şirketler başarıyla getirildi.
+2025-09-23 11:50:57 [INFO] [OK] Şirket listesi başarıyla oluşturuldu. (toplam: 1)
+2025-09-23 11:50:59 [INFO] [OK] 260 kayıt çekildi.
+2025-09-23 11:50:59 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 11:50:59 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 11:51:02 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 11:51:02 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 11:51:02 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 11:51:02 [INFO] [OK] Worker başlatıldı.
+2025-09-23 11:51:03 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:03 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:03 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 11:51:03 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:03 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:03 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 11:51:03 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:03 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:03 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 11:51:03 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:03 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:03 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 11:51:03 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:03 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:03 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 11:51:03 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:03 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:03 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:03 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:03 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:03 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:03 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 11:51:03 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:03 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:03 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 11:51:03 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:03 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:03 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:03 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:03 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 11:51:03 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 11:51:03 [INFO] [OK] OrderData: 28 kaydın 28 adedi eklendi (ignore).
+2025-09-23 11:51:03 [INFO] [OK] OrderItem: 28 kaydın 26 adedi eklendi (ignore).
+2025-09-23 11:51:03 [INFO] [OK] OrderHeader: 28 kaydın 19 adedi eklendi (ignore).
+2025-09-23 11:51:03 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 11:51:05 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 11:51:05 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 11:51:05 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 11:51:05 [INFO] [OK] Worker başlatıldı.
+2025-09-23 11:51:05 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:05 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:05 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:05 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 11:51:05 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:05 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 11:51:05 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:05 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:05 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 11:51:05 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:05 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:05 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 11:51:05 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:05 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:05 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:05 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:05 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:05 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:05 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:05 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:05 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 11:51:05 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:05 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:05 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 11:51:05 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:05 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:05 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 11:51:05 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:05 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:05 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 11:51:05 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 11:51:05 [INFO] [OK] OrderData: 28 kaydın 0 adedi eklendi (ignore).
+2025-09-23 11:51:05 [INFO] [OK] OrderItem: 28 kaydın 0 adedi eklendi (ignore).
+2025-09-23 11:51:05 [INFO] [OK] OrderHeader: 28 kaydın 0 adedi eklendi (ignore).
+2025-09-23 11:51:05 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 11:51:07 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 11:51:07 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 11:51:07 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 11:51:07 [INFO] [OK] Worker başlatıldı.
+2025-09-23 11:51:07 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:07 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:07 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 11:51:07 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:07 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:07 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:07 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 11:51:07 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:07 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 11:51:07 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:07 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:07 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:07 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:07 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:07 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:07 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:07 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:07 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 11:51:07 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:07 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:07 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 11:51:07 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:07 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:07 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 11:51:07 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:07 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:07 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 11:51:07 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:07 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:07 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 11:51:07 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 11:51:07 [INFO] [OK] OrderData: 28 kaydın 0 adedi eklendi (ignore).
+2025-09-23 11:51:07 [INFO] [OK] OrderItem: 28 kaydın 0 adedi eklendi (ignore).
+2025-09-23 11:51:07 [INFO] [OK] OrderHeader: 28 kaydın 0 adedi eklendi (ignore).
+2025-09-23 11:51:07 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 11:51:09 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 11:51:09 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 11:51:09 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 11:51:09 [INFO] [OK] Worker başlatıldı.
+2025-09-23 11:51:09 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:09 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:09 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 11:51:09 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:09 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:09 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 11:51:09 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:09 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:09 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 11:51:09 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:09 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:09 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 11:51:09 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:09 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:09 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 11:51:09 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:09 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:09 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:09 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:09 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:09 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:09 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:09 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:09 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 11:51:09 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:09 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:09 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 11:51:09 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:09 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:09 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 11:51:09 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 11:51:09 [INFO] [OK] OrderData: 28 kaydın 0 adedi eklendi (ignore).
+2025-09-23 11:51:09 [INFO] [OK] OrderItem: 28 kaydın 0 adedi eklendi (ignore).
+2025-09-23 11:51:09 [INFO] [OK] OrderHeader: 28 kaydın 0 adedi eklendi (ignore).
+2025-09-23 11:51:09 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 11:51:10 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 11:51:10 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 11:51:10 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 11:51:10 [INFO] [OK] Worker başlatıldı.
+2025-09-23 11:51:11 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:11 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:11 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 11:51:11 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:11 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:11 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 11:51:11 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:11 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:11 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 11:51:11 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:11 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:11 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:11 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:11 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:11 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:11 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 11:51:11 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:11 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:11 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 11:51:11 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:11 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:11 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:11 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:11 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 11:51:11 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:11 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:11 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 11:51:11 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:11 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:11 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 11:51:11 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 11:51:11 [INFO] [OK] OrderData: 28 kaydın 0 adedi eklendi (ignore).
+2025-09-23 11:51:11 [INFO] [OK] OrderItem: 28 kaydın 0 adedi eklendi (ignore).
+2025-09-23 11:51:11 [INFO] [OK] OrderHeader: 28 kaydın 0 adedi eklendi (ignore).
+2025-09-23 11:51:11 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 11:51:12 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 11:51:12 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 11:51:12 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 11:51:12 [INFO] [OK] Worker başlatıldı.
+2025-09-23 11:51:12 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:12 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:12 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:12 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:12 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:12 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 11:51:12 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:12 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 11:51:12 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:12 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:12 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:12 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:12 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 11:51:12 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:12 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 11:51:12 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:12 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 11:51:12 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:12 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:12 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:12 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:12 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 11:51:12 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:12 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:12 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 11:51:13 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:13 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:13 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:13 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:13 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 11:51:13 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 11:51:13 [INFO] [OK] OrderData: 28 kaydın 0 adedi eklendi (ignore).
+2025-09-23 11:51:13 [INFO] [OK] OrderItem: 28 kaydın 0 adedi eklendi (ignore).
+2025-09-23 11:51:13 [INFO] [OK] OrderHeader: 28 kaydın 0 adedi eklendi (ignore).
+2025-09-23 11:51:13 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 11:51:18 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 11:51:18 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 11:51:18 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 11:51:18 [INFO] [OK] Worker başlatıldı.
+2025-09-23 11:51:18 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:18 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:18 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 11:51:18 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:18 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:18 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 11:51:18 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:18 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:18 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:18 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 11:51:18 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:18 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 11:51:18 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:18 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:18 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:18 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:18 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 11:51:18 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:18 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:18 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:18 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:18 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:18 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:18 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 11:51:18 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:18 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:18 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 11:51:18 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:18 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:18 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 11:51:18 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 11:51:18 [INFO] [OK] OrderData: 28 kaydın 0 adedi eklendi (ignore).
+2025-09-23 11:51:18 [INFO] [OK] OrderItem: 28 kaydın 0 adedi eklendi (ignore).
+2025-09-23 11:51:18 [INFO] [OK] OrderHeader: 28 kaydın 0 adedi eklendi (ignore).
+2025-09-23 11:51:18 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 11:51:20 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 11:51:20 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 11:51:20 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 11:51:20 [INFO] [OK] Worker başlatıldı.
+2025-09-23 11:51:20 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:20 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:20 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:20 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:20 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 11:51:20 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:20 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 11:51:20 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:20 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 11:51:20 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:20 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:20 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:20 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 11:51:20 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:20 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 11:51:20 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:20 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:20 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:20 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:20 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:20 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:20 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:20 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:20 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 11:51:20 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:20 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:20 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 11:51:20 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:20 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:20 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 11:51:20 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 11:51:20 [INFO] [OK] OrderData: 28 kaydın 0 adedi eklendi (ignore).
+2025-09-23 11:51:20 [INFO] [OK] OrderItem: 28 kaydın 0 adedi eklendi (ignore).
+2025-09-23 11:51:20 [INFO] [OK] OrderHeader: 28 kaydın 0 adedi eklendi (ignore).
+2025-09-23 11:51:20 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 11:51:22 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 11:51:22 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 11:51:22 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 11:51:22 [INFO] [OK] Worker başlatıldı.
+2025-09-23 11:51:22 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:22 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:22 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 11:51:22 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:22 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:22 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 11:51:22 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:22 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:22 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 11:51:22 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:22 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:22 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 11:51:22 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:22 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:22 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 11:51:22 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:22 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:22 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:22 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:22 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:22 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:23 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:23 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:23 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 11:51:23 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:23 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:23 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 11:51:23 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 11:51:23 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 11:51:23 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 11:51:23 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 11:51:23 [INFO] [OK] OrderData: 28 kaydın 0 adedi eklendi (ignore).
+2025-09-23 11:51:23 [INFO] [OK] OrderItem: 28 kaydın 0 adedi eklendi (ignore).
+2025-09-23 11:51:23 [INFO] [OK] OrderHeader: 28 kaydın 0 adedi eklendi (ignore).
+2025-09-23 11:51:23 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 11:51:26 [INFO] [OK] 288 kayıt çekildi.
+2025-09-23 11:51:26 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 11:51:26 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 11:51:30 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 11:51:30 [INFO] [OK] Şirketler başarıyla getirildi.
+2025-09-23 11:51:30 [ERROR] [FAIL] Beklenmeyen veri tipi. Lütfen giriş bilgilerinizi kontrol edin.
+2025-09-23 11:51:30 [ERROR] [TypeError] 'Result' object is not iterable
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 46, in build_company_table
+    for row, acc in enumerate(records):
+TypeError: 'Result' object is not iterable
+2025-09-23 11:52:43 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 11:52:43 [INFO] [OK] Şirketler başarıyla getirildi.
+2025-09-23 11:52:43 [INFO] [OK] Şirket listesi başarıyla oluşturuldu. (toplam: 1)
+2025-09-23 11:52:45 [INFO] [OK] 288 kayıt çekildi.
+2025-09-23 11:52:45 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 11:52:45 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 11:52:47 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 11:52:47 [INFO] [OK] Şirketler başarıyla getirildi.
+2025-09-23 11:52:47 [ERROR] [FAIL] Tabloya eklenecek şirket bulunamadı.
+2025-09-23 11:55:28 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 11:55:28 [INFO] [OK] Şirketler başarıyla getirildi.
+2025-09-23 11:55:28 [INFO] [OK] Şirket listesi başarıyla oluşturuldu. (toplam: 1)
+2025-09-23 11:55:34 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 11:55:34 [INFO] [OK] Şirketler başarıyla getirildi.
+2025-09-23 11:55:34 [ERROR] [FAIL] Tabloya eklenecek şirket bulunamadı.
+2025-09-23 11:59:33 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 11:59:33 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 11:59:33 [ERROR] [FAIL] Geçersiz result objesi alındı.
+2025-09-23 11:59:36 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 11:59:36 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 11:59:36 [ERROR] [FAIL] Bilinmeyen bir hata oluştu. Lütfen tekrar deneyin.
+2025-09-23 11:59:36 [ERROR] [AttributeError] 'list' object has no attribute 'pk'
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 55, in build_company_table
+    item_logo.setData(Qt.ItemDataRole.UserRole, acc.pk)
+AttributeError: 'list' object has no attribute 'pk'
+2025-09-23 11:59:48 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 11:59:48 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 11:59:48 [ERROR] [FAIL] Geçersiz result objesi alındı.
+2025-09-23 12:03:55 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:03:55 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:03:55 [ERROR] [FAIL] Geçersiz result objesi alındı.
+2025-09-23 12:03:57 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:03:57 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:03:57 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 12:04:02 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:04:02 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:04:02 [ERROR] [FAIL] Bilinmeyen bir hata oluştu. Lütfen tekrar deneyin.
+2025-09-23 12:04:02 [ERROR] [AttributeError] 'list' object has no attribute 'account_id'
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 98, in fill_company_form
+    dialog_instance.seller_id_input.setText(account.account_id or "")
+AttributeError: 'list' object has no attribute 'account_id'
+2025-09-23 12:04:15 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:04:15 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:04:15 [ERROR] [FAIL] Geçersiz result objesi alındı.
+2025-09-23 12:07:09 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:07:09 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:07:09 [ERROR] [FAIL] Geçersiz result objesi alındı.
+2025-09-23 12:10:04 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:10:04 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:10:04 [ERROR] [FAIL] Geçersiz result objesi alındı.
+2025-09-23 12:10:07 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:10:07 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:10:07 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 12:16:47 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:16:47 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:16:47 [INFO] [OK] Şirket listesi başarıyla oluşturuldu. (toplam: 1)
+2025-09-23 12:16:54 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:16:54 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:16:54 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 12:16:56 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:16:56 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:16:56 [ERROR] [FAIL] Bilinmeyen bir hata oluştu. Lütfen tekrar deneyin.
+2025-09-23 12:16:56 [ERROR] [AttributeError] 'list' object has no attribute 'account_id'
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 99, in fill_company_form
+    dialog_instance.seller_id_input.setText(account.account_id or "")
+AttributeError: 'list' object has no attribute 'account_id'
+2025-09-23 12:17:08 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:17:08 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:17:08 [INFO] [OK] Şirket listesi başarıyla oluşturuldu. (toplam: 1)
+2025-09-23 12:17:09 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:17:09 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:17:09 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 12:18:23 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:18:23 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:18:23 [INFO] [OK] Şirket listesi başarıyla oluşturuldu. (toplam: 1)
+2025-09-23 12:18:26 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 12:18:26 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:18:26 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:18:26 [INFO] [OK] Worker başlatıldı.
+2025-09-23 12:18:26 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:26 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:26 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 12:18:26 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:26 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:26 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 12:18:26 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:26 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:26 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:26 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:26 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:26 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 12:18:26 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:26 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:26 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:26 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:26 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 12:18:26 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:26 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:26 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:26 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:26 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:26 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 12:18:26 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:26 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:26 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:26 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 12:18:26 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:26 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 12:18:26 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:26 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:26 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 12:18:26 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 12:18:26 [INFO] [OK] OrderData: 35 kaydın 7 adedi eklendi (ignore).
+2025-09-23 12:18:26 [INFO] [OK] OrderItem: 35 kaydın 7 adedi eklendi (ignore).
+2025-09-23 12:18:27 [INFO] [OK] OrderHeader: 35 kaydın 4 adedi eklendi (ignore).
+2025-09-23 12:18:27 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 12:18:28 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 12:18:28 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:18:28 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:18:28 [INFO] [OK] Worker başlatıldı.
+2025-09-23 12:18:29 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:29 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:29 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 12:18:29 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:29 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:29 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 12:18:29 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:29 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:29 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 12:18:29 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:29 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:29 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:29 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 12:18:29 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:29 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:29 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:29 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:29 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:29 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:29 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:29 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:29 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:29 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 12:18:29 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:29 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:29 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 12:18:29 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:29 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:29 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 12:18:29 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:29 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:29 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 12:18:29 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 12:18:29 [INFO] [OK] OrderData: 35 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:18:29 [INFO] [OK] OrderItem: 35 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:18:29 [INFO] [OK] OrderHeader: 35 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:18:29 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 12:18:30 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 12:18:30 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:18:30 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:18:30 [INFO] [OK] Worker başlatıldı.
+2025-09-23 12:18:30 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:30 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:30 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 12:18:30 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:30 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:30 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:30 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:30 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 12:18:30 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:30 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 12:18:30 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:30 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 12:18:30 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:30 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:30 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:30 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:30 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:30 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:30 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:30 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:30 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:30 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:30 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 12:18:30 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:30 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:30 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:30 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 12:18:30 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:30 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 12:18:30 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:18:30 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:18:30 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 12:18:30 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 12:18:30 [INFO] [OK] OrderData: 35 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:18:30 [INFO] [OK] OrderItem: 35 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:18:30 [INFO] [OK] OrderHeader: 35 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:18:30 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 12:18:34 [INFO] [OK] 295 kayıt çekildi.
+2025-09-23 12:18:34 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 12:18:35 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 12:18:40 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:18:40 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:18:40 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 12:18:42 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:18:42 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:18:42 [ERROR] [FAIL] Bilinmeyen bir hata oluştu. Lütfen tekrar deneyin.
+2025-09-23 12:18:42 [ERROR] [AttributeError] 'list' object has no attribute 'account_id'
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 99, in fill_company_form
+    dialog_instance.seller_id_input.setText(account.account_id or "")
+AttributeError: 'list' object has no attribute 'account_id'
+2025-09-23 12:21:13 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:21:13 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:21:13 [INFO] [OK] Şirket listesi başarıyla oluşturuldu. (toplam: 1)
+2025-09-23 12:21:14 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:21:14 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:21:14 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 12:21:16 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:21:16 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:21:17 [ERROR] [FAIL] Bilinmeyen bir hata oluştu. Lütfen tekrar deneyin.
+2025-09-23 12:21:17 [ERROR] [AttributeError] 'list' object has no attribute 'account_id'
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 99, in fill_company_form
+    dialog_instance.seller_id_input.setText(account.account_id or "")
+AttributeError: 'list' object has no attribute 'account_id'
+2025-09-23 12:21:36 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:21:36 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:21:36 [INFO] [OK] Şirket listesi başarıyla oluşturuldu. (toplam: 1)
+2025-09-23 12:21:37 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:21:37 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:21:37 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 12:21:39 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:21:39 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:21:39 [ERROR] [FAIL] Bilinmeyen bir hata oluştu. Lütfen tekrar deneyin.
+2025-09-23 12:21:39 [ERROR] [AttributeError] 'list' object has no attribute 'account_id'
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 99, in fill_company_form
+    dialog_instance.seller_id_input.setText(account.account_id or "")
+AttributeError: 'list' object has no attribute 'account_id'
+2025-09-23 12:34:55 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:34:55 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:34:55 [INFO] [OK] Şirket listesi başarıyla oluşturuldu. (toplam: 1)
+2025-09-23 12:34:56 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:34:56 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:34:56 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 12:34:57 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:34:57 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:34:57 [ERROR] [FAIL] Bilinmeyen bir hata oluştu. Lütfen tekrar deneyin.
+2025-09-23 12:34:57 [ERROR] [AttributeError] 'list' object has no attribute 'account_id'
+Traceback (most recent call last):
+  File "C:\Users\hermanjons\PycharmProjects\orderScout\Account\views\actions.py", line 99, in fill_company_form
+    dialog_instance.seller_id_input.setText(account.account_id or "")
+AttributeError: 'list' object has no attribute 'account_id'
+2025-09-23 12:37:07 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:37:07 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:37:07 [INFO] [OK] Şirket listesi başarıyla oluşturuldu. (toplam: 1)
+2025-09-23 12:37:09 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:37:09 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:37:09 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 12:37:10 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:37:10 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:45:10 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:45:10 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:45:10 [INFO] [OK] Şirket listesi başarıyla oluşturuldu. (toplam: 1)
+2025-09-23 12:45:11 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:45:11 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:45:11 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 12:45:13 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:45:13 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:45:13 [INFO] [OK] Form dolduruldu.
+2025-09-23 12:45:19 [INFO] [OK] 1 kayıt silindi.
+2025-09-23 12:45:19 [INFO] [OK] Şirket (id=1) başarıyla silindi.
+2025-09-23 12:45:19 [INFO] [OK] 0 kayıt çekildi.
+2025-09-23 12:45:19 [ERROR] [FAIL] Hiç şirket bulunamadı.
+2025-09-23 12:45:23 [INFO] [OK] 0 kayıt silindi.
+2025-09-23 12:45:23 [INFO] [OK] Şirket (id=1) başarıyla silindi.
+2025-09-23 12:45:23 [INFO] [OK] 0 kayıt çekildi.
+2025-09-23 12:45:23 [ERROR] [FAIL] Hiç şirket bulunamadı.
+2025-09-23 12:45:32 [INFO] [OK] 0 kayıt çekildi.
+2025-09-23 12:45:32 [ERROR] [FAIL] Hiç şirket bulunamadı.
+2025-09-23 12:45:44 [INFO] [OK] 0 kayıt çekildi.
+2025-09-23 12:45:44 [ERROR] [FAIL] Hiç şirket bulunamadı.
+2025-09-23 12:46:23 [INFO] [OK] Logo başarıyla kaydedildi.
+2025-09-23 12:46:23 [INFO] [OK] Logo başarıyla yüklendi.
+2025-09-23 12:46:24 [INFO] [OK] Validasyon başarılı.
+2025-09-23 12:46:24 [INFO] [OK] ApiAccount: 1 kayıt eklendi (plain).
+2025-09-23 12:46:24 [INFO] [OK] Şirket başarıyla kaydedildi.
+2025-09-23 12:46:25 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:46:25 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:46:25 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 12:46:29 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:46:29 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:46:29 [INFO] [OK] Form dolduruldu.
+2025-09-23 12:46:33 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:46:33 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:46:33 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 12:46:38 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:46:38 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:46:38 [INFO] [OK] Şirket listesi başarıyla oluşturuldu. (toplam: 1)
+2025-09-23 12:46:41 [INFO] [OK] 295 kayıt çekildi.
+2025-09-23 12:46:41 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 12:46:41 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 12:46:47 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 12:46:47 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:46:47 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:46:47 [INFO] [OK] Worker başlatıldı.
+2025-09-23 12:46:47 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:47 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:47 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 12:46:47 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:47 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:47 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:47 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:47 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:47 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 12:46:47 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:47 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 12:46:47 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:47 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:47 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:47 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:47 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:47 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 12:46:47 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:47 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:47 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:48 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:48 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:48 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 12:46:48 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:48 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:48 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 12:46:48 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:48 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:48 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 12:46:48 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:48 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:48 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:48 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:48 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 12:46:48 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 12:46:48 [INFO] [OK] OrderData: 102 kaydın 68 adedi eklendi (ignore).
+2025-09-23 12:46:48 [INFO] [OK] OrderItem: 107 kaydın 73 adedi eklendi (ignore).
+2025-09-23 12:46:48 [INFO] [OK] OrderHeader: 102 kaydın 3 adedi eklendi (ignore).
+2025-09-23 12:46:48 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 12:46:50 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 12:46:50 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:46:50 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:46:50 [INFO] [OK] Worker başlatıldı.
+2025-09-23 12:46:50 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:50 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:50 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 12:46:50 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:50 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:50 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:50 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 12:46:50 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:50 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 12:46:50 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:50 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:50 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 12:46:50 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:50 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:50 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:50 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:50 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:50 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:50 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:50 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:50 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 12:46:50 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:50 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:50 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:50 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:50 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 12:46:50 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:50 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:50 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 12:46:50 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:50 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:50 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:50 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:50 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 12:46:50 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 12:46:50 [INFO] [OK] OrderData: 102 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:46:50 [INFO] [OK] OrderItem: 107 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:46:50 [INFO] [OK] OrderHeader: 102 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:46:50 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 12:46:52 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 12:46:52 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:46:52 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:46:52 [INFO] [OK] Worker başlatıldı.
+2025-09-23 12:46:52 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:52 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:52 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 12:46:52 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:52 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:52 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:52 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:52 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 12:46:52 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:52 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:52 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 12:46:52 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:52 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:52 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:52 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:52 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:52 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:52 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 12:46:52 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:52 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:52 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:52 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:52 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 12:46:52 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:52 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:52 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 12:46:52 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:52 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:52 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 12:46:52 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:52 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:53 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:53 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:53 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 12:46:53 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 12:46:53 [INFO] [OK] OrderData: 102 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:46:53 [INFO] [OK] OrderItem: 107 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:46:53 [INFO] [OK] OrderHeader: 102 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:46:53 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 12:46:54 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 12:46:54 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:46:54 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:46:54 [INFO] [OK] Worker başlatıldı.
+2025-09-23 12:46:54 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:54 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:54 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:54 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 12:46:54 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:54 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:54 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:54 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 12:46:54 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:54 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:54 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:54 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:54 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:54 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 12:46:54 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:54 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 12:46:54 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:54 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:54 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:54 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:54 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:54 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:54 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 12:46:54 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:54 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:54 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 12:46:54 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:54 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:54 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 12:46:54 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:54 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:55 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:55 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:55 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 12:46:55 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 12:46:55 [INFO] [OK] OrderData: 102 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:46:55 [INFO] [OK] OrderItem: 107 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:46:55 [INFO] [OK] OrderHeader: 102 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:46:55 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 12:46:56 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 12:46:56 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:46:56 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:46:56 [INFO] [OK] Worker başlatıldı.
+2025-09-23 12:46:56 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:56 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:56 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 12:46:56 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:56 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:56 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:56 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:56 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:56 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:56 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 12:46:56 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:56 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:56 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 12:46:56 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:56 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:56 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 12:46:56 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:56 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:56 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:56 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:56 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:56 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:56 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 12:46:56 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:56 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:56 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 12:46:56 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:56 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:57 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:57 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:57 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 12:46:57 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:46:57 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:46:57 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 12:46:57 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 12:46:57 [INFO] [OK] OrderData: 102 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:46:57 [INFO] [OK] OrderItem: 107 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:46:57 [INFO] [OK] OrderHeader: 102 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:46:57 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 12:46:59 [INFO] [OK] 363 kayıt çekildi.
+2025-09-23 12:46:59 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 12:46:59 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 12:47:06 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 12:47:06 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:47:06 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:47:06 [INFO] [OK] Worker başlatıldı.
+2025-09-23 12:47:06 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:06 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:06 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:06 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:06 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 12:47:06 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:06 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 12:47:06 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:06 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:06 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:06 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:06 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:06 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:06 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 12:47:06 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:06 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:06 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 12:47:06 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:06 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:06 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:06 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:06 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:06 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 12:47:07 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:07 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:07 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 12:47:07 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:07 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:07 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 12:47:07 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:07 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:07 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:07 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:07 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 12:47:07 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 12:47:07 [INFO] [OK] OrderData: 102 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:07 [INFO] [OK] OrderItem: 107 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:07 [INFO] [OK] OrderHeader: 102 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:07 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 12:47:08 [INFO] [OK] 363 kayıt çekildi.
+2025-09-23 12:47:08 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 12:47:08 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 12:47:10 [INFO] [OK] Seçili sipariş sayısı güncellendi: 14
+2025-09-23 12:47:17 [INFO] [OK] 363 kayıt çekildi.
+2025-09-23 12:47:17 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 12:47:17 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 12:47:18 [INFO] [OK] Seçili sipariş sayısı güncellendi: 14
+2025-09-23 12:47:19 [INFO] [OK] Seçili sipariş sayısı güncellendi: 0
+2025-09-23 12:47:21 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 12:47:21 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:47:21 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:47:21 [INFO] [OK] Worker başlatıldı.
+2025-09-23 12:47:21 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:21 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:21 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 12:47:21 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:21 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:21 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 12:47:21 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:21 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:21 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 12:47:21 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:21 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:21 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:21 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:21 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:21 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:21 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:21 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 12:47:21 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:21 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:21 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:21 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:21 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:21 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 12:47:21 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:21 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:21 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 12:47:21 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:21 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:21 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:21 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 12:47:21 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:22 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:22 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:22 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 12:47:22 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 12:47:22 [INFO] [OK] OrderData: 102 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:22 [INFO] [OK] OrderItem: 107 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:22 [INFO] [OK] OrderHeader: 102 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:22 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 12:47:23 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 12:47:23 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:47:23 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:47:23 [INFO] [OK] Worker başlatıldı.
+2025-09-23 12:47:24 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:24 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:24 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 12:47:24 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:24 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:24 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:24 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:24 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 12:47:24 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:24 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 12:47:24 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:24 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:24 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:24 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 12:47:24 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:24 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:24 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:24 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:24 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:24 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:24 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:24 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:24 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:24 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 12:47:24 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:24 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 12:47:24 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:24 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:24 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 12:47:24 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:24 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:24 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:24 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:24 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 12:47:24 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 12:47:24 [INFO] [OK] OrderData: 102 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:24 [INFO] [OK] OrderItem: 107 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:24 [INFO] [OK] OrderHeader: 102 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:24 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 12:47:26 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 12:47:26 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:47:26 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:47:26 [INFO] [OK] Worker başlatıldı.
+2025-09-23 12:47:26 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:26 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:26 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 12:47:26 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:26 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:26 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 12:47:26 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:26 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:26 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 12:47:26 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:26 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:26 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:26 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:26 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:26 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 12:47:26 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:26 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:26 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:26 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:26 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:26 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:26 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:26 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 12:47:26 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:26 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:26 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 12:47:26 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:26 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:26 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:26 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:26 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 12:47:26 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:26 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:26 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 12:47:26 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 12:47:26 [INFO] [OK] OrderData: 102 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:26 [INFO] [OK] OrderItem: 107 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:26 [INFO] [OK] OrderHeader: 102 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:26 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 12:47:28 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 12:47:28 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:47:28 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:47:28 [INFO] [OK] Worker başlatıldı.
+2025-09-23 12:47:28 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:28 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:28 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 12:47:28 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:28 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:28 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:28 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:28 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:28 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 12:47:28 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:28 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 12:47:28 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:28 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:28 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:28 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:28 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:28 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:28 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 12:47:28 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:28 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:28 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:28 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:28 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 12:47:28 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:28 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:28 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 12:47:28 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:28 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:28 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 12:47:28 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:28 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:29 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:29 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:29 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 12:47:29 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 12:47:29 [INFO] [OK] OrderData: 102 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:29 [INFO] [OK] OrderItem: 107 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:29 [INFO] [OK] OrderHeader: 102 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:29 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 12:47:31 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 12:47:31 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:47:31 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:47:31 [INFO] [OK] Worker başlatıldı.
+2025-09-23 12:47:31 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:31 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:31 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:31 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 12:47:31 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:31 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 12:47:31 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:31 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:31 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 12:47:31 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:31 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:31 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:31 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:31 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:31 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 12:47:31 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:31 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:31 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:31 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:31 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:31 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:31 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:31 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 12:47:31 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:31 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:31 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 12:47:31 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:31 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:31 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 12:47:31 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:31 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:31 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:31 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:31 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 12:47:31 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 12:47:31 [INFO] [OK] OrderData: 102 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:31 [INFO] [OK] OrderItem: 107 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:31 [INFO] [OK] OrderHeader: 102 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:31 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 12:47:33 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 12:47:33 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:47:33 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:47:33 [INFO] [OK] Worker başlatıldı.
+2025-09-23 12:47:33 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:33 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:33 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 12:47:33 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:33 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:33 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:33 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:33 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 12:47:33 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:33 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:33 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 12:47:33 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:33 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:33 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:33 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:33 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:33 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:33 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 12:47:33 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:33 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:33 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:33 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:33 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 12:47:33 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:33 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:33 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:33 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 12:47:33 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:33 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 12:47:33 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:33 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:33 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:33 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:33 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 12:47:33 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 12:47:33 [INFO] [OK] OrderData: 102 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:33 [INFO] [OK] OrderItem: 107 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:33 [INFO] [OK] OrderHeader: 102 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:33 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 12:47:35 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 12:47:35 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:47:35 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:47:35 [INFO] [OK] Worker başlatıldı.
+2025-09-23 12:47:35 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:35 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:35 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 12:47:35 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:35 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:35 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:35 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:35 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 12:47:35 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:35 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:35 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 12:47:35 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:35 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:35 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:35 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:35 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 12:47:35 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:35 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:35 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:35 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:35 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:35 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:35 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 12:47:35 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:35 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:35 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 12:47:35 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:35 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:35 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 12:47:36 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:36 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:36 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:36 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:36 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 12:47:36 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 12:47:36 [INFO] [OK] OrderData: 102 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:36 [INFO] [OK] OrderItem: 107 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:36 [INFO] [OK] OrderHeader: 102 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:36 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 12:47:39 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 12:47:39 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 12:47:39 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 12:47:39 [INFO] [OK] Worker başlatıldı.
+2025-09-23 12:47:39 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:39 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:39 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 12:47:39 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:39 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:39 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:39 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 12:47:39 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:39 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:39 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:39 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:39 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 12:47:39 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:39 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:39 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:39 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:39 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 12:47:39 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:39 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:39 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:39 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:39 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:39 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 12:47:39 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:39 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:39 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 12:47:39 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:39 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:39 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 12:47:39 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:39 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:39 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 12:47:39 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 12:47:39 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 12:47:39 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 12:47:39 [INFO] [OK] OrderData: 102 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:40 [INFO] [OK] OrderItem: 107 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:40 [INFO] [OK] OrderHeader: 102 kaydın 0 adedi eklendi (ignore).
+2025-09-23 12:47:40 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 13:36:21 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 13:36:21 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 13:36:21 [INFO] [OK] Şirket listesi başarıyla oluşturuldu. (toplam: 1)
+2025-09-23 13:36:22 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 13:36:22 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 13:36:22 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 13:36:22 [INFO] [OK] Worker başlatıldı.
+2025-09-23 13:36:22 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 13:36:22 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 13:36:22 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 13:36:22 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 13:36:22 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 13:36:22 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 13:36:22 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 13:36:22 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 13:36:22 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 13:36:22 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 13:36:22 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 13:36:22 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 13:36:22 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 13:36:22 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 13:36:22 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 13:36:22 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 13:36:22 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 13:36:22 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 13:36:22 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 13:36:22 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 13:36:22 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 13:36:22 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 13:36:22 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 13:36:22 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 13:36:22 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 13:36:22 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 13:36:22 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 13:36:22 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 13:36:22 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 13:36:22 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 13:36:22 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 13:36:23 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 13:36:23 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 13:36:23 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 13:36:23 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 13:36:23 [INFO] [OK] OrderData: 113 kaydın 11 adedi eklendi (ignore).
+2025-09-23 13:36:23 [INFO] [OK] OrderItem: 120 kaydın 13 adedi eklendi (ignore).
+2025-09-23 13:36:23 [INFO] [OK] OrderHeader: 113 kaydın 6 adedi eklendi (ignore).
+2025-09-23 13:36:23 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 13:36:24 [INFO] [OK] 374 kayıt çekildi.
+2025-09-23 13:36:24 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 13:36:24 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 13:36:28 [INFO] [OK] Seçili sipariş sayısı güncellendi: 19
+2025-09-23 13:36:29 [INFO] [OK] Seçili sipariş sayısı güncellendi: 0
+2025-09-23 13:36:29 [INFO] [OK] Seçili sipariş sayısı güncellendi: 19
+2025-09-23 13:36:30 [INFO] [OK] Seçili sipariş sayısı güncellendi: 0
+2025-09-23 13:36:30 [INFO] [OK] Seçili sipariş sayısı güncellendi: 19
+2025-09-23 13:36:30 [INFO] [OK] Seçili sipariş sayısı güncellendi: 0
+2025-09-23 13:36:31 [INFO] [OK] Seçili sipariş sayısı güncellendi: 19
+2025-09-23 13:36:31 [INFO] [OK] Seçili sipariş sayısı güncellendi: 0
+2025-09-23 13:36:31 [INFO] [OK] Seçili sipariş sayısı güncellendi: 19
+2025-09-23 13:36:33 [INFO] [OK] Seçili sipariş sayısı güncellendi: 19
+2025-09-23 13:36:33 [INFO] [OK] Seçili sipariş sayısı güncellendi: 0
+2025-09-23 13:36:34 [INFO] [OK] Seçili sipariş sayısı güncellendi: 19
+2025-09-23 13:36:34 [INFO] [OK] Seçili sipariş sayısı güncellendi: 0
+2025-09-23 13:36:34 [INFO] [OK] Seçili sipariş sayısı güncellendi: 19
+2025-09-23 13:36:35 [INFO] [OK] Seçili sipariş sayısı güncellendi: 0
+2025-09-23 13:38:04 [INFO] [OK] Seçili sipariş sayısı güncellendi: 19
+2025-09-23 13:38:05 [INFO] [OK] Seçili sipariş sayısı güncellendi: 19
+2025-09-23 13:38:06 [INFO] [OK] Seçili sipariş sayısı güncellendi: 0
+2025-09-23 13:38:06 [INFO] [OK] Seçili sipariş sayısı güncellendi: 19
+2025-09-23 13:38:07 [INFO] [OK] Seçili sipariş sayısı güncellendi: 18
+2025-09-23 13:38:08 [INFO] [OK] Seçili sipariş sayısı güncellendi: 19
+2025-09-23 13:38:08 [INFO] [OK] Seçili sipariş sayısı güncellendi: 18
+2025-09-23 13:38:08 [INFO] [OK] Seçili sipariş sayısı güncellendi: 19
+2025-09-23 13:38:09 [INFO] [OK] Seçili sipariş sayısı güncellendi: 18
+2025-09-23 13:38:09 [INFO] [OK] Seçili sipariş sayısı güncellendi: 19
+2025-09-23 13:38:13 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 13:38:13 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 13:38:13 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 13:38:14 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 13:38:14 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 13:38:14 [INFO] [OK] Form dolduruldu.
+2025-09-23 15:00:28 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:00:28 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:00:28 [INFO] [OK] Şirket listesi başarıyla oluşturuldu. (toplam: 1)
+2025-09-23 15:00:29 [INFO] [OK] 374 kayıt çekildi.
+2025-09-23 15:00:29 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:00:29 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:00:32 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 15:00:32 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:00:32 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:00:32 [INFO] [OK] Worker başlatıldı.
+2025-09-23 15:00:32 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:32 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:32 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:32 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 15:00:32 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:32 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 15:00:32 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:32 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:32 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 15:00:32 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:32 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:32 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 15:00:32 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:32 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:32 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:32 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:32 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:32 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:32 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:32 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:32 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:32 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:32 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 15:00:32 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:32 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:32 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 15:00:32 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:32 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:32 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 15:00:32 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:32 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:32 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:32 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:32 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 15:00:32 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 15:00:32 [INFO] [OK] OrderData: 125 kaydın 12 adedi eklendi (ignore).
+2025-09-23 15:00:32 [INFO] [OK] OrderItem: 133 kaydın 13 adedi eklendi (ignore).
+2025-09-23 15:00:32 [INFO] [OK] OrderHeader: 125 kaydın 5 adedi eklendi (ignore).
+2025-09-23 15:00:32 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 15:00:35 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 15:00:35 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:00:35 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:00:35 [INFO] [OK] Worker başlatıldı.
+2025-09-23 15:00:35 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:35 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:35 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:35 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 15:00:35 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:35 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 15:00:35 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:35 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:35 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 15:00:35 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:35 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:35 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:35 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:35 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 15:00:35 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:35 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:35 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:35 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:35 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:35 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:35 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:35 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:35 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 15:00:35 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:35 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:35 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 15:00:35 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:35 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:35 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:35 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:35 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 15:00:35 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:35 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:35 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 15:00:35 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 15:00:35 [INFO] [OK] OrderData: 125 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:00:35 [INFO] [OK] OrderItem: 133 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:00:35 [INFO] [OK] OrderHeader: 125 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:00:35 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 15:00:36 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 15:00:36 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:00:36 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:00:36 [INFO] [OK] Worker başlatıldı.
+2025-09-23 15:00:37 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:37 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:37 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 15:00:37 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:37 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:37 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:37 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 15:00:37 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:37 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 15:00:37 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:37 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:37 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:37 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:37 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:37 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:37 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:37 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:37 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:37 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:37 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:37 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 15:00:37 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:37 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 15:00:37 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:37 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:37 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 15:00:37 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:37 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:37 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:37 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:37 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 15:00:39 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:39 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:39 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 15:00:39 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 15:00:39 [INFO] [OK] OrderData: 125 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:00:39 [INFO] [OK] OrderItem: 133 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:00:39 [INFO] [OK] OrderHeader: 125 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:00:39 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 15:00:41 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 15:00:41 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:00:41 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:00:41 [INFO] [OK] Worker başlatıldı.
+2025-09-23 15:00:41 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:41 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:41 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 15:00:41 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:41 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:41 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 15:00:41 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:41 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:41 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 15:00:41 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:41 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:41 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:41 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:41 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:41 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:41 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:41 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:41 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:41 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:41 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 15:00:41 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:41 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:41 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 15:00:41 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:41 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:41 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 15:00:41 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:41 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:41 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 15:00:41 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:41 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:41 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:41 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:41 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 15:00:41 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 15:00:41 [INFO] [OK] OrderData: 125 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:00:41 [INFO] [OK] OrderItem: 133 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:00:41 [INFO] [OK] OrderHeader: 125 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:00:41 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 15:00:42 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 15:00:42 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:00:42 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:00:42 [INFO] [OK] Worker başlatıldı.
+2025-09-23 15:00:43 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:43 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:43 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 15:00:43 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:43 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:43 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 15:00:43 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:43 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:43 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:43 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 15:00:43 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:43 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 15:00:43 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:43 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:43 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:43 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:43 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:43 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:43 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:43 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:43 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:43 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:43 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 15:00:43 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:43 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:43 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:43 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 15:00:43 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:43 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 15:00:43 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:43 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:43 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:00:43 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:00:43 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 15:00:43 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 15:00:43 [INFO] [OK] OrderData: 125 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:00:43 [INFO] [OK] OrderItem: 133 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:00:43 [INFO] [OK] OrderHeader: 125 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:00:43 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 15:00:44 [INFO] [OK] 386 kayıt çekildi.
+2025-09-23 15:00:44 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:00:44 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:00:49 [INFO] [OK] Seçili sipariş sayısı güncellendi: 23
+2025-09-23 15:00:51 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:00:51 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:00:51 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 15:00:53 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:00:53 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:00:53 [INFO] [OK] Form dolduruldu.
+2025-09-23 15:01:09 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:01:09 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:01:09 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 15:01:11 [INFO] [OK] 1 kayıt silindi.
+2025-09-23 15:01:11 [INFO] [OK] Şirket (id=1) başarıyla silindi.
+2025-09-23 15:01:11 [INFO] [OK] 0 kayıt çekildi.
+2025-09-23 15:01:11 [ERROR] [FAIL] Hiç şirket bulunamadı.
+2025-09-23 15:03:32 [INFO] [OK] 0 kayıt çekildi.
+2025-09-23 15:03:32 [ERROR] [FAIL] Hiç şirket bulunamadı.
+2025-09-23 15:03:39 [INFO] [OK] 0 kayıt çekildi.
+2025-09-23 15:03:39 [ERROR] [FAIL] Hiç şirket bulunamadı.
+2025-09-23 15:04:13 [INFO] [OK] 0 kayıt çekildi.
+2025-09-23 15:04:13 [ERROR] [FAIL] Hiç şirket bulunamadı.
+2025-09-23 15:04:15 [INFO] [OK] 0 kayıt çekildi.
+2025-09-23 15:04:15 [ERROR] [FAIL] Hiç şirket bulunamadı.
+2025-09-23 15:04:24 [INFO] [OK] Validasyon başarılı.
+2025-09-23 15:04:24 [INFO] [OK] ApiAccount: 1 kayıt eklendi (plain).
+2025-09-23 15:04:24 [INFO] [OK] Şirket başarıyla kaydedildi.
+2025-09-23 15:04:24 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:04:24 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:04:24 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 15:04:31 [INFO] [OK] 1 kayıt silindi.
+2025-09-23 15:04:31 [INFO] [OK] Şirket (id=1) başarıyla silindi.
+2025-09-23 15:04:31 [INFO] [OK] 0 kayıt çekildi.
+2025-09-23 15:04:31 [ERROR] [FAIL] Hiç şirket bulunamadı.
+2025-09-23 15:06:37 [INFO] [OK] 0 kayıt çekildi.
+2025-09-23 15:06:37 [ERROR] [FAIL] Hiç şirket bulunamadı.
+2025-09-23 15:06:39 [INFO] [OK] 0 kayıt çekildi.
+2025-09-23 15:06:39 [ERROR] [FAIL] Hiç şirket bulunamadı.
+2025-09-23 15:06:45 [INFO] [OK] Validasyon başarılı.
+2025-09-23 15:06:45 [INFO] [OK] ApiAccount: 1 kayıt eklendi (plain).
+2025-09-23 15:06:45 [INFO] [OK] Şirket başarıyla kaydedildi.
+2025-09-23 15:06:46 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:06:46 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:06:46 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 15:06:49 [INFO] [OK] 1 kayıt silindi.
+2025-09-23 15:06:49 [INFO] [OK] Şirket (id=1) başarıyla silindi.
+2025-09-23 15:06:49 [INFO] [OK] 0 kayıt çekildi.
+2025-09-23 15:06:49 [ERROR] [FAIL] Hiç şirket bulunamadı.
+2025-09-23 15:07:29 [INFO] [OK] 0 kayıt çekildi.
+2025-09-23 15:07:29 [ERROR] [FAIL] Hiç şirket bulunamadı.
+2025-09-23 15:07:31 [INFO] [OK] 0 kayıt çekildi.
+2025-09-23 15:07:31 [ERROR] [FAIL] Hiç şirket bulunamadı.
+2025-09-23 15:07:36 [INFO] [OK] Validasyon başarılı.
+2025-09-23 15:07:36 [INFO] [OK] ApiAccount: 1 kayıt eklendi (plain).
+2025-09-23 15:07:36 [INFO] [OK] Şirket başarıyla kaydedildi.
+2025-09-23 15:07:37 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:07:37 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:07:37 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 15:07:39 [INFO] [OK] 1 kayıt silindi.
+2025-09-23 15:07:39 [INFO] [OK] Şirket (id=1) başarıyla silindi.
+2025-09-23 15:07:39 [INFO] [OK] 0 kayıt çekildi.
+2025-09-23 15:07:39 [ERROR] [FAIL] Hiç şirket bulunamadı.
+2025-09-23 15:07:45 [INFO] [OK] 0 kayıt çekildi.
+2025-09-23 15:07:45 [ERROR] [FAIL] Hiç şirket bulunamadı.
+2025-09-23 15:15:46 [INFO] [OK] 0 kayıt çekildi.
+2025-09-23 15:15:46 [INFO] [OK] Hiç şirket bulunmuyor.
+2025-09-23 15:15:46 [ERROR] [FAIL] Listelenecek şirket bulunamadı.
+2025-09-23 15:17:10 [INFO] [OK] 0 kayıt çekildi.
+2025-09-23 15:17:10 [INFO] [OK] Hiç şirket bulunmuyor.
+2025-09-23 15:17:10 [INFO] [OK] Hiç şirket bulunmuyor.
+2025-09-23 15:17:13 [INFO] [OK] 0 kayıt çekildi.
+2025-09-23 15:17:13 [INFO] [OK] Hiç şirket bulunmuyor.
+2025-09-23 15:17:13 [ERROR] [FAIL] Tabloya eklenecek şirket bulunamadı.
+2025-09-23 15:17:58 [INFO] [OK] 0 kayıt çekildi.
+2025-09-23 15:17:58 [INFO] [OK] Hiç şirket bulunmuyor.
+2025-09-23 15:17:58 [INFO] [OK] Hiç şirket bulunmuyor.
+2025-09-23 15:18:00 [INFO] [OK] 0 kayıt çekildi.
+2025-09-23 15:18:00 [INFO] [OK] Hiç şirket bulunmuyor.
+2025-09-23 15:18:00 [INFO] [OK] Hiç şirket bulunmuyor.
+2025-09-23 15:18:05 [ERROR] [FAIL] Listede şirket bulunamadı.
+2025-09-23 15:18:09 [ERROR] [FAIL] Listede şirket bulunamadı.
+2025-09-23 15:18:11 [INFO] [OK] 0 kayıt çekildi.
+2025-09-23 15:18:11 [INFO] [OK] Hiç şirket bulunmuyor.
+2025-09-23 15:18:11 [INFO] [OK] Hiç şirket bulunmuyor.
+2025-09-23 15:18:37 [INFO] [OK] Logo başarıyla kaydedildi.
+2025-09-23 15:18:37 [INFO] [OK] Logo başarıyla yüklendi.
+2025-09-23 15:18:37 [INFO] [OK] Validasyon başarılı.
+2025-09-23 15:18:37 [INFO] [OK] ApiAccount: 1 kayıt eklendi (plain).
+2025-09-23 15:18:37 [INFO] [OK] Şirket başarıyla kaydedildi.
+2025-09-23 15:18:38 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:18:38 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:18:38 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 15:18:41 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:18:41 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:18:41 [INFO] [OK] Form dolduruldu.
+2025-09-23 15:18:45 [INFO] [OK] Validasyon başarılı.
+2025-09-23 15:18:45 [INFO] [OK] 1 kayıt güncellendi.
+2025-09-23 15:18:45 [INFO] [OK] Şirket başarıyla güncellendi.
+2025-09-23 15:18:45 [INFO] [OK] Şirket güncellendi.
+2025-09-23 15:18:46 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:18:46 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:18:46 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 15:18:49 [INFO] [OK] 386 kayıt çekildi.
+2025-09-23 15:18:49 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:18:49 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:18:56 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:18:56 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:18:56 [INFO] [OK] Şirket listesi başarıyla oluşturuldu. (toplam: 1)
+2025-09-23 15:18:58 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 15:18:58 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:18:58 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:18:58 [INFO] [OK] Worker başlatıldı.
+2025-09-23 15:18:58 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:18:58 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:18:58 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 15:18:58 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:18:58 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:18:58 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:18:58 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 15:18:58 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:18:58 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 15:18:58 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:18:58 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:18:58 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:18:58 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:18:58 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 15:18:58 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:18:58 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:18:58 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:18:58 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:18:58 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:18:58 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:18:58 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:18:58 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:18:58 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 15:18:58 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:18:58 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:18:58 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 15:18:58 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:18:58 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:18:58 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 15:18:58 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:18:58 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:18:58 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:18:58 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:18:58 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 15:18:58 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 15:18:58 [INFO] [OK] OrderData: 129 kaydın 4 adedi eklendi (ignore).
+2025-09-23 15:18:58 [INFO] [OK] OrderItem: 143 kaydın 10 adedi eklendi (ignore).
+2025-09-23 15:18:58 [INFO] [OK] OrderHeader: 129 kaydın 1 adedi eklendi (ignore).
+2025-09-23 15:18:58 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 15:19:01 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 15:19:01 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:19:01 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:19:01 [INFO] [OK] Worker başlatıldı.
+2025-09-23 15:19:01 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:01 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:01 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:01 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:01 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 15:19:01 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:01 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:01 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 15:19:01 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:01 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:01 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:01 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:01 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:01 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 15:19:01 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:01 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 15:19:01 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:01 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:01 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:01 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:01 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:01 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:01 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 15:19:01 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:01 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:01 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 15:19:01 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:01 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:01 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 15:19:01 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:01 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:01 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:01 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:01 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 15:19:01 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 15:19:01 [INFO] [OK] OrderData: 129 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:01 [INFO] [OK] OrderItem: 143 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:01 [INFO] [OK] OrderHeader: 129 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:01 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 15:19:03 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 15:19:03 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:19:03 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:19:03 [INFO] [OK] Worker başlatıldı.
+2025-09-23 15:19:03 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:03 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:03 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 15:19:03 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:03 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:03 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:03 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:03 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:03 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 15:19:03 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:03 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 15:19:03 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:03 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:03 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:03 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:03 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:03 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:03 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:03 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 15:19:03 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:03 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:03 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:03 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 15:19:04 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:04 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:04 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 15:19:04 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:04 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:04 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 15:19:04 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:04 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:04 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:04 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:04 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 15:19:04 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 15:19:04 [INFO] [OK] OrderData: 129 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:04 [INFO] [OK] OrderItem: 143 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:04 [INFO] [OK] OrderHeader: 129 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:04 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 15:19:06 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 15:19:06 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:19:06 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:19:06 [INFO] [OK] Worker başlatıldı.
+2025-09-23 15:19:06 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:06 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:06 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:06 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 15:19:06 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:06 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 15:19:06 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:06 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:06 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 15:19:06 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:06 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:06 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 15:19:06 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:06 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:06 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:06 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:06 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:06 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:06 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:06 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:06 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:06 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:06 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 15:19:06 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:06 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:06 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 15:19:06 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:06 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:06 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 15:19:06 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:06 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:06 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:06 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:06 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 15:19:06 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 15:19:06 [INFO] [OK] OrderData: 129 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:06 [INFO] [OK] OrderItem: 143 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:06 [INFO] [OK] OrderHeader: 129 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:06 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 15:19:08 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 15:19:08 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:19:08 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:19:08 [INFO] [OK] Worker başlatıldı.
+2025-09-23 15:19:08 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:08 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:08 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 15:19:08 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:08 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:08 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 15:19:08 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:08 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:08 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 15:19:08 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:08 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:08 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:08 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:08 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:08 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:08 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:08 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:09 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:09 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:09 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 15:19:09 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:09 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:09 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 15:19:09 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:09 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:09 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 15:19:09 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:09 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:09 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 15:19:09 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:09 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:09 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:09 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:09 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 15:19:09 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 15:19:09 [INFO] [OK] OrderData: 129 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:09 [INFO] [OK] OrderItem: 143 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:09 [INFO] [OK] OrderHeader: 129 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:09 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 15:19:10 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 15:19:10 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:19:10 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:19:10 [INFO] [OK] Worker başlatıldı.
+2025-09-23 15:19:11 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:11 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:11 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:11 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:11 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:11 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 15:19:11 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:11 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:11 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 15:19:11 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:11 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 15:19:11 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:11 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:11 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:11 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:11 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 15:19:11 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:11 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:11 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:11 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:11 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:11 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:11 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 15:19:11 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:11 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:11 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 15:19:11 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:11 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:11 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 15:19:11 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:11 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:11 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:11 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:11 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 15:19:11 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 15:19:11 [INFO] [OK] OrderData: 129 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:11 [INFO] [OK] OrderItem: 143 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:11 [INFO] [OK] OrderHeader: 129 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:11 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 15:19:13 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 15:19:13 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:19:13 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:19:13 [INFO] [OK] Worker başlatıldı.
+2025-09-23 15:19:13 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:13 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:13 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 15:19:13 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:13 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:13 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:13 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:13 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 15:19:13 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:13 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 15:19:13 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:13 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 15:19:13 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:13 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:13 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:13 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:13 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:13 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:13 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:13 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:13 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:13 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:13 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 15:19:13 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:13 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:13 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 15:19:13 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:13 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:13 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:13 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:13 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 15:19:13 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:13 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:13 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 15:19:13 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 15:19:13 [INFO] [OK] OrderData: 129 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:13 [INFO] [OK] OrderItem: 143 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:13 [INFO] [OK] OrderHeader: 129 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:13 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 15:19:15 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 15:19:15 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:19:15 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:19:15 [INFO] [OK] Worker başlatıldı.
+2025-09-23 15:19:15 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:15 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:15 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 15:19:15 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:15 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:15 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 15:19:15 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:15 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:15 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 15:19:15 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:15 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:15 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:15 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:15 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 15:19:15 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:15 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:15 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:15 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:15 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:15 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:15 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:15 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:15 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 15:19:15 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:15 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:15 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 15:19:15 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:15 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:15 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 15:19:15 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:15 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:16 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:16 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:16 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 15:19:16 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 15:19:16 [INFO] [OK] OrderData: 129 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:16 [INFO] [OK] OrderItem: 143 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:16 [INFO] [OK] OrderHeader: 129 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:16 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 15:19:17 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 15:19:17 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:19:17 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:19:17 [INFO] [OK] Worker başlatıldı.
+2025-09-23 15:19:17 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:17 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:17 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 15:19:17 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:17 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:17 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 15:19:17 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:17 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:17 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 15:19:17 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:17 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:17 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:17 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:17 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:17 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:17 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 15:19:17 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:17 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:17 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:17 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:17 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:17 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:17 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:17 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 15:19:17 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:17 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 15:19:17 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:17 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:17 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:17 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:17 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 15:19:18 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:18 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:18 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 15:19:18 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 15:19:18 [INFO] [OK] OrderData: 129 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:18 [INFO] [OK] OrderItem: 143 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:18 [INFO] [OK] OrderHeader: 129 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:18 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 15:19:19 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 15:19:19 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:19:19 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:19:19 [INFO] [OK] Worker başlatıldı.
+2025-09-23 15:19:19 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:19 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:19 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 15:19:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:19 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 15:19:19 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:19 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 15:19:19 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:19 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 15:19:19 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:19 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:19 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:19 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:19 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:19 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 15:19:19 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:19 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:19 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 15:19:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:19 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 15:19:19 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:19 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:19 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 15:19:19 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 15:19:20 [INFO] [OK] OrderData: 129 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:20 [INFO] [OK] OrderItem: 143 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:20 [INFO] [OK] OrderHeader: 129 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:20 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 15:19:21 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 15:19:21 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:19:21 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:19:21 [INFO] [OK] Worker başlatıldı.
+2025-09-23 15:19:21 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:21 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:21 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 15:19:21 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:21 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:21 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:21 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:21 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 15:19:21 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:21 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:21 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:21 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 15:19:21 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:21 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 15:19:21 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:21 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:21 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:21 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:21 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:21 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:21 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 15:19:21 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:21 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:21 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 15:19:21 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:21 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:21 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:21 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:21 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 15:19:23 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:23 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:23 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:19:23 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:19:23 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 15:19:23 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 15:19:23 [INFO] [OK] OrderData: 129 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:23 [INFO] [OK] OrderItem: 143 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:23 [INFO] [OK] OrderHeader: 129 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:19:23 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 15:19:33 [INFO] [OK] 390 kayıt çekildi.
+2025-09-23 15:19:33 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:19:33 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:19:35 [INFO] [OK] Seçili sipariş sayısı güncellendi: 24
+2025-09-23 15:19:36 [INFO] [OK] Seçili sipariş sayısı güncellendi: 0
+2025-09-23 15:21:03 [INFO] [OK] 390 kayıt çekildi.
+2025-09-23 15:21:03 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:21:03 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:21:06 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:21:06 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:21:06 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 15:21:11 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:21:11 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:21:11 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 15:23:07 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:23:07 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:23:07 [INFO] [OK] Şirket listesi başarıyla oluşturuldu. (toplam: 1)
+2025-09-23 15:23:13 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:23:13 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:23:13 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 15:23:14 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:23:14 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:23:14 [INFO] [OK] Form dolduruldu.
+2025-09-23 15:23:20 [INFO] [OK] Logo başarıyla kaydedildi.
+2025-09-23 15:23:20 [INFO] [OK] Logo başarıyla yüklendi.
+2025-09-23 15:23:20 [INFO] [OK] Validasyon başarılı.
+2025-09-23 15:23:20 [INFO] [OK] 1 kayıt güncellendi.
+2025-09-23 15:23:20 [INFO] [OK] Şirket başarıyla güncellendi.
+2025-09-23 15:23:20 [INFO] [OK] Şirket güncellendi.
+2025-09-23 15:23:21 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:23:21 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:23:21 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 15:23:25 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:23:25 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:23:25 [INFO] [OK] Şirket listesi başarıyla oluşturuldu. (toplam: 1)
+2025-09-23 15:23:41 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:23:41 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:23:41 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 15:23:42 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:23:42 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:23:42 [INFO] [OK] Form dolduruldu.
+2025-09-23 15:23:47 [INFO] [OK] Logo başarıyla kaydedildi.
+2025-09-23 15:23:47 [INFO] [OK] Logo başarıyla yüklendi.
+2025-09-23 15:23:48 [INFO] [OK] Validasyon başarılı.
+2025-09-23 15:23:48 [INFO] [OK] 1 kayıt güncellendi.
+2025-09-23 15:23:48 [INFO] [OK] Şirket başarıyla güncellendi.
+2025-09-23 15:23:48 [INFO] [OK] Şirket güncellendi.
+2025-09-23 15:23:49 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:23:49 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:23:49 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 15:23:53 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:23:53 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:23:53 [INFO] [OK] Şirket listesi başarıyla oluşturuldu. (toplam: 1)
+2025-09-23 15:24:00 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:24:00 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:24:00 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 15:24:02 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:24:02 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:24:02 [INFO] [OK] Form dolduruldu.
+2025-09-23 15:24:09 [INFO] [OK] Logo başarıyla kaydedildi.
+2025-09-23 15:24:09 [INFO] [OK] Logo başarıyla yüklendi.
+2025-09-23 15:24:09 [INFO] [OK] Validasyon başarılı.
+2025-09-23 15:24:09 [INFO] [OK] 1 kayıt güncellendi.
+2025-09-23 15:24:09 [INFO] [OK] Şirket başarıyla güncellendi.
+2025-09-23 15:24:09 [INFO] [OK] Şirket güncellendi.
+2025-09-23 15:24:10 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:24:10 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:24:10 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 15:24:13 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:24:13 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:24:13 [INFO] [OK] Şirket listesi başarıyla oluşturuldu. (toplam: 1)
+2025-09-23 15:24:19 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 15:24:19 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:24:19 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:24:19 [INFO] [OK] Worker başlatıldı.
+2025-09-23 15:24:19 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:24:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:24:19 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 15:24:19 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:24:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:24:19 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 15:24:19 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:24:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:24:19 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 15:24:19 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:24:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:24:19 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 15:24:19 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:24:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:24:19 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:24:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:24:19 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:24:19 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:24:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:24:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:24:19 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:24:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:24:19 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 15:24:19 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:24:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:24:19 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 15:24:19 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:24:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:24:19 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 15:24:19 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:24:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:24:19 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:24:19 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:24:19 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 15:24:19 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 15:24:19 [INFO] [OK] OrderData: 130 kaydın 1 adedi eklendi (ignore).
+2025-09-23 15:24:19 [INFO] [OK] OrderItem: 144 kaydın 1 adedi eklendi (ignore).
+2025-09-23 15:24:19 [INFO] [OK] OrderHeader: 130 kaydın 1 adedi eklendi (ignore).
+2025-09-23 15:24:19 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 15:24:25 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:25 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:25 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:28 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:28 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:28 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:28 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:28 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:28 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:29 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:29 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:29 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:29 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:29 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:29 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:29 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:29 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:29 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:29 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:29 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:29 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:30 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:30 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:30 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:30 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:30 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:30 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:32 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:32 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:32 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:32 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:32 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:33 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:33 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:33 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:33 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:33 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:33 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:33 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:33 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:33 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:33 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:33 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:33 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:34 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:34 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:34 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:34 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:34 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:34 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:34 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:34 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:34 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:34 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:34 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:34 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:34 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:35 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:35 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:35 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:35 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:35 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:35 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:35 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:35 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:35 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:35 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:35 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:35 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:35 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:35 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:35 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:35 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:35 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:35 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:35 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:35 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:35 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:36 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:36 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:36 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:36 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:36 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:36 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:36 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:36 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:36 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:36 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:36 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:36 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:36 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:36 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:36 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:36 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:36 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:36 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:36 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:36 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:36 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:36 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:36 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:36 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:36 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:36 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:36 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:36 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:36 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:37 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:37 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:37 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:37 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:37 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:37 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:37 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:37 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:37 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:37 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:37 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:37 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:37 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:37 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:37 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:37 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:37 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:37 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:37 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:37 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:37 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:37 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:38 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:38 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:38 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:38 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:38 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:38 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:38 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:38 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:38 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:38 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:38 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:38 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:38 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:38 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:38 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:38 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:38 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:38 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:38 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:38 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:38 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:38 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:38 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:39 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:39 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:39 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:39 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:39 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:39 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:39 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:39 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:39 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:39 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:39 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:39 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:39 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:39 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:39 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:39 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:39 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:39 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:39 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:39 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:39 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:39 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:40 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:40 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:40 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:40 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:40 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:40 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:40 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:40 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:40 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:40 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:40 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:40 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:40 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:40 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:40 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:40 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:40 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:40 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:41 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:41 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:41 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:41 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:41 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:41 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:41 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:41 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:41 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:41 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:41 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:41 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:41 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:41 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:41 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:43 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:43 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:43 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:49 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:24:49 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:24:49 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 15:24:50 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:50 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:51 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:24:55 [INFO] [OK] 391 kayıt çekildi.
+2025-09-23 15:24:55 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:24:55 [INFO] [OK] Siparişler başarıyla listeye eklendi.
+2025-09-23 15:25:02 [INFO] [OK] 1 şirket seçildi.
+2025-09-23 15:25:02 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:25:02 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:25:02 [INFO] [OK] Worker başlatıldı.
+2025-09-23 15:25:02 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:25:02 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:25:02 [INFO] [OK] UnDelivered için siparişler çekildi.
+2025-09-23 15:25:02 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:25:02 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:25:02 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:25:02 [INFO] [OK] Invoiced için siparişler çekildi.
+2025-09-23 15:25:02 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:25:02 [INFO] [OK] Picking için siparişler çekildi.
+2025-09-23 15:25:02 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:25:02 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:25:02 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:25:02 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:25:02 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:25:02 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:25:02 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:25:02 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:25:02 [INFO] [OK] Cancelled için siparişler çekildi.
+2025-09-23 15:25:02 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:25:02 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:25:02 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:25:02 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:25:02 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:25:02 [INFO] [OK] Delivered için siparişler çekildi.
+2025-09-23 15:25:02 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:25:02 [INFO] [OK] Created için siparişler çekildi.
+2025-09-23 15:25:02 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:25:02 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:25:02 [INFO] [OK] AtCollectionPoint için siparişler çekildi.
+2025-09-23 15:25:02 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:25:02 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:25:02 [INFO] [OK] GET https://apigw.trendyol.com/integration/order/sellers/784195/orders isteği başarılı.
+2025-09-23 15:25:02 [INFO] [OK] Siparişler başarıyla alındı.
+2025-09-23 15:25:02 [INFO] [OK] Shipped için siparişler çekildi.
+2025-09-23 15:25:02 [INFO] [OK] Siparişler başarıyla çekildi.
+2025-09-23 15:25:03 [INFO] [OK] OrderData: 131 kaydın 1 adedi eklendi (ignore).
+2025-09-23 15:25:03 [INFO] [OK] OrderItem: 145 kaydın 1 adedi eklendi (ignore).
+2025-09-23 15:25:03 [INFO] [OK] OrderHeader: 131 kaydın 0 adedi eklendi (ignore).
+2025-09-23 15:25:03 [INFO] [OK] Siparişler başarıyla veritabanına kaydedildi.
+2025-09-23 15:25:07 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:25:07 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:25:07 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 15:26:26 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:26:26 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:26:26 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 15:26:28 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:26:28 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:26:28 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 15:26:31 [INFO] [OK] 1 kayıt çekildi.
+2025-09-23 15:26:31 [INFO] [OK] 1 şirket bulundu.
+2025-09-23 15:26:31 [INFO] [OK] Şirketler tabloya yüklendi. (toplam: 1)
+2025-09-23 15:26:39 [INFO] [OK] 392 kayıt çekildi.
+2025-09-23 15:26:39 [INFO] [OK] ReadyToShip siparişler başarıyla çekildi.
+2025-09-23 15:26:39 [INFO] [OK] Siparişler başarıyla listeye eklendi.

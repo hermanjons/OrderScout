@@ -139,14 +139,16 @@ class CompanyManagerDialog(QDialog):
         pk = self.table.item(row, 0).data(Qt.ItemDataRole.UserRole)
 
         from Account.processors.pipeline import get_company_by_id
-        res = get_company_by_id(pk)
+        res = get_company_by_id([pk])  # parametre zaten list[int] olmalı
         if not res.success:
             MessageHandler.show(self, res, only_errors=True)
             return
 
-        # ✅ Yeni Result.data kullanımı
-        acc = res.data["accounts"]
+        records = res.data["records"]
+        if not records:
+            return  # ya da Result.fail dön
 
+        acc = records[0]  # ✅ tek kaydı al
         dialog = CompanyFormDialog(account=acc, parent=self)
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
@@ -253,6 +255,7 @@ class CompanyFormDialog(QDialog):
         self.setFixedSize(400, 700)
 
         if account is not None:
+            print("hesap:", account)
             res = fill_company_form(self, account)
             if not res.success:
                 MessageHandler.show(self, res, only_errors=True)
@@ -296,8 +299,9 @@ class CompanyListWidget(QListWidget):
         if not result.success:
             return result
 
-        records = result.data.get("records", [])
-        return build_company_list(self, records)
+        # records çıkarmak yerine Result'u direkt gönder
+        return build_company_list(self, result)
+
 
 
 

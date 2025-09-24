@@ -73,6 +73,7 @@ def delete_company_from_db(pk: int) -> Result:
     Bir şirket kaydını siler.
     """
     try:
+        print(pk)
         engine = get_engine("orders.db")
         delete_records(
             model=ApiAccount,
@@ -118,12 +119,26 @@ def get_all_companies() -> Result:
     """
     try:
         engine = get_engine("orders.db")
-        records = get_records(model=ApiAccount, db_engine=engine)
+        res = get_records(model=ApiAccount, db_engine=engine)
 
-        return Result.ok("Şirketler başarıyla getirildi.", close_dialog=False, data={"records": records})
+        if not res.success:
+            return res
+
+        records = res.data.get("records", [])
+
+        # ✅ boş liste de success kabul ediliyor
+        return Result.ok(
+            f"{len(records)} şirket bulundu." if records else "Hiç şirket bulunmuyor.",
+            close_dialog=False,
+            data={
+                "records": records,
+                "accounts": [[r.pk, r.api_key, r.api_secret, str(r.account_id)] for r in records]
+            }
+        )
 
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
+
 
 
 def get_company_by_id(pks: list[int]) -> Result:

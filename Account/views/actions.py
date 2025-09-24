@@ -34,13 +34,18 @@ def build_company_table(table_widget) -> Result:
             return Result.fail("Geçersiz result objesi alındı.", close_dialog=False)
 
         if not res.success:
-            return res  # doğrudan hata döndür
+            return res  # hata zaten Result ile dönüyor
 
         records = res.data.get("records", [])
         table_widget.setRowCount(0)
 
+        # ✅ boş kayıt durumu = success
         if not records:
-            return Result.fail("Tabloya eklenecek şirket bulunamadı.", close_dialog=False)
+            return Result.ok(
+                "Hiç şirket bulunmuyor.",
+                close_dialog=False,
+                data={"count": 0}
+            )
 
         added = 0
         for row, acc in enumerate(records):
@@ -77,6 +82,8 @@ def build_company_table(table_widget) -> Result:
 
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
+
+
 
 
 
@@ -247,6 +254,7 @@ def handle_logo_selection(dialog_instance, file_path: str) -> Result:
 # ==========================================================
 def delete_company_and_refresh(table, pk: int) -> Result:
     try:
+
         res = delete_company_from_db(pk)
         if not res.success:
             return res
@@ -277,20 +285,25 @@ def build_company_list(list_widget, result: Result, interaction_cb=None) -> Resu
         records = result.data.get("records", [])
         list_widget.clear()
 
+        # ✅ boş listeyi hata değil, success kabul et
         if not records:
-            return Result.fail("Listelenecek şirket bulunamadı.", close_dialog=False)
+            return Result.ok(
+                "Hiç şirket bulunmuyor.",
+                close_dialog=False,
+                data={"count": 0}
+            )
 
         added = 0
         for acc in records:
             switch = SwitchButton()
             switch.setChecked(True)
 
-            icon_name = (acc.comp_name or "").lower().replace(" ", "_")
-            icon_path = os.path.join(MEDIA_ROOT, f"{icon_name}.png")
+            # ✅ artık doğrudan DB'deki logo_path alanını kullanıyoruz
+            icon_path = acc.logo_path if getattr(acc, "logo_path", None) else None
 
             item_widget = ListSmartItemWidget(
                 title=acc.comp_name or "—",
-                identifier=str(acc.pk),  # 🔑 identifier artık pk olacak
+                identifier=str(acc.pk),
                 icon_path=icon_path,
                 optional_widget=switch
             )
@@ -298,11 +311,8 @@ def build_company_list(list_widget, result: Result, interaction_cb=None) -> Resu
             if interaction_cb:
                 item_widget.interaction.connect(interaction_cb)
 
-            # QListWidgetItem içine widget’ı koy
             item = QListWidgetItem(list_widget)
             item.setSizeHint(item_widget.sizeHint())
-
-            # 🔑 pk değerini gizli sakla
             item.setData(Qt.ItemDataRole.UserRole, acc.pk)
 
             list_widget.setItemWidget(item, item_widget)
@@ -316,6 +326,8 @@ def build_company_list(list_widget, result: Result, interaction_cb=None) -> Resu
 
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
+
+
 
 
 
