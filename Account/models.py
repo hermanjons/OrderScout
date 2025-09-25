@@ -1,5 +1,5 @@
-from sqlmodel import SQLModel, Field, UniqueConstraint, Column, JSON
-from typing import Optional
+from sqlmodel import SQLModel, Field, UniqueConstraint, Column, JSON, Relationship
+from typing import Optional,List
 from datetime import datetime
 
 
@@ -8,6 +8,11 @@ class ApiAccount(SQLModel, table=True):
     __table_args__ = (
         UniqueConstraint("comp_name", "platform", "account_id",
                          name="uq_apiaccount_comp_platform_account"),
+    )
+
+    order_headers: List["OrderHeader"] = Relationship(
+        back_populates="api_account",
+        cascade_delete="all, delete-orphan"
     )
 
     pk: Optional[int] = Field(default=None, primary_key=True)

@@ -7,14 +7,22 @@ from Account.models import ApiAccount
 
 # ---- ROOT: Siparişin temel kaydı ----
 class OrderHeader(SQLModel, table=True):
-    pk: Optional[int] = Field(default=None, primary_key=True)  # ✅ Otomatik birincil anahtar
+    pk: Optional[int] = Field(default=None, primary_key=True)
 
     orderNumber: str = Field(index=True)
     api_account_id: Optional[int] = Field(default=None, foreign_key="apiaccount.pk", index=True)
-    api_account: Optional[ApiAccount] = Relationship()
 
-    snapshots: List["OrderData"] = Relationship(back_populates="header")
-    items: List["OrderItem"] = Relationship(back_populates="header")
+    # 🔗 İlişkiler
+    api_account: Optional["ApiAccount"] = Relationship(back_populates="order_headers")
+
+    snapshots: List["OrderData"] = Relationship(
+        back_populates="header",
+        cascade_delete=True
+    )
+    items: List["OrderItem"] = Relationship(
+        back_populates="header",
+        cascade_delete=True
+    )
 
     __table_args__ = (
         UniqueConstraint("orderNumber", "api_account_id", name="uq_orderheader_orderno_accountid"),
@@ -25,10 +33,20 @@ class OrderHeader(SQLModel, table=True):
 class OrderData(SQLModel, table=True):
     pk: Optional[int] = Field(default=None, primary_key=True)
 
-    orderNumber: str = Field(foreign_key="orderheader.orderNumber", index=True)
-    header: Optional[OrderHeader] = Relationship(back_populates="snapshots")
+    # ✅ Artık gerçek FK: OrderHeader
+    order_header_id: Optional[int] = Field(default=None, foreign_key="orderheader.pk", index=True)
+
+    # Lookup için hâlâ tutuyoruz (API datası ile uyumlu kalsın)
+    orderNumber: str = Field(index=True)
     api_account_id: Optional[int] = Field(default=None, foreign_key="apiaccount.pk", index=True)
 
+    # 🔗 Parent
+    header: Optional["OrderHeader"] = Relationship(back_populates="snapshots")
+
+    # 🔎 Sadece lookup
+    api_account: Optional["ApiAccount"] = Relationship()
+
+    # Alanlar
     status: Optional[str] = Field(default=None, index=True)
 
     id: int
@@ -67,8 +85,6 @@ class OrderData(SQLModel, table=True):
     agreedDeliveryExtensionEndDate: Optional[str] = None
     agreedDeliveryExtensionStartDate: Optional[str] = None
     warehouseId: Optional[int] = None
-    totalProfit: Optional[float] = None
-    printed_date: Optional[datetime] = None
 
     __table_args__ = (
         UniqueConstraint("orderNumber", "lastModifiedDate", "api_account_id", name="uq_orderno_lastmod_accountid"),
@@ -79,14 +95,20 @@ class OrderData(SQLModel, table=True):
 
 # ---- SATIR VERİSİ: Siparişin içeriği ----
 class OrderItem(SQLModel, table=True):
-    pk: Optional[int] = Field(default=None, primary_key=True)  # ✅ Auto PK
+    pk: Optional[int] = Field(default=None, primary_key=True)
 
-    orderNumber: str = Field(foreign_key="orderheader.orderNumber", index=True)
-    header: Optional[OrderHeader] = Relationship(back_populates="items")
+    # ✅ Artık gerçek FK: OrderHeader
+    order_header_id: Optional[int] = Field(default=None, foreign_key="orderheader.pk", index=True)
 
-    # 🔁 Ek alanlar
-    order_data_id: Optional[int] = None  # eski 'id', ama artık item değil snapshot ID'si
-    api_account_id: Optional[int] = Field(default=None, foreign_key="apiaccount.pk", index=True)  # ✅ Eklendi
+    # Lookup için
+    orderNumber: str = Field(index=True)
+    api_account_id: Optional[int] = Field(default=None, foreign_key="apiaccount.pk", index=True)
+
+    # 🔗 Parent → OrderHeader
+    header: Optional["OrderHeader"] = Relationship(back_populates="items")
+
+    # Ek alanlar
+    order_data_id: Optional[int] = None
 
     quantity: int
     productSize: Optional[str] = None
@@ -116,8 +138,6 @@ class OrderItem(SQLModel, table=True):
         ),
         Index("ix_orderitem_orderno_productcode", "orderNumber", "productCode"),
     )
-
-
 
 
 # ---- Dış Veri: Kırpılmış veriler (opsiyonel) ----

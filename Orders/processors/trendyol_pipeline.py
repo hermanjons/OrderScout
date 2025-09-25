@@ -1,11 +1,14 @@
 from Orders.api.trendyol_api import TrendyolApi
-from Core.utils.model_utils import create_records, make_normalizer, get_records, get_engine
+from Core.utils.model_utils import create_records, get_records, get_engine
 import asyncio
 from typing import Optional, Callable
-from Orders.models.trendyol_models import OrderItem, OrderData, OrderHeader
+from Orders.models.trendyol.trendyol_models import OrderItem, OrderData, OrderHeader
 from Feedback.processors.pipeline import Result, map_error_to_message
 from settings import DB_NAME
-from Orders.constants.trendyol_constants import ORDERDATA_UNIQ,ORDERITEM_UNIQ,ORDERDATA_NORMALIZER,ORDERITEM_NORMALIZER
+from Orders.constants.trendyol_constants import ORDERDATA_UNIQ, ORDERITEM_UNIQ, ORDERDATA_NORMALIZER, \
+    ORDERITEM_NORMALIZER
+from Orders.models.trendyol.trendyol_custom_queries import latest_ready_to_ship_query
+from sqlmodel import Session, select
 
 
 async def normalize_order_data(order_data: dict, comp_api_account_id: int):
@@ -129,52 +132,18 @@ def save_orders_to_db(result: Result, db_name: str = DB_NAME) -> Result:
     worker.result_ready -> Result.success + Result.data = {"order_data_list": [...], "order_item_list": [...]}
     """
     try:
-        # 1) Eğer geçersiz veya başarısız result geldiyse
         if not result or not isinstance(result, Result):
             return Result.fail("Geçersiz result objesi alındı.")
 
         if not result.success:
-            return result  # direkt hatayı yukarıya ilet
+            return result
 
-        # 2) Data içinden listeleri çek
         order_data_list = result.data.get("order_data_list", [])
         order_item_list = result.data.get("order_item_list", [])
 
-        # 3) OrderData → upsert
-        if order_data_list:
-            res_data = create_records(
-                model=OrderData,
-                data_list=order_data_list,
-                db_name=db_name,
-                conflict_keys=ORDERDATA_UNIQ,
-                mode="ignore",
-                normalizer=ORDERDATA_NORMALIZER,
-                chunk_size=100,
-                drop_unknown=True,
-                rename_map={},
-            )
-            if not res_data.success:
-                return res_data  # hata varsa direkt dön
-
-        # 4) OrderItem → insert-ignore
-        if order_item_list:
-            res_items = create_records(
-                model=OrderItem,
-                data_list=order_item_list,
-                db_name=db_name,
-                conflict_keys=ORDERITEM_UNIQ,
-                mode="ignore",
-                normalizer=ORDERITEM_NORMALIZER,
-                chunk_size=200,
-                drop_unknown=True,
-                rename_map={"3pByTrendyol": "byTrendyol3"}
-            )
-            if not res_items.success:
-                return res_items
-
-        # 5) OrderHeader → orderNumber + api_account_id
+        # 1️⃣ Önce OrderHeader upsert
         header_map = {
-            od.get("orderNumber"): od.get("api_account_id")
+            (od["orderNumber"], od["api_account_id"])
             for od in order_data_list
             if od.get("orderNumber") and od.get("api_account_id") is not None
         }
@@ -184,14 +153,65 @@ def save_orders_to_db(result: Result, db_name: str = DB_NAME) -> Result:
                 model=OrderHeader,
                 data_list=[
                     {"orderNumber": order_number, "api_account_id": api_account_id}
-                    for order_number, api_account_id in header_map.items()
+                    for order_number, api_account_id in header_map
                 ],
-                db_name=db_name,
+                db_name=DB_NAME,
                 conflict_keys=["orderNumber", "api_account_id"],
                 mode="ignore",
             )
             if not res_headers.success:
                 return res_headers
+
+        # 2️⃣ Header PK map’i çıkar (get_records ile → Result pipeline içinde)
+        res_header_rows = get_records(model=OrderHeader, db_name=DB_NAME)
+        if not res_header_rows.success:
+            return res_header_rows
+
+        header_rows = res_header_rows.data.get("records", [])
+        header_pk_map = {
+            (h.orderNumber, h.api_account_id): h.pk
+            for h in header_rows
+        }
+
+        # 3️⃣ OrderData’ya order_header_id ekle
+        for od in order_data_list:
+            key = (od.get("orderNumber"), od.get("api_account_id"))
+            od["order_header_id"] = header_pk_map.get(key)
+
+        if order_data_list:
+            res_data = create_records(
+                model=OrderData,
+                data_list=order_data_list,
+                db_name=DB_NAME,
+                conflict_keys=ORDERDATA_UNIQ,
+                mode="ignore",
+                normalizer=ORDERDATA_NORMALIZER,
+                chunk_size=100,
+                drop_unknown=True,
+                rename_map={},
+            )
+            if not res_data.success:
+                return res_data
+
+        # 4️⃣ OrderItem’a order_header_id ekle
+        for oi in order_item_list:
+            key = (oi.get("orderNumber"), oi.get("api_account_id"))
+            oi["order_header_id"] = header_pk_map.get(key)
+
+        if order_item_list:
+            res_items = create_records(
+                model=OrderItem,
+                data_list=order_item_list,
+                db_name=DB_NAME,
+                conflict_keys=ORDERITEM_UNIQ,
+                mode="ignore",
+                normalizer=ORDERITEM_NORMALIZER,
+                chunk_size=200,
+                drop_unknown=True,
+                rename_map={"3pByTrendyol": "byTrendyol3"},
+            )
+            if not res_items.success:
+                return res_items
 
         return Result.ok("Siparişler başarıyla veritabanına kaydedildi.")
 
@@ -199,39 +219,20 @@ def save_orders_to_db(result: Result, db_name: str = DB_NAME) -> Result:
         return Result.fail(map_error_to_message(e), error=e)
 
 
+
 def get_latest_ready_to_ship_orders() -> Result:
-    """
-    En güncel 'ReadyToShip' sipariş snapshotlarını döner.
-    """
     try:
-        raw_data = get_records(
-            model=OrderData,
-            db_engine=get_engine(DB_NAME)
-        )
-        if not raw_data.success:
-            return raw_data
 
-        records = raw_data.data.get("records", [])
+        stmt = latest_ready_to_ship_query()
 
-        latest_snapshots = {}
-        for record in records:
-            key = record.orderNumber
-            if (
-                key not in latest_snapshots or
-                record.lastModifiedDate > latest_snapshots[key].lastModifiedDate
-            ):
-                latest_snapshots[key] = record
-
-        filtered = [
-            rec for rec in latest_snapshots.values()
-            if rec.shipmentPackageStatus == "ReadyToShip"
-        ]
+        res = get_records(db_name=DB_NAME, custom_stmt=stmt)
+        if not res.success:
+            return res
 
         return Result.ok(
-            "ReadyToShip siparişler başarıyla çekildi.",
-            data={"orders": filtered}
+            f"ReadyToShip siparişler başarıyla çekildi. (toplam: {len(res.data.get('records', []))})",
+            data={"orders": res.data.get("records", [])}
         )
 
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e)
-

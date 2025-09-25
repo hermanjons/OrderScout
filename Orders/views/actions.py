@@ -13,7 +13,7 @@ from Account.models import ApiAccount
 from Core.utils.model_utils import get_engine  # engine değişkeni nerede tanımlıysa onu import et
 from Feedback.processors.pipeline import MessageHandler, Result, map_error_to_message
 from PyQt6.QtWidgets import QLabel
-from Account.views.actions import collect_selected_companies,get_company_by_id
+from Account.views.actions import collect_selected_companies, get_company_by_id
 
 
 def fetch_ready_to_ship_orders(parent_widget):
@@ -21,7 +21,6 @@ def fetch_ready_to_ship_orders(parent_widget):
     ReadyToShip siparişleri DB'den çek ve UI'ya aktar.
     """
     result = get_latest_ready_to_ship_orders()
-
     if not result.success:
         MessageHandler.show(parent_widget, result, only_errors=True)
         return []
@@ -41,6 +40,11 @@ def build_orders_list(list_widget, orders, interaction_cb, selection_cb) -> Resu
         list_widget.clear()
 
         for order in orders:
+            # 🔑 API logosunu doğrudan ilişki üzerinden al
+            logo_path = "images/orders_img.png"
+            if getattr(order, "api_account", None) and getattr(order.api_account, "logo_path", None):
+                logo_path = order.api_account.logo_path
+
             switch = SwitchButton()
             item_widget = ListSmartItemWidget(
                 title=f"Order: {getattr(order, 'orderNumber', '—')}",
@@ -49,7 +53,7 @@ def build_orders_list(list_widget, orders, interaction_cb, selection_cb) -> Resu
                 extra=f"Kargo: {getattr(order, 'cargoProviderName', '-')} | "
                       f"Tutar: {getattr(order, 'totalPrice', 0)} ₺",
                 identifier=getattr(order, 'orderNumber', '—'),
-                icon_path="images/orders_img.png",
+                icon_path=logo_path,
                 optional_widget=switch
             )
 
@@ -67,6 +71,7 @@ def build_orders_list(list_widget, orders, interaction_cb, selection_cb) -> Resu
     except Exception as e:
         msg = map_error_to_message(e)
         return Result.fail(msg, error=e)
+
 
 
 def update_selected_count_label(list_widget, label: QLabel) -> Result:
@@ -127,81 +132,79 @@ def collect_selected_orders(list_widget) -> Result:
         return Result.fail(msg, error=e, close_dialog=False)
 
 
-def get_company_names_from_db() -> list[str]:
-    """
-    Veritabanından tüm şirket isimlerini çeker.
-    """
-    company_objs = get_records(model=ApiAccount, db_engine=get_engine("orders.db"))
-    return [c.comp_name for c in company_objs]
-
-
 # actions.py
-def get_orders_from_companies(parent_widget, company_list_widget):
+def get_orders_from_companies(parent_widget, company_list_widget, progress_target):
     """
     Seçilen şirketlerden API bilgilerini alır ve worker başlatır.
     UI ile ilgili mesaj/Popup işlemleri views.py'de yapılmalı.
     """
-    # 1) Listeden seçilen PK’leri topla
-    result = collect_selected_companies(company_list_widget)
-    if not result.success:
-        return result  # ❌ Hata → views.py handle eder
 
-    selected_company_pks = result.data["selected_company_pks"]
-
-    # 2) API credential’ları pk listesi ile getir
-    res_creds = get_company_by_id(selected_company_pks)
-    if not res_creds.success:
-        return res_creds  # ❌ API bilgisi bulunamadı
-
-    comp_api_account_list = res_creds.data.get("accounts", [])
-    if not comp_api_account_list:
-        return Result.fail("Seçili şirketler için API bilgisi bulunamadı.", close_dialog=False)
-
-    # 3) Worker başlat
-    fetch_with_worker(parent_widget, comp_api_account_list)
-    return Result.ok("Worker başlatıldı.", close_dialog=False)
-
-
-# Bu fonksiyon view içinden çağrılır
-def fetch_with_worker(view_instance, comp_api_account_list):
-    """
-    API'den siparişleri çek → DB'ye kaydet zinciri.
-    1. AsyncWorker -> fetch_orders_all
-    2. SyncWorker  -> save_orders_to_db
-    """
     try:
-        search_range_hour = 10
+        # 1) Listeden seçilen PK’leri topla
+        result = collect_selected_companies(company_list_widget)
+        if not result.success:
+            return result  # ❌ Hata → views.py handle eder
+
+        selected_company_pks = result.data["selected_company_pks"]
+
+        # 2) API credential’ları pk listesi ile getir
+        res_creds = get_company_by_id(selected_company_pks)
+        if not res_creds.success:
+            return res_creds  # ❌ API bilgisi bulunamadı
+
+        comp_api_account_list = res_creds.data.get("accounts", [])
+        if not comp_api_account_list:
+            return Result.fail("Seçili şirketler için API bilgisi bulunamadı.", close_dialog=False)
+
+        # 3) Worker başlat
+        search_range_hour = 200
         start_ep_time = time_for_now()
         final_ep_time = time_for_now() - time_stamp_calculator(search_range_hour)
 
         # 1️⃣ API Worker (async)
-        view_instance.api_worker = AsyncWorker(
+        parent_widget.api_worker = AsyncWorker(
             fetch_orders_all,
             TRENDYOL_STATUS_LIST,
             final_ep_time,
             start_ep_time,
             comp_api_account_list,
-            kwargs={"progress_callback": view_instance.update_progress},
-            parent=view_instance
+            kwargs={"progress_callback": lambda c, t: update_progress(progress_target, c, t)},
+            parent=parent_widget
         )
 
         def handle_api_result(res: Result):
             if not res.success:
-                MessageHandler.show(view_instance, res, only_errors=True)
+                MessageHandler.show(parent_widget, res, only_errors=True)
                 return
 
             # 2️⃣ DB Worker (sync)
-            view_instance.db_worker = SyncWorker(save_orders_to_db, res)
-            view_instance.db_worker.result_ready.connect(
-                lambda db_res: MessageHandler.show(view_instance, db_res)
+            parent_widget.db_worker = SyncWorker(save_orders_to_db, res)
+            parent_widget.db_worker.result_ready.connect(
+                lambda db_res: MessageHandler.show(parent_widget, db_res)
             )
-            view_instance.db_worker.finished.connect(view_instance.on_orders_fetched)
-            view_instance.db_worker.start()
+            parent_widget.db_worker.finished.connect(parent_widget.on_orders_fetched)
+            parent_widget.db_worker.start()
 
         # API Worker tamamlandığında handle_api_result çağrılır
-        view_instance.api_worker.result_ready.connect(handle_api_result)
-        view_instance.api_worker.start()
+        parent_widget.api_worker.result_ready.connect(handle_api_result)
+        parent_widget.api_worker.start()
+
+        return Result.ok("Worker başlatıldı.", close_dialog=False)
 
     except Exception as e:
         res = Result.fail(map_error_to_message(e), error=e, close_dialog=False)
-        MessageHandler.show(view_instance, res, only_errors=True)
+        MessageHandler.show(parent_widget, res, only_errors=True)
+        return res
+
+
+def update_progress(view_instance, current: int, total: int):
+    """
+    İşlem ilerlemesini hesapla ve UI'daki progress butonunu güncelle.
+    """
+
+    try:
+        percent = int(current / total * 100) if total else 0
+        view_instance.setProgress(percent)
+        return Result.ok(f"Progress {percent}% olarak güncellendi.", close_dialog=False)
+    except Exception as e:
+        return Result.fail(map_error_to_message(e), error=e, close_dialog=False)

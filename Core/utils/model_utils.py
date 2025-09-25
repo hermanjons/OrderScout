@@ -92,16 +92,16 @@ def make_normalizer(
 
 # ---------- Create ----------
 def create_records(
-    model: Type[SQLModel],
-    data_list: list[dict],
-    db_name: str = DB_NAME,
-    *,
-    conflict_keys: Optional[list[str]] = None,
-    mode: str = "ignore",  # "ignore" | "update" | "plain"
-    normalizer: Optional[Callable[[dict], dict]] = None,
-    chunk_size: int = 500,
-    rename_map: Optional[dict[str, str]] = None,
-    drop_unknown: bool = True,
+        model: Type[SQLModel],
+        data_list: list[dict],
+        db_name: str = DB_NAME,
+        *,
+        conflict_keys: Optional[list[str]] = None,
+        mode: str = "ignore",  # "ignore" | "update" | "plain"
+        normalizer: Optional[Callable[[dict], dict]] = None,
+        chunk_size: int = 500,
+        rename_map: Optional[dict[str, str]] = None,
+        drop_unknown: bool = True,
 ) -> Result:
     """
     Toplu kayıt ekleme/upsert.
@@ -204,19 +204,26 @@ def create_records(
 
 # ---------- Read ----------
 def get_records(
-    model: Type[SQLModel],
-    db_engine: Engine,
-    filters: Optional[dict] = None,
-    custom_sql: Optional[str] = None,
-    to_dataframe: bool = False
+        model: Type[SQLModel] = None,
+        db_engine: Engine = None,
+        db_name: str = DB_NAME,
+        filters: Optional[dict] = None,
+        custom_sql: Optional[str] = None,
+        custom_stmt: Optional[Any] = None,  # ✅ ORM query desteği
+        to_dataframe: bool = False
 ) -> Result:
     """
     Genel amaçlı veri çekme fonksiyonu.
-    - filters: dict olarak filtreler (örn: {"name": "Ali"} veya {"pk": [1,2,3]})
-    - custom_sql: Ham SQL sorgusu
-    - to_dataframe: True ise DataFrame döndürür
+    - filters: dict → {"name": "Ali"} veya {"pk": [1,2,3]}
+    - custom_sql: ham SQL string
+    - custom_stmt: ORM query (örn: select(...).join(...))
+    - to_dataframe: True ise DataFrame döner
     """
     try:
+
+        if db_engine is None:
+            db_engine = get_engine(db_name)
+
         # 🔹 Ham SQL modu
         if custom_sql:
             with db_engine.connect() as conn:
@@ -235,7 +242,27 @@ def get_records(
                         data={"records": result, "count": len(result)}
                     )
 
-        # 🔹 Normal SQLModel select
+        # 🔹 ORM Query modu
+        if custom_stmt is not None:
+            with Session(db_engine) as session:
+                result = session.exec(custom_stmt).all()
+                if to_dataframe:
+                    df = pd.DataFrame([r.dict() for r in result])
+                    return Result.ok(
+                        f"{len(df)} kayıt çekildi (custom_stmt, DataFrame).",
+                        close_dialog=False,
+                        data={"records": df, "count": len(df)}
+                    )
+                return Result.ok(
+                    f"{len(result)} kayıt çekildi (custom_stmt).",
+                    close_dialog=False,
+                    data={"records": result, "count": len(result)}
+                )
+
+        # 🔹 Normal SQLModel select (filters ile)
+        if model is None:
+            return Result.fail("Model belirtilmedi.", close_dialog=False)
+
         with Session(db_engine) as session:
             stmt = select(model)
 
@@ -266,18 +293,22 @@ def get_records(
         return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
 
 
-
 # ---------- Update ----------
 def update_records(
-    model: Type[SQLModel],
-    db_engine: Engine,
-    filters: dict,
-    update_data: dict
+        model: Type[SQLModel],
+        filters: dict,
+        update_data: dict,
+        db_name: str = DB_NAME,
+        db_engine: Engine = None,
+
 ) -> Result:
     """
     Genel amaçlı update fonksiyonu.
     """
     try:
+        if db_engine is None:
+            db_engine = get_engine(db_name)
+
         with Session(db_engine) as session:
             stmt = select(model)
             for attr, value in filters.items():
@@ -302,14 +333,18 @@ def update_records(
 
 # ---------- Delete ----------
 def delete_records(
-    model: Type[SQLModel],
-    db_engine: Engine,
-    filters: dict
+        model: Type[SQLModel],
+        filters: dict,
+        db_name: str = DB_NAME,
+        db_engine: Engine = None,
 ) -> Result:
     """
     Genel amaçlı delete fonksiyonu.
     """
     try:
+        if db_engine is None:
+            db_engine = get_engine(db_name)
+
         with Session(db_engine) as session:
             stmt = select(model)
             for attr, value in filters.items():

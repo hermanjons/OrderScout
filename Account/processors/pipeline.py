@@ -161,7 +161,7 @@ def get_company_by_id(pks: list[int]) -> Result:
             return res
 
         records = res.data.get("records", [])
-        print(records)
+
         if not records:
             return Result.fail("Seçilen şirketler bulunamadı.", close_dialog=False)
 

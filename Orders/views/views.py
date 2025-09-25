@@ -1,28 +1,21 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QGroupBox, QHBoxLayout,
-    QListWidget, QListWidgetItem, QPushButton
+    QListWidget, QPushButton
 )
 from PyQt6.QtCore import Qt
 
 from Core.views.views import (
-    CircularProgressButton, SwitchButton,
-    ListSmartItemWidget, PackageButton
+    CircularProgressButton, PackageButton
 )
 
 from Orders.views.actions import (
-    fetch_with_worker,
-    get_company_names_from_db,
     get_orders_from_companies, collect_selected_orders,
     update_selected_count_label, fetch_ready_to_ship_orders, build_orders_list
 )
 
-from Core.utils.model_utils import get_engine
-from Orders.models.trendyol_models import OrderData
-
-from Feedback.processors.pipeline import MessageHandler, Result
+from Feedback.processors.pipeline import MessageHandler
 
 from Account.views.views import CompanyListWidget
-from Account.views.actions import collect_selected_companies
 
 
 class OrdersListWindow(QWidget):
@@ -157,10 +150,9 @@ class OrdersTab(QWidget):
     # 📌 Siparişleri getir
     # views.py
     def get_orders(self):
-        result = get_orders_from_companies(self, self.company_list)
+        result = get_orders_from_companies(self, self.company_list, self.fetch_button)
 
         if not result.success:
-            # ❌ sadece hata durumunda popup göster
             MessageHandler.show(self, result, only_errors=True)
             return
 
@@ -176,7 +168,4 @@ class OrdersTab(QWidget):
     def on_orders_fetched(self):
         self.info_label.setText("✅ Siparişler başarıyla alındı.")
 
-    # 📌 Progress bar güncelle
-    def update_progress(self, current, total):
-        percent = int(current / total * 100)
-        self.fetch_button.setProgress(percent)
+

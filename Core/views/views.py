@@ -474,14 +474,7 @@ class CircularProgressButton(QPushButton):
 # 🔘 SwitchButton
 # ========================
 class SwitchButton(QAbstractButton):
-    def __init__(
-            self,
-            parent=None,
-            checked_color="#1abc9c",
-            unchecked_color="#cccccc",
-            thumb_color="white",
-            animation_duration=150
-    ):
+    def __init__(self, parent=None, checked_color="#1abc9c", unchecked_color="#cccccc", thumb_color="white", animation_duration=150):
         super().__init__(parent)
         try:
             self.setCheckable(True)
@@ -498,6 +491,15 @@ class SwitchButton(QAbstractButton):
             self.setThumbInitial()
         except Exception as e:
             print(Result.fail(map_error_to_message(e), error=e))
+
+    # 🔑 BURASI YENİ: animasyonun takip edeceği property
+    def getThumbPos(self):
+        return self._thumb_pos
+
+    def setThumbPos(self, pos):
+        self._thumb_pos = pos
+        self.update()  # repaint tetikle
+    thumb_pos = pyqtProperty(int, fget=getThumbPos, fset=setThumbPos)
 
     def paintEvent(self, event):
         try:
