@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (
     QDialog, QFormLayout, QLineEdit, QPushButton, QMessageBox, QComboBox, QLabel, QFileDialog, QVBoxLayout, QHBoxLayout,
     QTableWidget,
-    QTableWidgetItem, QSizePolicy, QHeaderView, QPlainTextEdit,QListWidget
+    QTableWidgetItem, QSizePolicy, QHeaderView, QPlainTextEdit, QListWidget
 )
 
 from PyQt6.QtGui import QIcon, QAction
@@ -14,6 +14,7 @@ from Feedback.processors.pipeline import MessageHandler, Result
 from settings import MEDIA_ROOT
 from Core.views.views import SwitchButton
 import os
+from Account.signals.signals import account_signals
 
 
 class CompanyManagerButton:
@@ -278,15 +279,15 @@ class CompanyFormDialog(QDialog):
             self.accept()
 
 
-
-
 class CompanyListWidget(QListWidget):
     """
     SwitchButton ile şirket seçimi yapılabilen liste widget.
     """
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setSelectionMode(QListWidget.SelectionMode.NoSelection)
+        account_signals.company_changed.connect(self.build_from_db)
 
     def build_from_db(self):
         """
@@ -301,7 +302,3 @@ class CompanyListWidget(QListWidget):
 
         # records çıkarmak yerine Result'u direkt gönder
         return build_company_list(self, result)
-
-
-
-

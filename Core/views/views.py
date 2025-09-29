@@ -358,8 +358,10 @@ class CircularProgressButton(QPushButton):
             if self._is_running:
                 return
             self._is_running = True
+            self._is_failed = False  # 🔄 fail state sıfırlansın
             self._progress = 0
-            self._animate_to(0.85, duration=200)
+            self.running_color = QColor("#2ecc71")  # 🟢 yeşil
+            self._animate_to(0.85, duration=200)  # basılı hale geç
             self.started.emit()
             self.update()
         except Exception as e:
@@ -367,10 +369,12 @@ class CircularProgressButton(QPushButton):
 
     def reset(self):
         try:
-            if not self._is_running and self._progress == 0 and self._scale == 1.0:
+            if not self._is_running and self._progress == 0 and self._scale == 1.0 and not self._is_failed:
                 return
             self._is_running = False
             self._progress = 0
+            self._is_failed = False  # 🔄 hata modu sıfırlanır
+            self.running_color = QColor("#2ecc71")
             self._animate_to(1.0, duration=250)
             self.finished.emit()
             self.update()
@@ -436,36 +440,66 @@ class CircularProgressButton(QPushButton):
             painter.setBrush(Qt.BrushStyle.NoBrush)
             painter.drawEllipse(center, radius, radius)
 
-            # progress çemberi
-            if self._is_running and self._progress > 0:
-                pen.setColor(self.running_color)
-                painter.setPen(pen)
-                span_angle = int(360 * self._progress / 100)
-                painter.drawArc(
-                    QRectF(center.x() - radius, center.y() - radius, 2 * radius, 2 * radius),
-                    -90 * 16,
-                    -span_angle * 16
-                )
+            # 1) Fail state → kırmızı + Retry
+            if getattr(self, "_is_failed", False):
+                painter.setBrush(QColor("#e74c3c"))
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.drawEllipse(center, radius - 8, radius - 8)
 
-            # iç dolgu
-            painter.setBrush(self.running_color if self._is_running else self.default_color)
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawEllipse(center, radius - 8, radius - 8)
+                painter.setPen(self.text_color)
+                painter.setFont(self.font())
+                painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, "Retry")
 
-            # metin
-            painter.setPen(self.text_color)
-            if self._is_running:
-                percent_text = f"{self._progress}%"
+            # 2) Running state → progress + yüzde
+            elif self._is_running:
+                # progress çemberi
+                if self._progress > 0:
+                    pen.setColor(self.running_color)
+                    painter.setPen(pen)
+                    span_angle = int(360 * self._progress / 100)
+                    painter.drawArc(
+                        QRectF(center.x() - radius, center.y() - radius, 2 * radius, 2 * radius),
+                        -90 * 16,
+                        -span_angle * 16
+                    )
+
+                # iç dolgu
+                painter.setBrush(self.running_color)
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.drawEllipse(center, radius - 8, radius - 8)
+
+                # yüzde metni
+                painter.setPen(self.text_color)
                 progress_font = QFont(self.progress_font_base)
-                progress_font.setPointSize(20)  # 🔥 büyütülmüş
+                progress_font.setPointSize(20)
                 progress_font.setWeight(QFont.Weight.Black)
                 painter.setFont(progress_font)
-                painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, percent_text)
+                painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, f"{self._progress}%")
+
+            # 3) Idle state → mavi + Başlat
             else:
+                painter.setBrush(self.default_color)
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.drawEllipse(center, radius - 8, radius - 8)
+
+                painter.setPen(self.text_color)
                 painter.setFont(self.font())
                 painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, self.text())
 
             painter.restore()
+
+        except Exception as e:
+            Result.fail(map_error_to_message(e), error=e)
+
+    def fail(self):
+        try:
+            self._is_running = False
+            self._progress = 0
+            self._is_failed = True  # fail state aktif
+
+            self.running_color = QColor("#e74c3c")  # 🔴 kırmızı
+            self._animate_to(1.0, duration=250)  # çıkık hale dön
+            self.update()
         except Exception as e:
             Result.fail(map_error_to_message(e), error=e)
 

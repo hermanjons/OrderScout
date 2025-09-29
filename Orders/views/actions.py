@@ -133,35 +133,34 @@ def collect_selected_orders(list_widget) -> Result:
 
 
 # actions.py
-def get_orders_from_companies(parent_widget, company_list_widget, progress_target):
+def get_orders_from_companies(parent_widget, company_list_widget, progress_target) -> Result:
     """
     Seçilen şirketlerden API bilgilerini alır ve worker başlatır.
-    UI ile ilgili mesaj/Popup işlemleri views.py'de yapılmalı.
+    UI ile ilgili mesaj/Popup işlemleri sadece views.py'de yapılmalı.
     """
-
     try:
         # 1) Listeden seçilen PK’leri topla
         result = collect_selected_companies(company_list_widget)
         if not result.success:
-            return result  # ❌ Hata → views.py handle eder
+            return result
 
         selected_company_pks = result.data["selected_company_pks"]
 
         # 2) API credential’ları pk listesi ile getir
         res_creds = get_company_by_id(selected_company_pks)
         if not res_creds.success:
-            return res_creds  # ❌ API bilgisi bulunamadı
+            return res_creds
 
         comp_api_account_list = res_creds.data.get("accounts", [])
         if not comp_api_account_list:
             return Result.fail("Seçili şirketler için API bilgisi bulunamadı.", close_dialog=False)
 
-        # 3) Worker başlat
+        # 3) Zaman aralığını belirle
         search_range_hour = 200
         start_ep_time = time_for_now()
         final_ep_time = time_for_now() - time_stamp_calculator(search_range_hour)
 
-        # 1️⃣ API Worker (async)
+        # 4) API Worker başlat
         parent_widget.api_worker = AsyncWorker(
             fetch_orders_all,
             TRENDYOL_STATUS_LIST,
@@ -174,27 +173,31 @@ def get_orders_from_companies(parent_widget, company_list_widget, progress_targe
 
         def handle_api_result(res: Result):
             if not res.success:
-                MessageHandler.show(parent_widget, res, only_errors=True)
+                parent_widget.on_orders_failed(res, progress_target)
                 return
 
-            # 2️⃣ DB Worker (sync)
+            # ✅ API başarılıysa → DB Worker başlat
             parent_widget.db_worker = SyncWorker(save_orders_to_db, res)
-            parent_widget.db_worker.result_ready.connect(
-                lambda db_res: MessageHandler.show(parent_widget, db_res)
-            )
-            parent_widget.db_worker.finished.connect(parent_widget.on_orders_fetched)
+
+            def handle_db_result(db_res: Result):
+                if not db_res.success:
+                    parent_widget.on_orders_failed(db_res, progress_target)
+                else:
+                    parent_widget.on_orders_fetched(db_res)
+
+            parent_widget.db_worker.result_ready.connect(handle_db_result)
             parent_widget.db_worker.start()
 
-        # API Worker tamamlandığında handle_api_result çağrılır
         parent_widget.api_worker.result_ready.connect(handle_api_result)
         parent_widget.api_worker.start()
 
         return Result.ok("Worker başlatıldı.", close_dialog=False)
 
     except Exception as e:
-        res = Result.fail(map_error_to_message(e), error=e, close_dialog=False)
-        MessageHandler.show(parent_widget, res, only_errors=True)
-        return res
+        msg = map_error_to_message(e)
+        return Result.fail(msg, error=e, close_dialog=False)
+
+
 
 
 def update_progress(view_instance, current: int, total: int):

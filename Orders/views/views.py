@@ -13,7 +13,7 @@ from Orders.views.actions import (
     update_selected_count_label, fetch_ready_to_ship_orders, build_orders_list
 )
 
-from Feedback.processors.pipeline import MessageHandler
+from Feedback.processors.pipeline import MessageHandler,Result
 
 from Account.views.views import CompanyListWidget
 
@@ -153,6 +153,10 @@ class OrdersTab(QWidget):
         result = get_orders_from_companies(self, self.company_list, self.fetch_button)
 
         if not result.success:
+            # 🔴 Progress barı hata moduna al
+            print("buradan fırladı")
+            self.fetch_button.fail()
+            # Hata mesajını göster
             MessageHandler.show(self, result, only_errors=True)
             return
 
@@ -165,7 +169,34 @@ class OrdersTab(QWidget):
         self.orders_window.show()
 
     # 📌 İşlem bittiğinde
-    def on_orders_fetched(self):
-        self.info_label.setText("✅ Siparişler başarıyla alındı.")
+    def on_orders_failed(self, result: Result, button: CircularProgressButton):
+        """
+        Worker zincirinden gelen hatalarda çalışır.
+        Progress butonunu sıfırlar, kullanıcıya hata mesajı gösterir.
+        """
+        # 🔴 Progress butonu kırmızıya dönsün
+        button.fail()
+
+        # ❌ Hata mesajı popup olarak gösterilsin
+        MessageHandler.show(self, result, only_errors=True)
+
+        # ℹ️ UI'daki bilgi metni güncellensin
+        self.info_label.setText("⚠️ İşlem başarısız.")
+
+    def on_orders_fetched(self, result: Result):
+        """
+        Hem API hem DB başarılıysa çalışır.
+        Kullanıcıya başarı mesajı gösterir.
+        """
+        # ✅ UI’ya bilgi ver
+        self.info_label.setText("✅ Siparişler başarıyla kaydedildi.")
+
+        # 🟢 Progress butonu otomatik olarak resetlenecek zaten
+        # çünkü %100'e ulaşınca CircularProgressButton reset() çağırıyor.
+
+        # ✅ İstersen log, bildirim vb. ekleyebilirsin
+        # print("İşlem tamamlandı:", result.message)
+
+
 
 

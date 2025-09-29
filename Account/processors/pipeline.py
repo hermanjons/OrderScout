@@ -14,7 +14,8 @@ from Core.utils.model_utils import (
 )
 from Feedback.processors.pipeline import Result, map_error_to_message
 from settings import MEDIA_ROOT
-
+from Account.signals.signals import account_signals
+from settings import DB_NAME
 # -------------------------------------------------
 # 🔧 Normalizer
 # -------------------------------------------------
@@ -44,6 +45,7 @@ def save_company_to_db(form_values: dict) -> Result:
             conflict_keys=["account_id", "comp_name", "platform"],
             normalizer=account_normalizer
         )
+        account_signals.company_changed.emit()
         return Result.ok("Şirket başarıyla kaydedildi.")
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e)
@@ -56,10 +58,12 @@ def update_company(pk: int, update_data: dict) -> Result:
     """
     Belirli bir şirket kaydını günceller.
     """
+
     try:
-        engine = get_engine("orders.db")
+
         filters = {"pk": pk}
-        update_records(ApiAccount, engine, filters, update_data)
+        update_records(ApiAccount, filters, update_data, db_name=DB_NAME)
+        account_signals.company_changed.emit()
         return Result.ok("Şirket başarıyla güncellendi.")
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e)
@@ -73,14 +77,16 @@ def delete_company_from_db(pk: int) -> Result:
     Bir şirket kaydını siler.
     """
     try:
-        print(pk)
+
         engine = get_engine("orders.db")
         delete_records(
             model=ApiAccount,
             db_engine=engine,
             filters={"pk": pk}
         )
+        account_signals.company_changed.emit()
         return Result.ok(f"Şirket (id={pk}) başarıyla silindi.")
+
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e)
 
