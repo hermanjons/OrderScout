@@ -287,6 +287,7 @@ class CompanyListWidget(QListWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setSelectionMode(QListWidget.SelectionMode.NoSelection)
+        self.build_from_db()
         account_signals.company_changed.connect(self.build_from_db)
 
     def build_from_db(self):

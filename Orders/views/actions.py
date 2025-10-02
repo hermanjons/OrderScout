@@ -28,49 +28,18 @@ def fetch_ready_to_ship_orders(parent_widget):
     return result.data.get("orders", [])
 
 
-def build_orders_list(list_widget, orders, interaction_cb, selection_cb) -> Result:
+def extract_cargo_names(orders: list) -> list[str]:
     """
-    Sipariş listesini QListWidget içine inşa eder.
+    Sipariş listesinden kargo firma isimlerini çıkarır (tekrarsız, sıralı).
     """
-    try:
-        if not orders:
-            list_widget.clear()
-            return Result.fail("Gösterilecek sipariş bulunamadı.", close_dialog=False)
+    return sorted({
+        getattr(o, "cargoProviderName", None)
+        for o in orders if getattr(o, "cargoProviderName", None)
+    })
 
-        list_widget.clear()
 
-        for order in orders:
-            # 🔑 API logosunu doğrudan ilişki üzerinden al
-            logo_path = "images/orders_img.png"
-            if getattr(order, "api_account", None) and getattr(order.api_account, "logo_path", None):
-                logo_path = order.api_account.logo_path
 
-            switch = SwitchButton()
-            item_widget = ListSmartItemWidget(
-                title=f"Order: {getattr(order, 'orderNumber', '—')}",
-                subtitle=f"Müşteri: {getattr(order, 'customerFirstName', '—')} "
-                         f"{getattr(order, 'customerLastName', '')}",
-                extra=f"Kargo: {getattr(order, 'cargoProviderName', '-')} | "
-                      f"Tutar: {getattr(order, 'totalPrice', 0)} ₺",
-                identifier=getattr(order, 'orderNumber', '—'),
-                icon_path=logo_path,
-                optional_widget=switch
-            )
 
-            # Etkileşimler
-            item_widget.interaction.connect(interaction_cb)
-            item_widget.selectionRequested.connect(selection_cb)
-
-            # Listeye ekle
-            item = QListWidgetItem(list_widget)
-            item.setSizeHint(item_widget.sizeHint())
-            list_widget.setItemWidget(item, item_widget)
-
-        return Result.ok("Siparişler başarıyla listeye eklendi.", close_dialog=False)
-
-    except Exception as e:
-        msg = map_error_to_message(e)
-        return Result.fail(msg, error=e)
 
 
 

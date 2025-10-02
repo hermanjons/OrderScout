@@ -4,12 +4,12 @@ from typing import Type, Iterable, Callable, Optional, Any
 from settings import DB_NAME, DEFAULT_DATABASE_DIR
 from sqlalchemy.engine import Engine
 from sqlalchemy import create_engine
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert  # PG'ye geçince pg_insert
-# from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.exc import IntegrityError, CompileError
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 import os
 import pandas as pd
 from Feedback.processors.pipeline import Result, map_error_to_message
+from sqlalchemy.sql.elements import BindParameter, ClauseElement
 
 
 # ---------- Engine ----------
@@ -90,6 +90,34 @@ def make_normalizer(
     return _norm
 
 
+def _sanitize_row(row: dict) -> dict:
+    """ClauseElement / BindParameter değerlerini Python tarafında güvenli hale getirir."""
+    safe = {}
+    for k, v in row.items():
+        if isinstance(v, BindParameter):
+            safe[k] = getattr(v, "value", None)  # çoğu zaman None
+        elif isinstance(v, ClauseElement):
+            # func.now() gibi bir ifade varsa çoklu insert'te patlar → None ata
+            safe[k] = None
+        else:
+            safe[k] = v
+    return safe
+
+
+def _sanitize_chunk(chunk: list[dict]) -> list[dict]:
+    return [_sanitize_row(r) for r in chunk]
+
+
+def _debug_find_problematic(rows: list[dict]) -> list[tuple]:
+    """Debug için: hangi alanlarda ClauseElement var göstersin."""
+    bad = []
+    for i, r in enumerate(rows):
+        for k, v in r.items():
+            if isinstance(v, (BindParameter, ClauseElement)):
+                bad.append((i, k, type(v).__name__, str(v)))
+    return bad
+
+
 # ---------- Create ----------
 def create_records(
         model: Type[SQLModel],
@@ -161,17 +189,30 @@ def create_records(
             if mode == "ignore":
                 inserted_total = 0
                 for chunk in batch_iter(cleaned, chunk_size):
-                    stmt = sqlite_insert(tbl).values(chunk)
-                    stmt = stmt.on_conflict_do_nothing(index_elements=conflict_keys)
-                    res = session.exec(stmt)
-                    rc = getattr(res, "rowcount", 0) or 0
-                    inserted_total += rc
+                    safe_chunk = _sanitize_chunk(chunk)
+                    try:
+                        stmt = sqlite_insert(tbl).values(safe_chunk)
+                        stmt = stmt.on_conflict_do_nothing(index_elements=conflict_keys)
+                        res = session.exec(stmt)
+                        rc = getattr(res, "rowcount", 0) or 0
+                        inserted_total += rc
+                    except CompileError as ce:
+                        # Debug log: hangi satır problemliydi?
+                        bad = _debug_find_problematic(chunk)
+                        print("⚠️ CompileError - problematic rows:", bad)
+
+                        # Fallback: tek tek ekle
+                        for r in safe_chunk:
+                            stmt = sqlite_insert(tbl).values(r)
+                            stmt = stmt.on_conflict_do_nothing(index_elements=conflict_keys)
+                            session.exec(stmt)
                 session.commit()
                 return Result.ok(
                     f"{model.__name__}: {attempted} kaydın {inserted_total} adedi eklendi (ignore).",
                     close_dialog=False,
                     data={"model": model.__name__, "attempted": attempted, "inserted": inserted_total}
                 )
+
 
             elif mode == "update":
                 affected_total = 0

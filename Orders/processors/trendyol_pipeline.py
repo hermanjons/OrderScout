@@ -9,7 +9,7 @@ from Orders.constants.trendyol_constants import ORDERDATA_UNIQ, ORDERITEM_UNIQ, 
     ORDERITEM_NORMALIZER
 from Orders.models.trendyol.trendyol_custom_queries import latest_ready_to_ship_query
 from sqlmodel import Session, select
-
+from Orders.signals.signals import order_signals
 
 async def normalize_order_data(order_data: dict, comp_api_account_id: int):
     """
@@ -206,13 +206,13 @@ def save_orders_to_db(result: Result, db_name: str = DB_NAME) -> Result:
                 conflict_keys=ORDERITEM_UNIQ,
                 mode="ignore",
                 normalizer=ORDERITEM_NORMALIZER,
-                chunk_size=200,
+                chunk_size=100,
                 drop_unknown=True,
                 rename_map={"3pByTrendyol": "byTrendyol3"},
             )
             if not res_items.success:
                 return res_items
-
+        order_signals.orders_changed.emit()
         return Result.ok("Siparişler başarıyla veritabanına kaydedildi.")
 
     except Exception as e:
