@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (
     QListWidget, QPushButton, QLineEdit, QComboBox, QGridLayout, QDateEdit, QCheckBox, QListWidgetItem
 )
 
-from PyQt6.QtCore import Qt, QDate
+from PyQt6.QtCore import Qt, QDate, QTimer
 
 from Core.views.views import (
     CircularProgressButton, PackageButton
@@ -13,7 +13,8 @@ from Core.views.views import (
 from datetime import datetime, date
 from Orders.views.actions import (
     get_orders_from_companies, collect_selected_orders,
-    update_selected_count_label, fetch_ready_to_ship_orders, extract_cargo_names
+    update_selected_count_label, load_ready_to_ship_orders, extract_cargo_names, build_order_list,
+    filter_orders
 )
 
 from Feedback.processors.pipeline import MessageHandler, Result, map_error_to_message
@@ -28,6 +29,7 @@ from PyQt6.QtCore import QDate
 from datetime import datetime, date
 from Orders.signals.signals import order_signals
 from Core.views.views import SwitchButton, ListSmartItemWidget
+from Core.threads.sync_worker import SyncWorker
 
 
 class OrdersListWidget(QListWidget):
@@ -53,51 +55,22 @@ class OrdersListWidget(QListWidget):
 
     def reload_orders(self):
         """Siparişleri DB'den çek ve listeyi yeniden inşa et."""
-        self.orders = fetch_ready_to_ship_orders(self)
-        self.filtered_orders = list(self.orders)
-        self._build_list(self.orders)
-
-        # 📢 UI'ya siparişler yüklendi bilgisini ver
-        order_signals.orders_loaded.emit(self.orders)
-
-    def _build_list(self, orders: list | None = None):
-        """Sipariş listesini yeniden inşa et."""
         try:
-            if orders is None:
-                orders = self.orders
-            # else: ❌ burada self.orders’ı değiştirme
-
-            self.clear()
-
-            if not orders:
-                info_item = QListWidgetItem("Gösterilecek sipariş bulunamadı.")
-                info_item.setFlags(info_item.flags() & ~Qt.ItemFlag.ItemIsSelectable)
-                self.addItem(info_item)
+            result = load_ready_to_ship_orders()
+            if not result.success:
+                MessageHandler.show(self, result, only_errors=True)
                 return
 
-            for order in orders:
-                logo_path = "images/orders_img.png"
-                if getattr(order, "api_account", None) and getattr(order.api_account, "logo_path", None):
-                    logo_path = order.api_account.logo_path
+            self.orders = result.data.get("records", [])
+            self.filtered_orders = list(self.orders)
 
-                switch = SwitchButton()
-                item_widget = ListSmartItemWidget(
-                    title=f"Order: {getattr(order, 'orderNumber', '—')}",
-                    subtitle=f"Müşteri: {getattr(order, 'customerFirstName', '—')} "
-                             f"{getattr(order, 'customerLastName', '')}",
-                    extra=f"Kargo: {getattr(order, 'cargoProviderName', '-')} | "
-                          f"Tutar: {getattr(order, 'totalPrice', 0)} ₺",
-                    identifier=getattr(order, 'orderNumber', '—'),
-                    icon_path=logo_path,
-                    optional_widget=switch
-                )
+            # ✅ Listeyi actions.py üzerinden inşa et
+            result = build_order_list(self, self.orders, self.on_item_interaction, self.clear_other_selections)
+            if not result.success:
+                MessageHandler.show(self, result, only_errors=True)
 
-                item_widget.interaction.connect(self.on_item_interaction)
-                item_widget.selectionRequested.connect(self.clear_other_selections)
-
-                item = QListWidgetItem(self)
-                item.setSizeHint(item_widget.sizeHint())
-                self.setItemWidget(item, item_widget)
+            # 📢 UI'ya siparişler yüklendi bilgisini ver
+            order_signals.orders_loaded.emit(self.orders)
 
         except Exception as e:
             msg = map_error_to_message(e)
@@ -126,8 +99,12 @@ class OrdersListWidget(QListWidget):
         return []
 
 
-
 class OrdersManagerWindow(QWidget):
+    """
+    Kargoya hazır siparişleri yöneten ana pencere.
+    Filtreleme, listeleme ve toplu seçim işlemlerini içerir.
+    """
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Kargoya Hazır Siparişler")
@@ -136,7 +113,7 @@ class OrdersManagerWindow(QWidget):
         layout = QVBoxLayout(self)
 
         # =========================
-        # 📃 LİSTE
+        # 📃 LİSTE (KENDİ KENDİNİ YÖNETİR)
         # =========================
         self.list_widget = OrdersListWidget(self)
 
@@ -148,38 +125,57 @@ class OrdersManagerWindow(QWidget):
 
         self.global_search = QLineEdit()
         self.global_search.setPlaceholderText("Genel Ara (müşteri, ürün, sipariş no, kargo...)")
-        self.global_search.textChanged.connect(self.apply_filters)
 
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Sipariş No Ara...")
-        self.search_input.textChanged.connect(self.apply_filters)
 
         self.cargo_filter = QComboBox()
         self.cargo_filter.addItem("Tümü")
-        self.cargo_filter.currentIndexChanged.connect(self.apply_filters)
 
         self.customer_input = QLineEdit()
         self.customer_input.setPlaceholderText("Müşteri Adı Ara...")
-        self.customer_input.textChanged.connect(self.apply_filters)
 
         self.date_filter_enable = QCheckBox("Tarih filtresini uygula")
         self.date_filter_enable.setChecked(False)
-        self.date_filter_enable.stateChanged.connect(self.apply_filters)
 
         self.date_from = QDateEdit()
         self.date_from.setCalendarPopup(True)
         self.date_from.setDate(QDate.currentDate().addMonths(-1))
-        self.date_from.dateChanged.connect(self.apply_filters)
 
         self.date_to = QDateEdit()
         self.date_to.setCalendarPopup(True)
         self.date_to.setDate(QDate.currentDate())
-        self.date_to.dateChanged.connect(self.apply_filters)
 
         self._toggle_date_inputs(self.date_filter_enable.isChecked())
         self.date_filter_enable.stateChanged.connect(
             lambda _: self._toggle_date_inputs(self.date_filter_enable.isChecked())
         )
+
+        # 🕓 Debounce timer (filtreyi gecikmeli çalıştırır)
+        self.filter_timer = QTimer()
+        self.filter_timer.setSingleShot(True)
+        self.filter_timer.timeout.connect(self.apply_filters)
+
+        # Her input değişikliğinde debounce başlasın
+        inputs = [
+            self.global_search,
+            self.search_input,
+            self.customer_input,
+            self.cargo_filter,
+            self.date_filter_enable,
+            self.date_from,
+            self.date_to
+        ]
+
+        for w in inputs:
+            if isinstance(w, QComboBox):
+                w.currentIndexChanged.connect(self._trigger_debounce)
+            elif isinstance(w, QCheckBox):
+                w.stateChanged.connect(self._trigger_debounce)
+            elif hasattr(w, "textChanged"):
+                w.textChanged.connect(self._trigger_debounce)
+            elif hasattr(w, "dateChanged"):
+                w.dateChanged.connect(self._trigger_debounce)
 
         filter_layout.addWidget(QLabel("Genel Ara:"), 0, 0)
         filter_layout.addWidget(self.global_search, 0, 1, 1, 3)
@@ -190,6 +186,7 @@ class OrdersManagerWindow(QWidget):
         filter_layout.addWidget(QLabel("Müşteri:"), 2, 0)
         filter_layout.addWidget(self.customer_input, 2, 1)
         filter_layout.addWidget(self.date_filter_enable, 2, 2)
+
         dates_row = QHBoxLayout()
         dates_row.addWidget(self.date_from)
         dates_row.addWidget(QLabel(" - "))
@@ -197,12 +194,11 @@ class OrdersManagerWindow(QWidget):
         filter_layout.addLayout(dates_row, 2, 3)
 
         layout.addWidget(filter_box)
+        layout.addWidget(self.list_widget)
 
         # 📊 Seçili sayısı
         self.selected_count_label = QLabel("Seçili: 0 / Toplam: 0 (Filtreli: 0)")
         layout.addWidget(self.selected_count_label)
-
-        layout.addWidget(self.list_widget)
 
         # 🚚 Siparişler yüklendiğinde kargo filtrelerini doldur
         order_signals.orders_loaded.connect(self._refresh_cargo_filter)
@@ -210,117 +206,91 @@ class OrdersManagerWindow(QWidget):
         # 🧰 Toplu işlem butonları
         control_box = QGroupBox("Toplu İşlemler")
         control_layout = QHBoxLayout(control_box)
-
         select_all_btn = QPushButton("Tümünü Seç")
         deselect_all_btn = QPushButton("Seçimi Kaldır")
-
         select_all_btn.clicked.connect(self.select_all)
         deselect_all_btn.clicked.connect(self.deselect_all)
-
         control_layout.addStretch()
         control_layout.addWidget(select_all_btn)
         control_layout.addWidget(deselect_all_btn)
         layout.addWidget(control_box)
 
+    def _refresh_cargo_filter(self, orders=None):
+        """Siparişler yüklendikten sonra kargo firmalarını doldurur."""
+        try:
+            self.cargo_filter.blockSignals(True)
+            self.cargo_filter.clear()
+            self.cargo_filter.addItem("Tümü")
 
+            # Siparişlerden kargo isimlerini çıkar
+            cargos = extract_cargo_names(self.list_widget.orders)
+            self.cargo_filter.addItems(cargos)
 
+        except Exception as e:
+            msg = map_error_to_message(e)
+            MessageHandler.show(self, Result.fail(msg, error=e), only_errors=True)
+        finally:
+            self.cargo_filter.blockSignals(False)
 
     # =========================
     # Helpers
     # =========================
     def _toggle_date_inputs(self, enabled: bool):
+        """Tarih filtre kutularını aktif/pasif hale getirir."""
         self.date_from.setEnabled(enabled)
         self.date_to.setEnabled(enabled)
 
-    def _coerce_to_date(self, v) -> date | None:
-        if v is None:
-            return None
-        if isinstance(v, date) and not isinstance(v, datetime):
-            return v
-        if isinstance(v, datetime):
-            return v.date()
-        if isinstance(v, (int, float)):
-            try:
-                return datetime.fromtimestamp(v).date()
-            except Exception:
-                return None
-        if isinstance(v, str):
-            for fmt in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%d.%m.%Y", "%Y/%m/%d"):
-                try:
-                    return datetime.strptime(v, fmt).date()
-                except Exception:
-                    pass
-        return None
-
-    def _get_order_date(self, o) -> date | None:
-        for attr in ("shipmentDate", "orderDate", "createdDate"):
-            d = self._coerce_to_date(getattr(o, attr, None))
-            if d:
-                return d
-        return None
-
-    def _refresh_cargo_filter(self, orders=None):
-        """Siparişler yüklendikten sonra kargo firmalarını doldur."""
-        self.cargo_filter.blockSignals(True)  # 🔇 geçici olarak sinyali kapat
-        self.cargo_filter.clear()
-        self.cargo_filter.addItem("Tümü")
-        cargos = extract_cargo_names(self.list_widget.orders)
-        self.cargo_filter.addItems(cargos)
-        self.cargo_filter.blockSignals(False)  # 🔊 geri aç
+    # =========================
+    # 🕓 Debounce
+    # =========================
+    def _trigger_debounce(self):
+        """Kullanıcı yazmaya devam ederken filtreyi bekletir."""
+        self.filter_timer.start(350)  # 350ms sonra çalışsın
 
     # =========================
-    # Filtreleri uygula
+    # Filtreleri uygula (thread içinde)
     # =========================
     def apply_filters(self):
-        # 🔥 her zaman full liste üzerinden filtre başlasın
-        filtered = list(self.list_widget.orders)
+        try:
+            filters = {
+                "global": self.global_search.text().strip(),
+                "order_no": self.search_input.text().strip(),
+                "cargo": self.cargo_filter.currentText(),
+                "customer": self.customer_input.text().strip(),
+                "date_enabled": self.date_filter_enable.isChecked(),
+                "date_from": self.date_from.date().toPyDate(),
+                "date_to": self.date_to.date().toPyDate(),
+            }
 
-        search_text = self.search_input.text().strip().lower()
-        cargo_text = self.cargo_filter.currentText()
-        customer_text = self.customer_input.text().strip().lower()
-        global_text = self.global_search.text().strip().lower()
+            self.selected_count_label.setText("🔄 Filtre uygulanıyor...")
 
-        if global_text:
-            new_list = []
-            for o in filtered:
-                items = getattr(o, "items", None) or []
-                in_items = any(
-                    global_text in str(getattr(it, "productName", "")).lower()
-                    or global_text in str(getattr(it, "productSku", "")).lower()
-                    for it in items
+            # 🔧 SyncWorker ile filtre işlemini başlat
+            self.filter_worker = SyncWorker(filter_orders, self.list_widget.orders, filters)
+
+            def handle_filter_result(result: Result):
+                if not result.success:
+                    MessageHandler.show(self, result, only_errors=True)
+                    self.selected_count_label.setText("⚠️ Filtreleme başarısız.")
+                    return
+
+                filtered = result.data.get("filtered", [])
+                self.list_widget.filtered_orders = filtered
+
+                build_order_list(
+                    self.list_widget,
+                    filtered,
+                    interaction_cb=self.list_widget.on_item_interaction,
+                    selection_cb=self.list_widget.clear_other_selections
                 )
-                if (
-                    global_text in str(getattr(o, "orderNumber", "")).lower()
-                    or global_text in str(getattr(o, "cargoProviderName", "")).lower()
-                    or global_text in str(getattr(o, "customerFirstName", "")).lower()
-                    or in_items
-                ):
-                    new_list.append(o)
-            filtered = new_list
+                self._update_label()
+                self.selected_count_label.setText(f"✅ Filtre tamamlandı. (Kalan: {len(filtered)})")
 
-        if search_text:
-            filtered = [o for o in filtered if search_text in str(getattr(o, "orderNumber", "")).lower()]
+            self.filter_worker.result_ready.connect(handle_filter_result)
+            self.filter_worker.start()
 
-        if cargo_text and cargo_text != "Tümü":
-            filtered = [o for o in filtered if getattr(o, "cargoProviderName", None) == cargo_text]
-
-        if customer_text:
-            filtered = [o for o in filtered if customer_text in str(getattr(o, "customerFirstName", "")).lower()]
-
-        if self.date_filter_enable.isChecked():
-            df = self.date_from.date().toPyDate()
-            dt = self.date_to.date().toPyDate()
-            tmp = []
-            for o in filtered:
-                od = self._get_order_date(o)
-                if od and df <= od <= dt:
-                    tmp.append(o)
-            filtered = tmp
-
-        # 🔥 filtre sonucunu widget'a gönder
-        self.list_widget.filtered_orders = filtered
-        self.list_widget._build_list(filtered)
-        self._update_label()
+        except Exception as e:
+            msg = map_error_to_message(e)
+            MessageHandler.show(self, Result.fail(msg, error=e), only_errors=True)
 
     # =========================
     # Seçili sayısı güncelle
@@ -354,7 +324,6 @@ class OrdersManagerWindow(QWidget):
         if res.success:
             return res.data.get("selected_orders", [])
         return []
-
 
 
 class OrdersTab(QWidget):
