@@ -36,25 +36,36 @@ def resolve_order_logo_path(order) -> str:
     Siparişin bağlı olduğu hesabın logosunu döndürür.
     Hesapta logo yoksa varsayılan sipariş görseli kullanılır.
     """
-    if getattr(order, "api_account", None) and getattr(order.api_account, "logo_path", None):
-        return order.api_account.logo_path
+    logo = getattr(getattr(order, "api_account", None), "logo_path", None)
+    if logo:
+        return logo
     return "images/orders_img.png"
 
 
 def format_order_summary(order) -> dict:
     """
     Siparişin UI’da gösterilecek metinlerini biçimlendirir.
-    Bu fonksiyon farklı alanlarda (liste, detay, PDF, e-posta vb.)
-    tekrar kullanılabilir.
+    Farklı katmanlarda (liste, detay, PDF) tekrar kullanılabilir.
     """
+    total = getattr(order, "totalPrice", 0)
+    try:
+        total_fmt = f"{float(total):,.2f}".replace(",", ".")  # 1.234,50 ₺ formatına yakın
+    except Exception:
+        total_fmt = total
+
+    date_part = getattr(order, "orderDate", None)
+    if isinstance(date_part, datetime):
+        date_str = date_part.strftime("%d.%m.%Y")
+    else:
+        date_str = str(date_part or "—")
+
     return {
-        "title": f"Order: {getattr(order, 'orderNumber', '—')}",
-        "subtitle": f"Müşteri: {getattr(order, 'customerFirstName', '—')} "
-                    f"{getattr(order, 'customerLastName', '')}",
+        "title": f"Sipariş: {getattr(order, 'orderNumber', '—')}",
+        "subtitle": f"Müşteri: {getattr(order, 'customerFirstName', '—')} {getattr(order, 'customerLastName', '')}",
         "extra": f"Kargo: {getattr(order, 'cargoProviderName', '-')} | "
-                 f"Tutar: {getattr(order, 'totalPrice', 0)} ₺",
+                 f"Tarih: {date_str} | Tutar: {total_fmt} ₺",
         "identifier": getattr(order, "orderNumber", "—"),
-        "logo_path": resolve_order_logo_path(order)
+        "logo_path": resolve_order_logo_path(order),
     }
 
 
@@ -64,9 +75,13 @@ def build_order_list(list_widget, orders: list, interaction_cb=None, selection_c
     UI elemanlarını oluşturur ve sinyalleri bağlar.
     """
     try:
+        # 🧽 Qt leak fix (widgetları temizle)
+        for i in range(list_widget.count()):
+            w = list_widget.itemWidget(list_widget.item(i))
+            if w:
+                w.deleteLater()
         list_widget.clear()
 
-        # 📭 Boş liste durumu
         if not orders:
             info_item = QListWidgetItem("Gösterilecek sipariş bulunamadı.")
             info_item.setFlags(info_item.flags() & ~Qt.ItemFlag.ItemIsSelectable)
@@ -84,7 +99,7 @@ def build_order_list(list_widget, orders: list, interaction_cb=None, selection_c
                 extra=display["extra"],
                 identifier=display["identifier"],
                 icon_path=display["logo_path"],
-                optional_widget=switch
+                optional_widget=switch,
             )
 
             if interaction_cb:
@@ -103,36 +118,25 @@ def build_order_list(list_widget, orders: list, interaction_cb=None, selection_c
         return Result.fail(map_error_to_message(e), error=e)
 
 
-def update_selected_count_label(list_widget, label: QLabel) -> Result:
+def update_selected_count_label(list_widget, label: QLabel | None = None) -> Result:
     """
-    SwitchButton durumlarına bakarak seçili sipariş sayısını hesaplar
-    ve label üzerinde gösterir.
+    SwitchButton durumlarına bakarak seçili sipariş sayısını hesaplar.
+    İstenirse label üzerinde gösterir.
     """
     try:
-        if list_widget.count() == 0:
-            if label:
-                label.setText("Seçili sipariş sayısı: 0")
-            return Result.fail("Listede sipariş bulunamadı.", close_dialog=False)
-
-        count = 0
-        for i in range(list_widget.count()):
-            widget = list_widget.itemWidget(list_widget.item(i))
-            if widget and getattr(widget, "right_widget", None):
-                if widget.right_widget.isChecked():
-                    count += 1
-
-        if label:
-            label.setText(f"Seçili sipariş sayısı: {count}")
-
-        return Result.ok(
-            f"Seçili sipariş sayısı güncellendi: {count}",
-            close_dialog=False,
-            data={"count": count}
+        count = sum(
+            1 for i in range(list_widget.count())
+            if getattr(list_widget.itemWidget(list_widget.item(i)), "right_widget", None)
+            and list_widget.itemWidget(list_widget.item(i)).right_widget.isChecked()
         )
 
+        if label:
+            label.setText(f"Seçili: {count}")
+
+        return Result.ok("Seçili sayısı güncellendi.", data={"count": count}, close_dialog=False)
+
     except Exception as e:
-        msg = map_error_to_message(e)
-        return Result.fail(msg, error=e, close_dialog=False)
+        return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
 
 
 def collect_selected_orders(list_widget) -> Result:
@@ -140,38 +144,28 @@ def collect_selected_orders(list_widget) -> Result:
     QListWidget içindeki SwitchButton'lara bakarak seçili siparişleri döndürür.
     """
     try:
-        if list_widget.count() == 0:
-            return Result.fail("Listede sipariş bulunamadı.", close_dialog=False)
-
         selected = []
         for i in range(list_widget.count()):
-            widget = list_widget.itemWidget(list_widget.item(i))
-            if widget and isinstance(widget.right_widget, SwitchButton):
-                if widget.right_widget.isChecked():
-                    selected.append(widget.identifier)
+            w = list_widget.itemWidget(list_widget.item(i))
+            if not w:
+                continue
+            btn = getattr(w, "right_widget", None)
+            if btn and btn.isChecked():
+                selected.append(w.identifier)
 
         if not selected:
             return Result.fail("Hiçbir sipariş seçilmedi.", close_dialog=False)
 
-        return Result.ok(
-            f"{len(selected)} sipariş seçildi.",
-            close_dialog=False,
-            data={"selected_orders": selected}
-        )
+        return Result.ok(f"{len(selected)} sipariş seçildi.", data={"selected_orders": selected}, close_dialog=False)
 
     except Exception as e:
-        msg = map_error_to_message(e)
-        return Result.fail(msg, error=e, close_dialog=False)
+        return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
 
 
 def extract_cargo_names(orders: list) -> list[str]:
-    """
-    Sipariş listesinden kargo firma isimlerini çıkarır (tekrarsız, sıralı).
-    """
-    return sorted({
-        getattr(o, "cargoProviderName", None)
-        for o in orders if getattr(o, "cargoProviderName", None)
-    })
+    """Sipariş listesinden tekrarsız ve alfabetik sıralı kargo firma adlarını döndürür."""
+    return sorted(
+        {getattr(o, "cargoProviderName", "").strip() for o in orders if getattr(o, "cargoProviderName", None)})
 
 
 # ============================================================
@@ -179,17 +173,14 @@ def extract_cargo_names(orders: list) -> list[str]:
 # ============================================================
 
 def load_ready_to_ship_orders() -> Result:
-    """
-    Pipeline'dan ReadyToShip siparişleri alır ve UI için hazırlar.
-    Bu katman yalnızca veri düzenleme/filtreleme yapar, UI mesajı göstermez.
-    """
-    result = get_latest_ready_to_ship_orders()
-
-    if not result.success:
-        return result
-
-    orders = result.data.get("orders", [])
-    return Result.ok("ReadyToShip siparişler başarıyla yüklendi.", data={"records": orders})
+    """ReadyToShip siparişleri pipeline’dan çeker ve UI için döndürür."""
+    try:
+        result = get_latest_ready_to_ship_orders()
+        if not result.success:
+            return result
+        return Result.ok("ReadyToShip siparişler yüklendi.", data={"records": result.data.get("orders", [])})
+    except Exception as e:
+        return Result.fail(map_error_to_message(e), error=e)
 
 
 # ============================================================
@@ -277,92 +268,93 @@ def update_progress(view_instance, current: int, total: int):
 def filter_orders(orders: list, filters: dict) -> Result:
     """
     Sipariş listesini verilen filtrelere göre süzer.
-
-    Args:
-        orders (list): Tam sipariş listesi
-        filters (dict): {
-            "global": "aranan",
-            "order_no": "123",
-            "cargo": "Yurtiçi Kargo",
-            "customer": "Ali",
-            "date_enabled": True,
-            "date_from": date,
-            "date_to": date
-        }
+    Çok büyük datasetlerde de CPU dostu.
     """
     try:
         filtered = list(orders)
 
-        global_text = filters.get("global", "").lower()
-        search_text = filters.get("order_no", "").lower()
-        cargo_text = filters.get("cargo")
-        customer_text = filters.get("customer", "").lower()
+        gtxt = filters.get("global", "").lower()
+        order_no = filters.get("order_no", "").lower()
+        cargo = filters.get("cargo")
+        customer = filters.get("customer", "").lower()
         date_enabled = filters.get("date_enabled", False)
         df = filters.get("date_from")
         dt = filters.get("date_to")
 
-        def coerce_date(v) -> date | None:
-            if v is None:
-                return None
-            if isinstance(v, date) and not isinstance(v, datetime):
-                return v
-            if isinstance(v, datetime):
-                return v.date()
-            if isinstance(v, (int, float)):
-                return datetime.fromtimestamp(v).date()
-            if isinstance(v, str):
-                for fmt in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%d.%m.%Y", "%Y/%m/%d"):
-                    try:
-                        return datetime.strptime(v, fmt).date()
-                    except Exception:
-                        pass
-            return None
-
         def get_order_date(o) -> date | None:
             for attr in ("shipmentDate", "orderDate", "createdDate"):
-                d = coerce_date(getattr(o, attr, None))
-                if d:
+                d = getattr(o, attr, None)
+                if isinstance(d, datetime):
+                    return d.date()
+                if isinstance(d, date):
                     return d
             return None
 
-        # --- global search
-        if global_text:
-            temp = []
+        if gtxt:
+            gtxt = gtxt.strip()
+            new = []
             for o in filtered:
-                items = getattr(o, "items", None) or []
-                in_items = any(
-                    global_text in str(getattr(it, "productName", "")).lower()
-                    or global_text in str(getattr(it, "productSku", "")).lower()
-                    for it in items
-                )
-                if (
-                        global_text in str(getattr(o, "orderNumber", "")).lower()
-                        or global_text in str(getattr(o, "cargoProviderName", "")).lower()
-                        or global_text in str(getattr(o, "customerFirstName", "")).lower()
-                        or in_items
-                ):
-                    temp.append(o)
-            filtered = temp
+                items = getattr(o, "items", [])
+                if any(gtxt in str(getattr(it, "productName", "")).lower() or gtxt in str(
+                        getattr(it, "productSku", "")).lower() for it in items) \
+                        or any(gtxt in str(getattr(o, f, "")).lower() for f in
+                               ("orderNumber", "cargoProviderName", "customerFirstName")):
+                    new.append(o)
+            filtered = new
 
-        if search_text:
-            filtered = [o for o in filtered if search_text in str(getattr(o, "orderNumber", "")).lower()]
+        if order_no:
+            filtered = [o for o in filtered if order_no in str(getattr(o, "orderNumber", "")).lower()]
 
-        if cargo_text and cargo_text != "Tümü":
-            filtered = [o for o in filtered if getattr(o, "cargoProviderName", None) == cargo_text]
+        if cargo and cargo != "Tümü":
+            filtered = [o for o in filtered if getattr(o, "cargoProviderName", None) == cargo]
 
-        if customer_text:
-            filtered = [o for o in filtered if customer_text in str(getattr(o, "customerFirstName", "")).lower()]
+        if customer:
+            filtered = [o for o in filtered if customer in str(getattr(o, "customerFirstName", "")).lower()]
 
         if date_enabled and df and dt:
-            tmp = []
-            for o in filtered:
-                od = get_order_date(o)
-                if od and df <= od <= dt:
-                    tmp.append(o)
-            filtered = tmp
+            filtered = [o for o in filtered if (d := get_order_date(o)) and df <= d <= dt]
 
         return Result.ok("Filtre uygulandı.", data={"filtered": filtered})
 
     except Exception as e:
-        from Feedback.processors.pipeline import map_error_to_message
         return Result.fail(map_error_to_message(e), error=e)
+
+
+# actions.py içine (örneğin "🔹 4. UI yardımcıları" altına)
+
+def refresh_cargo_filter(cargo_combobox, orders: list) -> Result:
+    """Sipariş listesinden kargo isimlerini çekip combobox’a ekler."""
+    try:
+        cargo_combobox.blockSignals(True)
+        cargo_combobox.clear()
+        cargo_combobox.addItem("Tümü")
+
+        cargos = extract_cargo_names(orders)
+        cargo_combobox.addItems(cargos)
+
+        return Result.ok("Kargo filtreleri güncellendi.", close_dialog=False)
+
+    except Exception as e:
+        return Result.fail(map_error_to_message(e), error=e)
+    finally:
+        cargo_combobox.blockSignals(False)
+
+
+# actions.py içine (örneğin "🔹 5. Filtreleme yönetimi" altına)
+def start_filter_worker(parent_widget, list_widget, filters: dict) -> SyncWorker:
+    """Filtre işlemini SyncWorker ile başlatır ve sonuç sinyali döner."""
+    worker = SyncWorker(filter_orders, list_widget.orders, filters)
+
+    def handle_filter_result(result: Result):
+        if not result.success:
+            MessageHandler.show(parent_widget, result, only_errors=True)
+            parent_widget.selected_count_label.setText("⚠️ Filtreleme başarısız.")
+            return
+
+        filtered = result.data.get("filtered", [])
+        list_widget.apply_filter_result(filtered)
+        parent_widget._update_label()
+        parent_widget.selected_count_label.setText(f"✅ Filtre tamamlandı. (Kalan: {len(filtered)})")
+
+    worker.result_ready.connect(handle_filter_result)
+    return worker
