@@ -1,36 +1,50 @@
+# ============================================================
+# 🧠 CORE IMPORTS
+# ============================================================
 from __future__ import annotations
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QGroupBox, QHBoxLayout,
-    QListWidget, QPushButton, QLineEdit, QComboBox, QGridLayout, QDateEdit, QCheckBox, QListWidgetItem
+    QListWidget, QPushButton, QLineEdit, QComboBox, QGridLayout,
+    QDateEdit, QCheckBox, QListWidgetItem
 )
+from PyQt6.QtCore import Qt, QDate, QTimer, QRegularExpression
+from PyQt6.QtGui import QRegularExpressionValidator
+from datetime import datetime, date
 
-from PyQt6.QtCore import Qt, QDate, QTimer
-
+# Core widgets
 from Core.views.views import (
-    CircularProgressButton, PackageButton
+    CircularProgressButton, PackageButton, SwitchButton, ListSmartItemWidget
 )
-from datetime import datetime, date
-from Orders.views.actions import (
-    get_orders_from_companies, collect_selected_orders,
-    update_selected_count_label, load_ready_to_ship_orders, extract_cargo_names, build_order_list,
-    filter_orders, refresh_cargo_filter, start_filter_worker
-)
-
-from Feedback.processors.pipeline import MessageHandler, Result, map_error_to_message
-
-from Account.views.views import CompanyListWidget
-
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QGroupBox, QHBoxLayout, QGridLayout,
-    QLineEdit, QComboBox, QLabel, QListWidget, QPushButton, QDateEdit
-)
-from PyQt6.QtCore import QDate
-from datetime import datetime, date
-from Orders.signals.signals import order_signals
-from Core.views.views import SwitchButton, ListSmartItemWidget
 from Core.threads.sync_worker import SyncWorker
 
+# ============================================================
+# 🧩 DOMAIN IMPORTS
+# ============================================================
+from Orders.signals.signals import order_signals
+from Orders.views.actions import (
+    get_orders_from_companies,
+    collect_selected_orders,
+    load_ready_to_ship_orders,
+    extract_cargo_names,
+    build_order_list,
+    filter_orders,
+    refresh_cargo_filter,
+    start_filter_worker
+)
+
+from Account.views.views import CompanyListWidget
+from Feedback.processors.pipeline import MessageHandler, Result, map_error_to_message
+
+
+# ============================================================
+# 🔹 1. OrdersListWidget — Sipariş Listeleme Bileşeni
+# ============================================================
+# Bu sınıf liste görünümünü yönetir:
+# - DB’den siparişleri çeker
+# - Arka planda yeniden yükleme sinyallerini dinler
+# - Filtrelenmiş veya tüm siparişleri render eder
+# ============================================================
 
 class OrdersListWidget(QListWidget):
     """
@@ -49,20 +63,22 @@ class OrdersListWidget(QListWidget):
         # 🔌 Siparişler değiştiğinde kendini yenile
         order_signals.orders_changed.connect(self.reload_orders)
 
-    # =========================
-    # Yaşam döngüsü
-    # =========================
+    # ============================================================
+    # 🔄 Yaşam Döngüsü
+    # ============================================================
     def showEvent(self, event):
         """Widget ilk gösterildiğinde siparişleri yükle."""
         super().showEvent(event)
         if not self.orders:  # sadece ilk kez
             self.reload_orders()
 
-    # =========================
-    # Ana işlemler
-    # =========================
+    # ============================================================
+    # 🧩 Ana İşlemler
+    # ============================================================
     def reload_orders(self):
-        """DB'den siparişleri çekip listeyi yeniden oluşturur."""
+        """
+        DB'den siparişleri çekip listeyi yeniden oluşturur.
+        """
         try:
             result = load_ready_to_ship_orders()
             if not result.success:
@@ -88,11 +104,14 @@ class OrdersListWidget(QListWidget):
         self.filtered_orders = filtered_orders
         self._safe_build(filtered_orders)
 
-    # =========================
-    # Yardımcı işlemler
-    # =========================
+    # ============================================================
+    # 🧰 Yardımcı İşlemler
+    # ============================================================
     def _safe_build(self, orders: list):
-        """Build işlemini güvenli biçimde gerçekleştirir."""
+        """
+        Build işlemini güvenli biçimde gerçekleştirir.
+        Memory leak koruması içerir.
+        """
         try:
             # 🧹 Gereksiz render engelleme
             if not orders and not self.count():
@@ -114,13 +133,12 @@ class OrdersListWidget(QListWidget):
             msg = map_error_to_message(e)
             MessageHandler.show(self, Result.fail(msg, error=e), only_errors=True)
 
-    # =========================
-    # Event callbacks
-    # =========================
+    # ============================================================
+    # 🎯 Event Callbacks
+    # ============================================================
     def on_item_interaction(self, identifier, value: bool):
         """Toggle değiştiğinde seçili sayısını güncelle."""
-        res = update_selected_count_label(self, None)
-        MessageHandler.show(self, res, only_errors=True)
+        pass
 
     def clear_other_selections(self, keep_widget):
         """Tek seçim modu: diğer seçimleri temizle."""
@@ -137,20 +155,18 @@ class OrdersListWidget(QListWidget):
         return []
 
 
+# ============================================================
+# 🔹 2. OrdersManagerWindow — Filtreleme Penceresi
+# ============================================================
+# Bu pencere:
+# - Filtre alanlarını (müşteri, kargo, tarih, sipariş no) içerir
+# - Debounce mekanizması ile performanslı filtreleme yapar
+# - Listeyi güncel tutar
+# ============================================================
+
 class OrdersManagerWindow(QWidget):
     """
     Kargoya hazır siparişleri yöneten ana pencere.
-
-    Bu sınıf, siparişlerin:
-    - filtrelenmesi (müşteri, tarih, kargo, ürün, sipariş no)
-    - listelenmesi
-    - toplu seçilmesi / seçimlerin temizlenmesi
-    gibi işlemleri yönetir.
-
-    Yapı:
-        OrdersListWidget → Siparişlerin listelendiği özel widget
-        start_filter_worker → actions.py içinden filtre iş mantığını yürütür
-        refresh_cargo_filter → kargo dropdown’unu dinamik doldurur
     """
 
     def __init__(self):
@@ -158,76 +174,77 @@ class OrdersManagerWindow(QWidget):
         self.setWindowTitle("Kargoya Hazır Siparişler")
         self.setGeometry(200, 200, 1000, 650)
 
-        # Ana layout
         layout = QVBoxLayout(self)
 
         # ============================================================
-        # 📃 LİSTE WIDGET — Siparişleri gösteren ana alan
+        # 📦 Liste Widget
         # ============================================================
-        # Bu widget kendi reload, filter ve render mantığını yönetir.
         self.list_widget = OrdersListWidget(self)
 
         # ============================================================
-        # 🔎 FİLTRE PANELİ — Kullanıcıya arama filtreleri sunar
+        # 🔍 Filtre Paneli
         # ============================================================
         filter_box = QGroupBox("Filtreler")
         filter_layout = QGridLayout(filter_box)
 
-        # --- Genel arama (her alanda arar)
+        # --- Genel Arama
         self.global_search = QLineEdit()
         self.global_search.setPlaceholderText("Genel Ara (müşteri, ürün, sipariş no, kargo...)")
 
-        # --- Sipariş numarasına göre arama
+        # --- Sipariş No (sadece sayısal giriş)
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Sipariş No Ara...")
+        numeric_validator = QRegularExpressionValidator(QRegularExpression(r"^\d*$"))
+        self.search_input.setValidator(numeric_validator)
 
-        # --- Kargo firmasına göre filtreleme
+        # --- Kargo Firması
         self.cargo_filter = QComboBox()
         self.cargo_filter.addItem("Tümü")
 
-        # --- Müşteri adına göre filtreleme
+        # --- Müşteri Adı
         self.customer_input = QLineEdit()
         self.customer_input.setPlaceholderText("Müşteri Adı Ara...")
 
-        # --- Tarih aralığı filtreleme (isteğe bağlı)
+        # ============================================================
+        # 🗓️ Tarih Filtresi
+        # ============================================================
         self.date_filter_enable = QCheckBox("Tarih filtresini uygula")
         self.date_filter_enable.setChecked(False)
 
         self.date_from = QDateEdit()
         self.date_from.setCalendarPopup(True)
+        self.date_from.setDisplayFormat("dd.MM.yyyy")
+        self.date_from.setFixedWidth(130)
         self.date_from.setDate(QDate.currentDate().addMonths(-1))
 
         self.date_to = QDateEdit()
         self.date_to.setCalendarPopup(True)
+        self.date_to.setDisplayFormat("dd.MM.yyyy")
+        self.date_to.setFixedWidth(130)
         self.date_to.setDate(QDate.currentDate())
 
-        # Tarih alanlarını aktif/pasif yap
+        # Estetik dokunuş
+        self.date_from.setStyleSheet("QDateEdit { padding: 3px; border-radius: 4px; }")
+        self.date_to.setStyleSheet("QDateEdit { padding: 3px; border-radius: 4px; }")
+
+        # 🔄 Tarih kutularını etkin/pasif yap
         self._toggle_date_inputs(self.date_filter_enable.isChecked())
         self.date_filter_enable.stateChanged.connect(
             lambda _: self._toggle_date_inputs(self.date_filter_enable.isChecked())
         )
 
         # ============================================================
-        # 🕓 DEBOUNCE MEKANİZMASI
+        # 🕓 Debounce Mekanizması
         # ============================================================
-        # Kullanıcı yazarken sürekli filtreyi çalıştırmak yerine
-        # 350 ms bekler, sonra çalıştırır → performans artışı.
         self.filter_timer = QTimer()
         self.filter_timer.setSingleShot(True)
         self.filter_timer.timeout.connect(self.apply_filters)
 
-        # Filtre alanlarını listele
+        # Filtre değişikliklerinde debounce tetikleme
         inputs = [
-            self.global_search,
-            self.search_input,
-            self.customer_input,
-            self.cargo_filter,
-            self.date_filter_enable,
-            self.date_from,
-            self.date_to
+            self.global_search, self.search_input, self.customer_input,
+            self.cargo_filter, self.date_filter_enable, self.date_from, self.date_to
         ]
-
-        # Her input değiştiğinde debounce başlat
         for w in inputs:
             if isinstance(w, QComboBox):
                 w.currentIndexChanged.connect(self._trigger_debounce)
@@ -238,7 +255,9 @@ class OrdersManagerWindow(QWidget):
             elif hasattr(w, "dateChanged"):
                 w.dateChanged.connect(self._trigger_debounce)
 
-        # --- Filtre kutularını layout’a yerleştir
+        # ============================================================
+        # 📐 Filtre Layout Yerleşimi
+        # ============================================================
         filter_layout.addWidget(QLabel("Genel Ara:"), 0, 0)
         filter_layout.addWidget(self.global_search, 0, 1, 1, 3)
         filter_layout.addWidget(QLabel("Sipariş No:"), 1, 0)
@@ -249,84 +268,70 @@ class OrdersManagerWindow(QWidget):
         filter_layout.addWidget(self.customer_input, 2, 1)
         filter_layout.addWidget(self.date_filter_enable, 2, 2)
 
-        # --- Tarih aralığı satırı
+        # --- Tarih Aralığı
         dates_row = QHBoxLayout()
         dates_row.addWidget(self.date_from)
         dates_row.addWidget(QLabel(" - "))
         dates_row.addWidget(self.date_to)
+        dates_row.addStretch()
         filter_layout.addLayout(dates_row, 2, 3)
 
-        # Layout’a filtre kutusunu ekle
         layout.addWidget(filter_box)
         layout.addWidget(self.list_widget)
 
         # ============================================================
-        # 📊 SEÇİM SAYISI ETİKETİ
+        # 📊 Seçim Bilgisi
         # ============================================================
         self.selected_count_label = QLabel("Seçili: 0 / Toplam: 0 (Filtreli: 0)")
         layout.addWidget(self.selected_count_label)
 
         # ============================================================
-        # 🚚 SİNYAL: Siparişler yüklendiğinde kargo filtrelerini yenile
+        # 🚚 Sipariş Yüklendiğinde
         # ============================================================
         order_signals.orders_loaded.connect(self._refresh_cargo_filter)
+        order_signals.orders_loaded.connect(self._update_label)
 
         # ============================================================
-        # 🧰 TOPLU İŞLEM BUTONLARI
+        # 🧰 Toplu İşlem Butonları
         # ============================================================
         control_box = QGroupBox("Toplu İşlemler")
         control_layout = QHBoxLayout(control_box)
-
         select_all_btn = QPushButton("Tümünü Seç")
         deselect_all_btn = QPushButton("Seçimi Kaldır")
-
         select_all_btn.clicked.connect(self.select_all)
         deselect_all_btn.clicked.connect(self.deselect_all)
-
         control_layout.addStretch()
         control_layout.addWidget(select_all_btn)
         control_layout.addWidget(deselect_all_btn)
         layout.addWidget(control_box)
 
     # ============================================================
-    # 🔹 EVENTLER VE YARDIMCILAR
+    # 🧩 Yardımcı Fonksiyonlar
     # ============================================================
-
     def _refresh_cargo_filter(self, orders=None):
-        """
-        Yeni siparişler yüklendiğinde kargo combobox’ını günceller.
-        Mantık actions.refresh_cargo_filter fonksiyonunda bulunur.
-        """
         res = refresh_cargo_filter(self.cargo_filter, self.list_widget.orders)
         MessageHandler.show(self, res, only_errors=True)
 
     def _toggle_date_inputs(self, enabled: bool):
-        """Tarih filtre kutularını aktif/pasif hale getirir."""
+        """Tarih alanlarını aktif/pasif hale getirir."""
         self.date_from.setEnabled(enabled)
         self.date_to.setEnabled(enabled)
-
-    # ============================================================
-    # 🕓 DEBOUNCE MEKANİZMASI
-    # ============================================================
+        self.date_from.setStyleSheet("" if enabled else "color: gray;")
+        self.date_to.setStyleSheet("" if enabled else "color: gray;")
 
     def _trigger_debounce(self):
-        """
-        Kullanıcı yazmaya devam ederken filtreyi bekletir.
-        350 ms boyunca başka input değişmezse filtre çalışır.
-        """
+        """Kullanıcı etkileşimi sonrası filtreleme tetiklenmeden kısa gecikme."""
         self.filter_timer.start(350)
 
     # ============================================================
-    # 🔍 FİLTRE UYGULAMA
+    # 🔍 Filtre Uygulama
     # ============================================================
-
     def apply_filters(self):
         """
-        Aktif filtre değerlerini toplayıp SyncWorker ile işlenmek üzere gönderir.
-        Arka planda çalıştığı için UI donmaz.
+        Aktif filtreleri toplayıp SyncWorker ile arka planda uygular.
+        UI donmaz.
         """
         try:
-            # 1️⃣ Filtre parametrelerini oluştur
             filters = {
                 "global": self.global_search.text().strip(),
                 "order_no": self.search_input.text().strip(),
@@ -337,10 +342,7 @@ class OrdersManagerWindow(QWidget):
                 "date_to": self.date_to.date().toPyDate(),
             }
 
-            # 2️⃣ Kullanıcıya bilgi ver
             self.selected_count_label.setText("🔄 Filtre uygulanıyor...")
-
-            # 3️⃣ actions.start_filter_worker → arka plan işlemini başlat
             self.filter_worker = start_filter_worker(self, self.list_widget, filters)
             self.filter_worker.start()
 
@@ -349,22 +351,19 @@ class OrdersManagerWindow(QWidget):
             MessageHandler.show(self, Result.fail(msg, error=e), only_errors=True)
 
     # ============================================================
-    # 📈 SEÇİM SAYISI GÜNCELLEME
+    # 📈 Sayaç Güncelleme
     # ============================================================
-
     def _update_label(self):
-        """Seçili, toplam ve filtreli sipariş sayılarını günceller."""
         selected = collect_selected_orders(self.list_widget).data.get("selected_orders", [])
         total = len(self.list_widget.orders)
         filtered = len(self.list_widget.filtered_orders)
         self.selected_count_label.setText(f"Seçili: {len(selected)} / Toplam: {total} (Filtreli: {filtered})")
 
     # ============================================================
-    # 🧰 TOPLU SEÇİM İŞLEMLERİ
+    # 🧰 Toplu Seçim Fonksiyonları
     # ============================================================
-
     def select_all(self):
-        """Listedeki tüm siparişleri seçili hale getirir."""
+        """Listedeki tüm siparişleri seç."""
         for i in range(self.list_widget.count()):
             widget = self.list_widget.itemWidget(self.list_widget.item(i))
             if widget and hasattr(widget, "right_widget") and not widget.right_widget.isChecked():
@@ -372,7 +371,7 @@ class OrdersManagerWindow(QWidget):
         self._update_label()
 
     def deselect_all(self):
-        """Listedeki tüm siparişlerin seçimini kaldırır."""
+        """Listedeki tüm seçimleri kaldır."""
         for i in range(self.list_widget.count()):
             widget = self.list_widget.itemWidget(self.list_widget.item(i))
             if widget and hasattr(widget, "right_widget") and widget.right_widget.isChecked():
@@ -380,7 +379,7 @@ class OrdersManagerWindow(QWidget):
         self._update_label()
 
     def get_selected_orders(self):
-        """Seçili siparişlerin kimliklerini (orderNumber) döndürür."""
+        """Seçili siparişleri döndürür."""
         res = collect_selected_orders(self.list_widget)
         MessageHandler.show(self, res, only_errors=True)
         if res.success:
@@ -388,7 +387,18 @@ class OrdersManagerWindow(QWidget):
         return []
 
 
+# ============================================================
+# 🔹 3. OrdersTab — Ana Tab / Veri Çekme Arayüzü
+# ============================================================
+# Bu kısım Trendyol API'sinden sipariş çeker, progress bar’ı yönetir,
+# OrdersManagerWindow’u açar.
+# ============================================================
+
 class OrdersTab(QWidget):
+    """
+    OrdersManagerWindow ve veri çekme işlemini yöneten ana sekme bileşeni.
+    """
+
     def __init__(self):
         super().__init__()
         layout = QVBoxLayout(self)
@@ -428,52 +438,45 @@ class OrdersTab(QWidget):
 
         layout.addWidget(self.bottom_panel)
 
-    # 📌 Siparişleri getir
-    # views.py
+    # ============================================================
+    # 📡 Siparişleri API'den Getir
+    # ============================================================
     def get_orders(self):
+        """
+        Seçili şirketlerden siparişleri çeker, progress'i başlatır.
+        """
         result = get_orders_from_companies(self, self.company_list, self.fetch_button)
-
         if not result.success:
-            # 🔴 Progress barı hata moduna al
-            print("buradan fırladı")
             self.fetch_button.fail()
-            # Hata mesajını göster
             MessageHandler.show(self, result, only_errors=True)
             return
-
-        # ⏳ işlem başladı bilgisi UI’ya yazılsın
         self.info_label.setText("⏳ Veri çekiliyor...")
 
-    # 📌 Sipariş penceresi aç
+    # ============================================================
+    # 🪟 Sipariş Penceresi Aç
+    # ============================================================
     def open_orders_window(self):
+        """Filtreleme ve listeleme penceresini açar."""
         self.orders_window = OrdersManagerWindow()
         self.orders_window.show()
 
-    # 📌 İşlem bittiğinde
+    # ============================================================
+    # ⚠️ Worker Callback — Hata Durumu
+    # ============================================================
     def on_orders_failed(self, result: Result, button: CircularProgressButton):
         """
         Worker zincirinden gelen hatalarda çalışır.
         Progress butonunu sıfırlar, kullanıcıya hata mesajı gösterir.
         """
-        # 🔴 Progress butonu kırmızıya dönsün
         button.fail()
-
-        # ❌ Hata mesajı popup olarak gösterilsin
         MessageHandler.show(self, result, only_errors=True)
-
-        # ℹ️ UI'daki bilgi metni güncellensin
         self.info_label.setText("⚠️ İşlem başarısız.")
 
+    # ============================================================
+    # ✅ Worker Callback — Başarı Durumu
+    # ============================================================
     def on_orders_fetched(self, result: Result):
         """
-        Hem API hem DB başarılıysa çalışır.
-        Kullanıcıya başarı mesajı gösterir.
+        API ve DB işlemleri başarılı olduğunda çalışır.
         """
-        # ✅ UI’ya bilgi ver
         self.info_label.setText("✅ Siparişler başarıyla kaydedildi.")
-
-        # 🟢 Progress butonu otomatik olarak resetlenecek zaten
-        # çünkü %100'e ulaşınca CircularProgressButton reset() çağırıyor.
-
-        # ✅ İstersen log, bildirim vb. ekleyebilirsin
-        # print("İşlem tamamlandı:", result.message)

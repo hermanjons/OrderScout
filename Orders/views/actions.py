@@ -3,13 +3,16 @@
 # ============================================================
 from __future__ import annotations
 
-from PyQt6.QtWidgets import QListWidgetItem, QLabel
+from PyQt6.QtWidgets import QListWidgetItem
 from PyQt6.QtCore import Qt
+from datetime import datetime, date
+
+# Core utilities & base classes
 from Core.views.views import SwitchButton, ListSmartItemWidget
 from Core.threads.async_worker import AsyncWorker
 from Core.threads.sync_worker import SyncWorker
 from Core.utils.model_utils import get_engine
-from Core.utils.time_utils import time_for_now, time_stamp_calculator
+from Core.utils.time_utils import coerce_to_date, time_for_now, time_stamp_calculator
 from Feedback.processors.pipeline import MessageHandler, Result, map_error_to_message
 from settings import MEDIA_ROOT
 
@@ -24,40 +27,39 @@ from Orders.processors.trendyol_pipeline import (
 from Orders.constants.trendyol_constants import TRENDYOL_STATUS_LIST
 from Account.models import ApiAccount
 from Account.views.actions import collect_selected_companies, get_company_by_id
-from datetime import datetime, date
 
 
 # ============================================================
-# 🔹 1. OrdersListWidget — Liste render ve seçim yönetimi
+# 🔹 1. OrdersListWidget — Liste render & seçim yönetimi
+# ============================================================
+# Bu bölüm doğrudan `OrdersListWidget` sınıfının arka planında çalışır.
+# Liste oluşturma, sipariş özet biçimlendirme, seçim toplama vb. işlemleri içerir.
 # ============================================================
 
 def resolve_order_logo_path(order) -> str:
     """
+    🧩 Bağlantılı: OrdersListWidget
     Siparişin bağlı olduğu hesabın logosunu döndürür.
-    Hesapta logo yoksa varsayılan sipariş görseli kullanılır.
+    Eğer hesapta logo yoksa varsayılan sipariş görseli döner.
     """
     logo = getattr(getattr(order, "api_account", None), "logo_path", None)
-    if logo:
-        return logo
-    return "images/orders_img.png"
+    return logo or "images/orders_img.png"
 
 
 def format_order_summary(order) -> dict:
     """
+    🧩 Bağlantılı: OrdersListWidget
     Siparişin UI’da gösterilecek metinlerini biçimlendirir.
-    Farklı katmanlarda (liste, detay, PDF) tekrar kullanılabilir.
+    (Liste kartları, detay sayfası, PDF çıktısı vb. yerlerde tekrar kullanılabilir.)
     """
     total = getattr(order, "totalPrice", 0)
     try:
-        total_fmt = f"{float(total):,.2f}".replace(",", ".")  # 1.234,50 ₺ formatına yakın
+        total_fmt = f"{float(total):,.2f}".replace(",", ".")  # Örn: 1.234.50 ₺
     except Exception:
         total_fmt = total
 
     date_part = getattr(order, "orderDate", None)
-    if isinstance(date_part, datetime):
-        date_str = date_part.strftime("%d.%m.%Y")
-    else:
-        date_str = str(date_part or "—")
+    date_str = date_part.strftime("%d.%m.%Y") if isinstance(date_part, datetime) else str(date_part or "—")
 
     return {
         "title": f"Sipariş: {getattr(order, 'orderNumber', '—')}",
@@ -71,15 +73,12 @@ def format_order_summary(order) -> dict:
 
 def build_order_list(list_widget, orders: list, interaction_cb=None, selection_cb=None) -> Result:
     """
-    Sipariş listesini verilen QListWidget içine inşa eder.
-    UI elemanlarını oluşturur ve sinyalleri bağlar.
+    🧩 Bağlantılı: OrdersListWidget
+    Sipariş listesini QListWidget içine render eder.
+    Performans için setUpdatesEnabled kullanılır.
     """
     try:
-        # 🧽 Qt leak fix (widgetları temizle)
-        for i in range(list_widget.count()):
-            w = list_widget.itemWidget(list_widget.item(i))
-            if w:
-                w.deleteLater()
+        list_widget.setUpdatesEnabled(False)
         list_widget.clear()
 
         if not orders:
@@ -116,31 +115,13 @@ def build_order_list(list_widget, orders: list, interaction_cb=None, selection_c
 
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e)
-
-
-def update_selected_count_label(list_widget, label: QLabel | None = None) -> Result:
-    """
-    SwitchButton durumlarına bakarak seçili sipariş sayısını hesaplar.
-    İstenirse label üzerinde gösterir.
-    """
-    try:
-        count = sum(
-            1 for i in range(list_widget.count())
-            if getattr(list_widget.itemWidget(list_widget.item(i)), "right_widget", None)
-            and list_widget.itemWidget(list_widget.item(i)).right_widget.isChecked()
-        )
-
-        if label:
-            label.setText(f"Seçili: {count}")
-
-        return Result.ok("Seçili sayısı güncellendi.", data={"count": count}, close_dialog=False)
-
-    except Exception as e:
-        return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
+    finally:
+        list_widget.setUpdatesEnabled(True)
 
 
 def collect_selected_orders(list_widget) -> Result:
     """
+    🧩 Bağlantılı: OrdersListWidget, OrdersManagerWindow
     QListWidget içindeki SwitchButton'lara bakarak seçili siparişleri döndürür.
     """
     try:
@@ -156,41 +137,76 @@ def collect_selected_orders(list_widget) -> Result:
         if not selected:
             return Result.fail("Hiçbir sipariş seçilmedi.", close_dialog=False)
 
-        return Result.ok(f"{len(selected)} sipariş seçildi.", data={"selected_orders": selected}, close_dialog=False)
-
+        return Result.ok(f"{len(selected)} sipariş seçildi.",
+                         data={"selected_orders": selected},
+                         close_dialog=False)
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
 
 
 def extract_cargo_names(orders: list) -> list[str]:
-    """Sipariş listesinden tekrarsız ve alfabetik sıralı kargo firma adlarını döndürür."""
-    return sorted(
-        {getattr(o, "cargoProviderName", "").strip() for o in orders if getattr(o, "cargoProviderName", None)})
+    """
+    🧩 Bağlantılı: OrdersManagerWindow (cargo_filter)
+    Sipariş listesinden tekrarsız ve alfabetik sıralı kargo firma adlarını döndürür.
+    """
+    return sorted({
+        getattr(o, "cargoProviderName", "").strip()
+        for o in orders if getattr(o, "cargoProviderName", None)
+    })
 
 
 # ============================================================
 # 🔹 2. OrdersManagerWindow — Pipeline’dan veri yükleme
 # ============================================================
+# Bu bölüm filtreleme penceresinin (OrdersManagerWindow) iş mantığını destekler.
+# Yani filtrelemeden önce DB'den verileri almak veya kargo listesini güncellemek gibi.
+# ============================================================
 
 def load_ready_to_ship_orders() -> Result:
-    """ReadyToShip siparişleri pipeline’dan çeker ve UI için döndürür."""
+    """
+    🧩 Bağlantılı: OrdersListWidget.reload_orders()
+    ReadyToShip siparişleri pipeline’dan çeker ve UI’ye döndürür.
+    """
     try:
         result = get_latest_ready_to_ship_orders()
         if not result.success:
             return result
-        return Result.ok("ReadyToShip siparişler yüklendi.", data={"records": result.data.get("orders", [])})
+        return Result.ok("ReadyToShip siparişler yüklendi.",
+                         data={"records": result.data.get("orders", [])})
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e)
+
+
+def refresh_cargo_filter(combo_box, orders: list) -> Result:
+    """
+    🧩 Bağlantılı: OrdersManagerWindow._refresh_cargo_filter()
+    Kargo firmalarını combobox’a doldurur (UI-safe).
+    """
+    try:
+        combo_box.blockSignals(True)
+        combo_box.clear()
+        combo_box.addItem("Tümü")
+        cargos = extract_cargo_names(orders)
+        combo_box.addItems(cargos)
+        return Result.ok(f"{len(cargos)} kargo firması yüklendi.", close_dialog=False)
+    except Exception as e:
+        return Result.fail(map_error_to_message(e), error=e)
+    finally:
+        combo_box.blockSignals(False)
 
 
 # ============================================================
 # 🔹 3. OrdersTab — API'den sipariş çekme (Trendyol)
 # ============================================================
+# Bu bölüm Trendyol API’sinden veri çekme, kaydetme ve progress yönetimini içerir.
+# Yani `OrdersTab` içindeki “BAŞLAT” butonu ve `CircularProgressButton` akışı.
+# ============================================================
 
 def get_orders_from_companies(parent_widget, company_list_widget, progress_target) -> Result:
     """
-    Seçilen şirketlerden API bilgilerini alır ve worker başlatır.
-    UI ile ilgili mesaj/Popup işlemleri sadece views.py'de yapılmalı.
+    🧩 Bağlantılı: OrdersTab.get_orders()
+    Seçilen şirketlerden API bilgilerini alır ve worker zincirini başlatır.
+    (Async → API, ardından Sync → DB kaydı)
     """
     try:
         # 1️⃣ Seçilen şirketleri topla
@@ -209,12 +225,12 @@ def get_orders_from_companies(parent_widget, company_list_widget, progress_targe
         if not comp_api_account_list:
             return Result.fail("Seçili şirketler için API bilgisi bulunamadı.", close_dialog=False)
 
-        # 3️⃣ Zaman aralığını belirle
+        # 3️⃣ Tarih aralığı belirle
         search_range_hour = 200
         start_ep_time = time_for_now()
         final_ep_time = time_for_now() - time_stamp_calculator(search_range_hour)
 
-        # 4️⃣ Async Worker başlat (API)
+        # 4️⃣ Async Worker (API)
         parent_widget.api_worker = AsyncWorker(
             fetch_orders_all,
             TRENDYOL_STATUS_LIST,
@@ -225,7 +241,7 @@ def get_orders_from_companies(parent_widget, company_list_widget, progress_targe
             parent=parent_widget
         )
 
-        # 📌 Callback zinciri
+        # 🧩 Callback zinciri
         def handle_api_result(res: Result):
             if not res.success:
                 parent_widget.on_orders_failed(res, progress_target)
@@ -255,7 +271,8 @@ def get_orders_from_companies(parent_widget, company_list_widget, progress_targe
 
 def update_progress(view_instance, current: int, total: int):
     """
-    İşlem ilerlemesini hesapla ve UI'daki progress butonunu güncelle.
+    🧩 Bağlantılı: OrdersTab.get_orders()
+    Progress butonunun yüzdesini günceller.
     """
     try:
         percent = int(current / total * 100) if total else 0
@@ -265,10 +282,29 @@ def update_progress(view_instance, current: int, total: int):
         return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
 
 
+# ============================================================
+# 🔹 4. Filtreleme Yönetimi (OrdersManagerWindow.apply_filters)
+# ============================================================
+# Bu kısım filtrelerin asenkron çalıştırılması, tarih uyumluluğu ve
+# CPU dostu arama optimizasyonlarını içerir.
+# ============================================================
+
+def get_order_date(order) -> date | None:
+    """
+    🧩 Yardımcı fonksiyon — bir siparişin tarih alanını normalize eder.
+    """
+    for attr in ("shipmentDate", "orderDate", "createdDate"):
+        val = getattr(order, attr, None)
+        coerced = coerce_to_date(val)
+        if coerced:
+            return coerced
+    return None
+
+
 def filter_orders(orders: list, filters: dict) -> Result:
     """
-    Sipariş listesini verilen filtrelere göre süzer.
-    Çok büyük datasetlerde de CPU dostu.
+    🧩 Bağlantılı: OrdersManagerWindow.apply_filters()
+    Sipariş listesini filtre parametrelerine göre süzer.
     """
     try:
         filtered = list(orders)
@@ -281,38 +317,47 @@ def filter_orders(orders: list, filters: dict) -> Result:
         df = filters.get("date_from")
         dt = filters.get("date_to")
 
-        def get_order_date(o) -> date | None:
-            for attr in ("shipmentDate", "orderDate", "createdDate"):
-                d = getattr(o, attr, None)
-                if isinstance(d, datetime):
-                    return d.date()
-                if isinstance(d, date):
-                    return d
-            return None
-
+        # --- Genel arama
         if gtxt:
             gtxt = gtxt.strip()
-            new = []
+            temp = []
             for o in filtered:
                 items = getattr(o, "items", [])
-                if any(gtxt in str(getattr(it, "productName", "")).lower() or gtxt in str(
-                        getattr(it, "productSku", "")).lower() for it in items) \
-                        or any(gtxt in str(getattr(o, f, "")).lower() for f in
-                               ("orderNumber", "cargoProviderName", "customerFirstName")):
-                    new.append(o)
-            filtered = new
+                in_items = any(
+                    gtxt in str(getattr(it, "productName", "")).lower()
+                    or gtxt in str(getattr(it, "productSku", "")).lower()
+                    for it in items
+                )
+                in_order = any(
+                    gtxt in str(getattr(o, f, "")).lower()
+                    for f in ("orderNumber", "cargoProviderName", "customerFirstName")
+                )
+                if in_items or in_order:
+                    temp.append(o)
+            filtered = temp
 
+        # --- Sipariş no
         if order_no:
             filtered = [o for o in filtered if order_no in str(getattr(o, "orderNumber", "")).lower()]
 
+        # --- Kargo filtresi
         if cargo and cargo != "Tümü":
             filtered = [o for o in filtered if getattr(o, "cargoProviderName", None) == cargo]
 
+        # --- Müşteri filtresi
         if customer:
             filtered = [o for o in filtered if customer in str(getattr(o, "customerFirstName", "")).lower()]
 
+        # --- Tarih filtresi
         if date_enabled and df and dt:
-            filtered = [o for o in filtered if (d := get_order_date(o)) and df <= d <= dt]
+            tmp = []
+            for o in filtered:
+                for attr in ("shipmentDate", "orderDate", "createdDate"):
+                    d = coerce_to_date(getattr(o, attr, None))
+                    if d and df <= d <= dt:
+                        tmp.append(o)
+                        break
+            filtered = tmp
 
         return Result.ok("Filtre uygulandı.", data={"filtered": filtered})
 
@@ -320,32 +365,15 @@ def filter_orders(orders: list, filters: dict) -> Result:
         return Result.fail(map_error_to_message(e), error=e)
 
 
-# actions.py içine (örneğin "🔹 4. UI yardımcıları" altına)
-
-def refresh_cargo_filter(cargo_combobox, orders: list) -> Result:
-    """Sipariş listesinden kargo isimlerini çekip combobox’a ekler."""
-    try:
-        cargo_combobox.blockSignals(True)
-        cargo_combobox.clear()
-        cargo_combobox.addItem("Tümü")
-
-        cargos = extract_cargo_names(orders)
-        cargo_combobox.addItems(cargos)
-
-        return Result.ok("Kargo filtreleri güncellendi.", close_dialog=False)
-
-    except Exception as e:
-        return Result.fail(map_error_to_message(e), error=e)
-    finally:
-        cargo_combobox.blockSignals(False)
-
-
-# actions.py içine (örneğin "🔹 5. Filtreleme yönetimi" altına)
 def start_filter_worker(parent_widget, list_widget, filters: dict) -> SyncWorker:
-    """Filtre işlemini SyncWorker ile başlatır ve sonuç sinyali döner."""
+    """
+    🧩 Bağlantılı: OrdersManagerWindow.apply_filters()
+    SyncWorker'ı başlatır, filtre işlemini arka planda yapar.
+    UI donmadan sonucu parent’a bildirir.
+    """
     worker = SyncWorker(filter_orders, list_widget.orders, filters)
 
-    def handle_filter_result(result: Result):
+    def handle_result(result: Result):
         if not result.success:
             MessageHandler.show(parent_widget, result, only_errors=True)
             parent_widget.selected_count_label.setText("⚠️ Filtreleme başarısız.")
@@ -353,8 +381,9 @@ def start_filter_worker(parent_widget, list_widget, filters: dict) -> SyncWorker
 
         filtered = result.data.get("filtered", [])
         list_widget.apply_filter_result(filtered)
+        list_widget.filtered_orders = filtered
         parent_widget._update_label()
         parent_widget.selected_count_label.setText(f"✅ Filtre tamamlandı. (Kalan: {len(filtered)})")
 
-    worker.result_ready.connect(handle_filter_result)
+    worker.result_ready.connect(handle_result)
     return worker
