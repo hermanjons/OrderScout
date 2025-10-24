@@ -7,14 +7,15 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QIcon, QAction
 from PyQt6.QtCore import QSize, Qt
 from Account.views.actions import handle_company_submit, fill_company_form, handle_logo_selection, \
-    build_company_table
+    build_company_table,build_company_list
 
 from Account.constants.constants import PLATFORMS
-from Feedback.processors.pipeline import MessageHandler, Result
+from Feedback.processors.pipeline import MessageHandler, Result, map_error_to_message
 from settings import MEDIA_ROOT
 from Core.views.views import SwitchButton
 import os
 from Account.signals.signals import account_signals
+from Account.processors.pipeline import get_all_companies,get_active_companies
 
 
 class CompanyManagerButton:
@@ -256,7 +257,6 @@ class CompanyFormDialog(QDialog):
         self.setFixedSize(400, 700)
 
         if account is not None:
-            print("hesap:", account)
             res = fill_company_form(self, account)
             if not res.success:
                 MessageHandler.show(self, res, only_errors=True)
@@ -281,25 +281,103 @@ class CompanyFormDialog(QDialog):
 
 class CompanyListWidget(QListWidget):
     """
-    SwitchButton ile şirket seçimi yapılabilen liste widget.
+    SwitchButton ile şirket seçimi yapılabilen, kendine yeten liste widget'ı.
+    - İlk gösterimde kendini yükler
+    - Sinyal ile (company_changed) yeniden yükler
+    - Render’ı actions.build_company_list ile yapar
     """
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setSelectionMode(QListWidget.SelectionMode.NoSelection)
-        self.build_from_db()
-        account_signals.company_changed.connect(self.build_from_db)
 
-    def build_from_db(self):
+        # 🔌 Şirketler değiştiğinde otomatik yenile
+        account_signals.company_changed.connect(self.reload_companies)
+
+    # ============================================================
+    # 🔄 Yaşam döngüsü
+    # ============================================================
+    def showEvent(self, event):
+        """Widget ilk gösterildiğinde şirketleri yükle."""
+        super().showEvent(event)
+        if self.count() == 0:  # sadece ilk kez
+            self.reload_companies()
+
+    # ============================================================
+    # 🧩 Ana işlemler
+    # ============================================================
+    def reload_companies(self):
         """
-        DB’den şirketleri çekip listeyi doldurur.
+        DB’den şirketleri çekip listeyi yeniden kurar.
         """
-        from Account.processors.pipeline import get_all_companies
-        from Account.views.actions import build_company_list
+        try:
+            result = get_active_companies()
+            if not result.success:
+                MessageHandler.show(self, result, only_errors=True)
+                return
 
-        result = get_all_companies()
-        if not result.success:
-            return result
+            self._safe_build(result)
 
-        # records çıkarmak yerine Result'u direkt gönder
-        return build_company_list(self, result)
+        except Exception as e:
+            msg = map_error_to_message(e)
+            MessageHandler.show(self, Result.fail(msg, error=e), only_errors=True)
+
+    # ============================================================
+    # 🧰 Yardımcı işlemler
+    # ============================================================
+    def _safe_build(self, result: Result):
+        """
+        build_company_list çağrısını Qt leak koruması ile güvenli yap.
+        """
+        try:
+            # 🧽 Qt memory leak koruması (mevcut widgetları öldür)
+            for i in range(self.count()):
+                w = self.itemWidget(self.item(i))
+                if w:
+                    w.deleteLater()
+            self.clear()
+
+            # 🏗️ actions.build_company_list Result objesiyle çalışıyor
+            res = build_company_list(self, result)
+            if not res.success:
+                # Boş listeyi success kabul ettiği için genelde burası error’dur
+                MessageHandler.show(self, res, only_errors=True)
+
+        except Exception as e:
+            MessageHandler.show(self, Result.fail(map_error_to_message(e), error=e), only_errors=True)
+
+    # ============================================================
+    # 📦 Seçim yardımcıları (opsiyonel, kullanmak istersen var)
+    # ============================================================
+    def get_selected_company_pks(self) -> list[int]:
+        """
+        ListSmartItemWidget içindeki switch’lere bakarak seçili şirket PK’larını döndür.
+        (collect_selected_companies kullanmak istemeyen yerler için)
+        """
+        selected = []
+        for i in range(self.count()):
+            item = self.item(i)
+            w = self.itemWidget(item)
+            if not w:
+                continue
+            btn = getattr(w, "right_widget", None)
+            if btn and btn.isChecked():
+                # PK, build_company_list içinde UserRole olarak item’a set ediliyor
+                pk = item.data(Qt.ItemDataRole.UserRole)
+                if pk is not None:
+                    selected.append(pk)
+        return selected
+
+    def select_all(self):
+        """Listedeki tüm şirketleri seç."""
+        for i in range(self.count()):
+            w = self.itemWidget(self.item(i))
+            if w and hasattr(w, "right_widget") and not w.right_widget.isChecked():
+                w.right_widget.setChecked(True)
+
+    def deselect_all(self):
+        """Listedeki tüm seçimleri kaldır."""
+        for i in range(self.count()):
+            w = self.itemWidget(self.item(i))
+            if w and hasattr(w, "right_widget") and w.right_widget.isChecked():
+                w.right_widget.setChecked(False)

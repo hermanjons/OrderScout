@@ -146,6 +146,38 @@ def get_all_companies() -> Result:
         return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
 
 
+def get_active_companies() -> Result:
+    """
+    Sadece AKTİF (is_active=True) şirketleri getirir.
+    get_all_companies ile aynı data şemasını döndürür:
+      data = {
+        "records": [ApiAccount, ...],
+        "accounts": [[pk, api_key, api_secret, account_id], ...]
+      }
+    """
+    try:
+        engine = get_engine("orders.db")
+        res = get_records(model=ApiAccount, db_engine=engine)
+        if not res.success:
+            return res
+
+        all_records = res.data.get("records", []) or []
+
+        # ✅ sadece aktifler
+        records = [r for r in all_records if getattr(r, "is_active", False) is True]
+
+        return Result.ok(
+            f"{len(records)} aktif şirket bulundu." if records else "Aktif şirket bulunmuyor.",
+            close_dialog=False,
+            data={
+                "records": records,
+                "accounts": [[r.pk, r.api_key, r.api_secret, str(r.account_id)] for r in records],
+            },
+        )
+    except Exception as e:
+        return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
+
+
 
 def get_company_by_id(pks: list[int]) -> Result:
     """
