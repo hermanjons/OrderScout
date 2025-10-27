@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QPushButton, QAbstractButton,
     QLabel, QHBoxLayout, QSizePolicy, QGraphicsDropShadowEffect
@@ -583,5 +585,194 @@ class SwitchButton(QAbstractButton):
             super().setChecked(checked)
             self.setThumbInitial()
             self.update()
+        except Exception as e:
+            print(Result.fail(map_error_to_message(e), error=e))
+
+
+class ActionPulseButton(QAbstractButton):
+    """
+    Dikkat çekici aksiyon butonu.
+    - Aktifken etrafında canlı yanıp sönen border animasyonu var.
+    - Pasifken gri ve cansız.
+    - Metin + opsiyonel ikon destekli.
+    """
+
+    clicked = pyqtSignal()
+
+    def __init__(self, text: str = "Aksiyon", icon_path: str | None = None, parent=None):
+        super().__init__(parent)
+        try:
+            self._text = text
+            self._icon = QPixmap(icon_path) if icon_path else None
+
+            self._radius = 10
+            self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+            self.setFixedSize(180, 60)
+            self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+            # renkler
+            self._bg_enabled = QColor("#4e6cef")      # aktif gövde
+            self._bg_disabled = QColor("#9e9e9e")     # pasif gövde
+            self._text_color_enabled = QColor("#ffffff")
+            self._text_color_disabled = QColor("#dddddd")
+
+            # pulse seviyesi (0.0 - 1.0)
+            self._pulse_level = 0.0
+
+            # animasyon
+            self._pulse_anim = QPropertyAnimation(self, b"pulseLevel", self)
+            self._pulse_anim.setDuration(800)
+            self._pulse_anim.setStartValue(0.0)
+            self._pulse_anim.setEndValue(1.0)
+            self._pulse_anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
+            self._pulse_anim.setLoopCount(-1)
+
+            # başlangıçta kapalı kalsın
+            self.setEnabled(False)
+
+        except Exception as e:
+            print(Result.fail(map_error_to_message(e), error=e))
+
+    # ---------------------------
+    # pulse property
+    # ---------------------------
+    def getPulseLevel(self) -> float:
+        return self._pulse_level
+
+    def setPulseLevel(self, val: float):
+        try:
+            self._pulse_level = float(val)
+            self.update()
+        except Exception as e:
+            print(Result.fail(map_error_to_message(e), error=e))
+
+    pulseLevel = pyqtProperty(float, fget=getPulseLevel, fset=setPulseLevel)
+
+    # ---------------------------
+    # enable/disable
+    # ---------------------------
+    def setEnabled(self, enabled: bool):
+        """
+        enable -> animasyon başlar
+        disable -> animasyon durur, gri görünüm
+        """
+        try:
+            super().setEnabled(enabled)
+
+            if enabled:
+                if self._pulse_anim.state() != QPropertyAnimation.State.Running:
+                    # ileri geri yanıp sönen efekt
+                    # startValue=0, endValue=1 arası gidip geliyor gibi olsun diye
+                    # ping-pong efektini elle taklit ediyoruz:
+                    self._pulse_anim.setStartValue(0.0)
+                    self._pulse_anim.setEndValue(1.0)
+                    self._pulse_anim.start()
+            else:
+                if self._pulse_anim.state() == QPropertyAnimation.State.Running:
+                    self._pulse_anim.stop()
+                self._pulse_level = 0.0
+                self.update()
+        except Exception as e:
+            print(Result.fail(map_error_to_message(e), error=e))
+
+    # ---------------------------
+    # public api
+    # ---------------------------
+    def setText(self, text: str):
+        self._text = text
+        self.update()
+
+    def setIconPixmap(self, path: str):
+        try:
+            self._icon = QPixmap(path)
+            self.update()
+        except Exception as e:
+            print(Result.fail(map_error_to_message(e), error=e))
+
+    # ---------------------------
+    # click
+    # ---------------------------
+    def mouseReleaseEvent(self, event):
+        try:
+            if event.button() == Qt.MouseButton.LeftButton and self.isEnabled():
+                self.clicked.emit()
+        except Exception as e:
+            print(Result.fail(map_error_to_message(e), error=e))
+
+    # ---------------------------
+    # paint
+    # ---------------------------
+    def paintEvent(self, event):
+        try:
+            painter = QPainter(self)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+            full_rect = self.rect()
+            body_rect = full_rect.adjusted(4, 4, -4, -4)  # iç gövde
+            outer_rect = full_rect.adjusted(1, 1, -1, -1) # dış halka sınırı
+
+            # aktif/pasif renk seç
+            if self.isEnabled():
+                bg = QColor(self._bg_enabled)
+                text_color = QColor(self._text_color_enabled)
+            else:
+                bg = QColor(self._bg_disabled)
+                text_color = QColor(self._text_color_disabled)
+
+            #
+            # 1) Dış pulsating border (SADECE ENABLE İKEN)
+            #
+            if self.isEnabled():
+                # pulse_level 0 → sönük, 1 → parlak
+                # alpha'yı sert arttırıyoruz ki göze çarpsın
+                alpha = int(80 + self._pulse_level * 170)  # 80-250 arası
+                pulse_color = QColor("#6f8cff")  # maviye yakın parıltı
+                pulse_color.setAlpha(alpha)
+
+                pulse_pen = QPen(pulse_color)
+                pulse_pen.setWidth(4)  # kalın border
+                painter.setPen(pulse_pen)
+                painter.setBrush(Qt.BrushStyle.NoBrush)
+
+                # dış çerçevenin yuvarlak köşeleri biraz büyük olsun ki glow hissi versin
+                painter.drawRoundedRect(outer_rect, self._radius + 4, self._radius + 4)
+
+            #
+            # 2) Ana buton gövdesi
+            #
+            painter.setBrush(bg)
+            painter.setPen(QPen(bg.darker(140), 1))
+            painter.drawRoundedRect(body_rect, self._radius, self._radius)
+
+            #
+            # 3) İçerik (ikon + text)
+            #
+            x_cursor = body_rect.left() + 14
+            cy = body_rect.center().y()
+
+            # ikon
+            if self._icon and not self._icon.isNull():
+                icon_size = 28
+                icon_y = int(cy - icon_size / 2)
+                painter.drawPixmap(x_cursor, icon_y, icon_size, icon_size, self._icon)
+                x_cursor += icon_size + 8
+
+            # text
+            font = QFont("Segoe UI", 11, QFont.Weight.Bold)
+            painter.setFont(font)
+            painter.setPen(text_color)
+
+            text_rect = QRectF(
+                x_cursor,
+                cy - 10,
+                body_rect.right() - x_cursor - 10,
+                24
+            )
+            painter.drawText(
+                text_rect,
+                Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft,
+                self._text
+            )
+
         except Exception as e:
             print(Result.fail(map_error_to_message(e), error=e))
