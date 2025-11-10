@@ -11,6 +11,7 @@ from Orders.models.trendyol.trendyol_custom_queries import latest_ready_to_ship_
 from sqlmodel import Session, select
 from Orders.signals.signals import order_signals
 
+
 async def normalize_order_data(order_data: dict, comp_api_account_id: int):
     """
     Tek bir order verisini normalize eder ve (order, items) tuple döner.
@@ -219,7 +220,6 @@ def save_orders_to_db(result: Result, db_name: str = DB_NAME) -> Result:
         return Result.fail(map_error_to_message(e), error=e)
 
 
-
 def get_latest_ready_to_ship_orders() -> Result:
     try:
 
@@ -236,3 +236,148 @@ def get_latest_ready_to_ship_orders() -> Result:
 
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e)
+
+
+def get_order_full_details_by_numbers(order_numbers: list) -> Result:
+    """
+    Verilen sipariş numaraları için:
+    - OrderHeader
+    - OrderData
+    - OrderItem
+
+    hepsini tek seferde toplar ve Result içinde döner.
+
+    Kullanım:
+        - Yazdırma (etiket) akışı
+        - Sipariş detay ekranı (ileride)
+        - Toplu işlem ekranları
+
+    data yapısı:
+        {
+            "orders": [
+                {
+                    "header": OrderHeader,
+                    "data": [OrderData, ...],
+                    "items": [OrderItem, ...],
+                },
+                ...
+            ],
+            "headers": [OrderHeader, ...],
+            "order_data_list": [OrderData, ...],
+            "order_item_list": [OrderItem, ...],
+        }
+    """
+    try:
+        if not order_numbers:
+            return Result.fail(
+                "Sipariş numarası listesi boş.",
+                close_dialog=False
+            )
+
+        # normalize et (str'e çevir, trimle, boşları at)
+        normalized = {
+            str(num).strip()
+            for num in order_numbers
+            if str(num).strip()
+        }
+        if not normalized:
+            return Result.fail(
+                "Geçerli sipariş numarası bulunamadı.",
+                close_dialog=False
+            )
+
+        # 1️⃣ Header kayıtları
+        res_headers = get_records(
+            model=OrderHeader,
+            db_name=DB_NAME,
+            filters={"orderNumber": list(normalized)},
+        )
+        if not res_headers.success:
+            return res_headers
+
+        headers: list[OrderHeader] = res_headers.data.get("records", []) or []
+        if not headers:
+            return Result.ok(
+                "Verilen sipariş numaraları için kayıt bulunamadı.",
+                close_dialog=False,
+                data={
+                    "orders": [],
+                    "headers": [],
+                    "order_data_list": [],
+                    "order_item_list": [],
+                }
+            )
+
+        header_pks = [h.pk for h in headers if getattr(h, "pk", None) is not None]
+        if not header_pks:
+            # teorik edge case
+            return Result.ok(
+                "Header bulundu ancak PK bilgisi alınamadı.",
+                close_dialog=False,
+                data={
+                    "orders": [],
+                    "headers": headers,
+                    "order_data_list": [],
+                    "order_item_list": [],
+                }
+            )
+
+        # 2️⃣ OrderData kayıtları
+        res_data = get_records(
+            model=OrderData,
+            db_name=DB_NAME,
+            filters={"order_header_id": header_pks},
+        )
+        if not res_data.success:
+            return res_data
+        order_data_list: list[OrderData] = res_data.data.get("records", []) or []
+
+        # 3️⃣ OrderItem kayıtları
+        res_items = get_records(
+            model=OrderItem,
+            db_name=DB_NAME,
+            filters={"order_header_id": header_pks},
+        )
+        if not res_items.success:
+            return res_items
+        order_item_list: list[OrderItem] = res_items.data.get("records", []) or []
+
+        # 4️⃣ Map'leri kur
+        data_by_header: dict[int, list[OrderData]] = {}
+        for od in order_data_list:
+            hid = getattr(od, "order_header_id", None)
+            if hid is not None:
+                data_by_header.setdefault(hid, []).append(od)
+
+        items_by_header: dict[int, list[OrderItem]] = {}
+        for oi in order_item_list:
+            hid = getattr(oi, "order_header_id", None)
+            if hid is not None:
+                items_by_header.setdefault(hid, []).append(oi)
+
+        # 5️⃣ Tek tek paketle
+        orders = []
+        for h in headers:
+            orders.append({
+                "header": h,
+                "data": data_by_header.get(h.pk, []),
+                "items": items_by_header.get(h.pk, []),
+            })
+
+        return Result.ok(
+            f"{len(orders)} siparişin detayları getirildi.",
+            close_dialog=False,
+            data={
+                "orders": orders,
+                "headers": headers,
+                "order_data_list": order_data_list,
+                "order_item_list": order_item_list,
+            }
+        )
+
+    except Exception as e:
+        return Result.fail(
+            map_error_to_message(e),
+            error=e,
+            close_dialog=False
+        )

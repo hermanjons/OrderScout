@@ -1,105 +1,108 @@
 from __future__ import annotations
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QComboBox, QGroupBox
+    QDialog, QVBoxLayout, QHBoxLayout,
+    QLabel, QComboBox, QGroupBox, QPushButton,QMessageBox
 )
 from PyQt6.QtCore import Qt
 
-from Feedback.processors.pipeline import Result, map_error_to_message
+from Feedback.processors.pipeline import Result, map_error_to_message,MessageHandler
 
-# yeni düz constants importu
-from Labels.constants.constants import (
-    LABEL_BRANDS,
-    LABEL_MODELS_BY_BRAND,
-)
+from Labels.constants.constants import LABEL_BRANDS, LABEL_MODELS_BY_BRAND
+from Labels.processors.pipeline import create_order_label_from_orders  # 🔗 pipeline fonksiyonu
 
 
-class LabelPrintManagerWindow(QWidget):
+class LabelPrintManagerWindow(QDialog):
     """
     Etiket yazdırma yönetim ekranı.
-    - Marka seç (ör: Tanex)
-    - Model seç (ör: 2736)
+    - Marka seçimi
+    - Model seçimi
+    - Yazdır butonu:
+        - Seçili siparişlerden etiket datasını hazırlayan pipeline'ı tetikler.
 
-    İleride:
-    - Seçili sipariş adeti gösterilecek
-    - Önizleme
-    - Dışa aktar / Yazdır
+    Yazdır'a basılıp işlem başarılı olursa:
+        - self.label_result içinde Result nesnesi
+        - self.label_result.data içinde:
+            - selected_order_numbers, orders, headers, order_data_list, order_item_list
+            - brand_code, model_code
+        tutulur ve dialog accept() ile kapanır.
     """
 
     def __init__(self, parent=None):
         super().__init__(parent)
-
         try:
             self.setWindowTitle("Etiket Yazdırma")
+            self.setModal(True)
             self.setMinimumSize(400, 250)
+
+            self.label_result: Result | None = None  # dışarıya veri taşımak için
 
             main_layout = QVBoxLayout(self)
             main_layout.setContentsMargins(16, 16, 16, 16)
             main_layout.setSpacing(16)
 
-            # ============================================================
-            # Marka / Model Seçimi
-            # ============================================================
+            # ==============================
+            # 📦 Şablon Seçimi
+            # ==============================
             selection_box = QGroupBox("Şablon Seçimi")
             selection_layout = QVBoxLayout(selection_box)
             selection_layout.setContentsMargins(12, 12, 12, 12)
             selection_layout.setSpacing(12)
 
-            # --- Marka satırı
+            # Marka
             row_brand = QHBoxLayout()
             row_brand.setSpacing(8)
-
             row_brand.addWidget(QLabel("Marka:"), stretch=0, alignment=Qt.AlignmentFlag.AlignVCenter)
 
             self.brand_combo = QComboBox()
             self.brand_combo.setEditable(False)
             row_brand.addWidget(self.brand_combo, stretch=1)
-
             selection_layout.addLayout(row_brand)
 
-            # --- Model satırı
+            # Model
             row_model = QHBoxLayout()
             row_model.setSpacing(8)
-
             row_model.addWidget(QLabel("Model:"), stretch=0, alignment=Qt.AlignmentFlag.AlignVCenter)
 
             self.model_combo = QComboBox()
             self.model_combo.setEditable(False)
             row_model.addWidget(self.model_combo, stretch=1)
-
             selection_layout.addLayout(row_model)
 
             main_layout.addWidget(selection_box)
 
-            # ============================================================
-            # dropdown doldurma
-            # ============================================================
+            # ==============================
+            # 🔘 Yazdır Butonu
+            # ==============================
+            buttons_layout = QHBoxLayout()
+            buttons_layout.setContentsMargins(0, 8, 0, 0)
+            buttons_layout.addStretch()
+
+            self.print_button = QPushButton("Yazdır")
+            self.print_button.setDefault(True)
+            self.print_button.clicked.connect(self._on_print_clicked)
+
+            buttons_layout.addWidget(self.print_button)
+            main_layout.addLayout(buttons_layout)
+
+            # ==============================
+            # 🔄 Combobox doldurma
+            # ==============================
             self._populate_brands()
             self.brand_combo.currentIndexChanged.connect(self._on_brand_changed)
 
         except Exception as e:
             print(Result.fail(map_error_to_message(e), error=e))
 
-    # ------------------------------------------------------------
-    # helperlar (bunlar artık view içinde kalıyor)
-    # ------------------------------------------------------------
+    # --------------------------------------------------------
+    # Marka / Model doldurma
+    # --------------------------------------------------------
     def _populate_brands(self):
-        """
-        LABEL_BRANDS içeriğini brand_combo'ya doldurur.
-        İlk markaya göre model listesini de çeker.
-        """
         try:
             self.brand_combo.clear()
-
             for brand in LABEL_BRANDS:
-                # brand["name"] kullanıcıya görünen
-                # brand["code"] dahili
                 self.brand_combo.addItem(brand["name"], userData=brand["code"])
-
-            # ilk markaya bağlı olarak modelleri yükle
             self._populate_models_for_current_brand()
-
         except Exception as e:
             print(Result.fail(map_error_to_message(e), error=e))
 
@@ -110,27 +113,119 @@ class LabelPrintManagerWindow(QWidget):
             print(Result.fail(map_error_to_message(e), error=e))
 
     def _populate_models_for_current_brand(self):
-        """
-        Seçili marka kodunu alır ve LABEL_MODELS_BY_BRAND'tan model listesini doldurur.
-        """
         try:
-            brand_code = self.brand_combo.currentData()  # örn: "TANEX"
+            brand_code = self.brand_combo.currentData()
             models = LABEL_MODELS_BY_BRAND.get(brand_code, [])
-
             self.model_combo.clear()
             for m in models:
-                # m["name"] → kullanıcıya görünen ("2736")
-                # m["code"] → içsel kod ("TANEX_2736")
                 self.model_combo.addItem(m["name"], userData=m["code"])
-
         except Exception as e:
             print(Result.fail(map_error_to_message(e), error=e))
 
-    # ------------------------------------------------------------
-    # public getters: business logic buradan okuyacak
-    # ------------------------------------------------------------
+    # --------------------------------------------------------
+    # Getter'lar
+    # --------------------------------------------------------
     def get_selected_brand_code(self) -> str | None:
         return self.brand_combo.currentData()
 
     def get_selected_model_code(self) -> str | None:
         return self.model_combo.currentData()
+
+    # --------------------------------------------------------
+    # Yazdır butonu handler
+    # --------------------------------------------------------
+    def _on_print_clicked(self):
+        """
+        Akış:
+        1) Marka & model kontrolü
+        2) Parent içinden list_widget'i al
+        3) create_order_label_from_orders(list_widget) çağır
+        4) Başarılıysa Result'u zenginleştir, test için göster, dialog'u kapat
+        """
+        try:
+            brand = self.get_selected_brand_code()
+            model = self.get_selected_model_code()
+
+            if not brand or not model:
+                MessageHandler.show(
+                    self,
+                    Result.fail("Lütfen marka ve model seçiniz.", close_dialog=False),
+                    only_errors=True
+                )
+                return
+
+            parent = self.parent()
+            if parent is None or not hasattr(parent, "list_widget"):
+                MessageHandler.show(
+                    self,
+                    Result.fail(
+                        "Liste kaynağı bulunamadı. Bu pencere OrdersManagerWindow üzerinden açılmalı.",
+                        close_dialog=False
+                    ),
+                    only_errors=True
+                )
+                return
+
+            list_widget = parent.list_widget
+
+            # 🔗 Pipeline: seçili siparişlerden detayları çek
+            res = create_order_label_from_orders(list_widget)
+
+            if not res or not isinstance(res, Result):
+                MessageHandler.show(
+                    self,
+                    Result.fail("Etiket verisi hazırlanırken beklenmeyen bir hata oluştu.",
+                                close_dialog=False),
+                    only_errors=True
+                )
+                return
+
+            if not res.success:
+                # Örn: hiç sipariş seçilmemiş, detay alınamamış vs.
+                MessageHandler.show(self, res, only_errors=True)
+                return
+
+            # ✅ Başarılı: datayı al
+            data = res.data or {}
+            data["brand_code"] = brand
+            data["model_code"] = model
+            res.data = data
+
+            # 🧪 TEST: gelen veriyi bu pencerede göster
+            orders = data.get("orders", [])
+            lines = [
+                f"Seçilen şablon: {brand} / {model}",
+                f"Toplam sipariş paketi: {len(orders)}",
+                ""
+            ]
+
+            for o in orders:
+                header = o.get("header")
+                items = o.get("items", [])
+                if not header:
+                    continue
+
+                order_no = getattr(header, "orderNumber", "?")
+                acc_id = getattr(header, "api_account_id", "?")
+                lines.append(f"- #{order_no} (account: {acc_id}, items: {len(items)})")
+
+            if not lines:
+                lines = ["Hiç veri dönmedi."]
+
+            QMessageBox.information(
+                self,
+                "Label Test Verisi",
+                "\n".join(lines)
+            )
+
+            # Son olarak Result'ı sakla (ileride gerçek yazdırmada kullanırsın)
+            self.label_result = res
+            self.accept()
+
+        except Exception as e:
+            MessageHandler.show(
+                self,
+                Result.fail(map_error_to_message(e), error=e, close_dialog=False),
+                only_errors=True
+            )
+

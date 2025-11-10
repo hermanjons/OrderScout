@@ -334,17 +334,14 @@ class OrdersManagerWindow(QWidget):
     # 🔘 Buton tıklama davranışı (ileride yazdır flow buraya girecek)
     # ============================================================
     def _on_action_button_clicked(self):
-        # seçili siparişleri al
         chosen_orders = self.get_selected_orders()
-
-        # güvenlik: hiç seçili yoksa zaten buton disable olmalı ama yine de check yapıyoruz
         if not chosen_orders:
             return
 
-        # Label yazdırma yöneticisini aç
-        # referansı self üstünde tutuyoruz ki GC hemen öldürmesin
+        # parent VERME
         self.label_window = LabelPrintManagerWindow(self)
-        self.label_window.show()
+        self.label_window.exec()
+        self.label_window.setWindowModality(Qt.WindowModality.NonModal)
         self.label_window.raise_()
         self.label_window.activateWindow()
 
