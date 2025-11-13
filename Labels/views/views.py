@@ -2,14 +2,15 @@ from __future__ import annotations
 
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout,
-    QLabel, QComboBox, QGroupBox, QPushButton,QMessageBox
+    QLabel, QComboBox, QGroupBox, QPushButton, QMessageBox, QTextEdit, QDialogButtonBox
 )
 from PyQt6.QtCore import Qt
 
-from Feedback.processors.pipeline import Result, map_error_to_message,MessageHandler
+from Feedback.processors.pipeline import Result, map_error_to_message, MessageHandler
 
 from Labels.constants.constants import LABEL_BRANDS, LABEL_MODELS_BY_BRAND
 from Labels.processors.pipeline import create_order_label_from_orders  # 🔗 pipeline fonksiyonu
+import json
 
 
 class LabelPrintManagerWindow(QDialog):
@@ -94,6 +95,21 @@ class LabelPrintManagerWindow(QDialog):
         except Exception as e:
             print(Result.fail(map_error_to_message(e), error=e))
 
+    def _show_text_dump(self, title: str, text: str):
+        dlg = QDialog(self)
+        dlg.setWindowTitle(title)
+        lay = QVBoxLayout(dlg)
+        view = QTextEdit()
+        view.setReadOnly(True)
+        view.setPlainText(text)
+        lay.addWidget(view)
+        btns = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        btns.rejected.connect(dlg.reject)
+        btns.accepted.connect(dlg.accept)
+        lay.addWidget(btns)
+        dlg.resize(800, 600)
+        dlg.exec()
+
     # --------------------------------------------------------
     # Marka / Model doldurma
     # --------------------------------------------------------
@@ -140,7 +156,7 @@ class LabelPrintManagerWindow(QDialog):
         1) Marka & model kontrolü
         2) Parent içinden list_widget'i al
         3) create_order_label_from_orders(list_widget) çağır
-        4) Başarılıysa Result'u zenginleştir, test için göster, dialog'u kapat
+        4) Başarılıysa Result'u zenginleştir, **label_payload**'ı metin olarak göster, dialog'u kapat
         """
         try:
             brand = self.get_selected_brand_code()
@@ -181,44 +197,28 @@ class LabelPrintManagerWindow(QDialog):
                 return
 
             if not res.success:
-                # Örn: hiç sipariş seçilmemiş, detay alınamamış vs.
                 MessageHandler.show(self, res, only_errors=True)
                 return
 
-            # ✅ Başarılı: datayı al
+            # ✅ Başarılı: datayı al ve şablon bilgisini ekle
             data = res.data or {}
             data["brand_code"] = brand
             data["model_code"] = model
             res.data = data
 
-            # 🧪 TEST: gelen veriyi bu pencerede göster
-            orders = data.get("orders", [])
-            lines = [
-                f"Seçilen şablon: {brand} / {model}",
-                f"Toplam sipariş paketi: {len(orders)}",
-                ""
-            ]
+            # 🧪 TEST: **label_payload**'ı düz metin (pretty JSON) olarak göster
+            payload = data.get("label_payload", {})
+            preview_dict = {
+                "brand_code": brand,
+                "model_code": model,
+                "max_items_per_label": payload.get("max_items_per_label"),
+                "total_labels": payload.get("total_labels"),
+                "labels": payload.get("labels", []),  # istersen burada ilk N label'a kırpabilirsin
+            }
+            txt = json.dumps(preview_dict, ensure_ascii=False, indent=2)
+            self._show_text_dump("Label Payload (TEST)", txt)
 
-            for o in orders:
-                header = o.get("header")
-                items = o.get("items", [])
-                if not header:
-                    continue
-
-                order_no = getattr(header, "orderNumber", "?")
-                acc_id = getattr(header, "api_account_id", "?")
-                lines.append(f"- #{order_no} (account: {acc_id}, items: {len(items)})")
-
-            if not lines:
-                lines = ["Hiç veri dönmedi."]
-
-            QMessageBox.information(
-                self,
-                "Label Test Verisi",
-                "\n".join(lines)
-            )
-
-            # Son olarak Result'ı sakla (ileride gerçek yazdırmada kullanırsın)
+            # Son olarak Result'ı sakla (gerçek yazdırmada kullanacağız)
             self.label_result = res
             self.accept()
 
@@ -228,4 +228,3 @@ class LabelPrintManagerWindow(QDialog):
                 Result.fail(map_error_to_message(e), error=e, close_dialog=False),
                 only_errors=True
             )
-
