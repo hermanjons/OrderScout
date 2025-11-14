@@ -156,7 +156,7 @@ class LabelPrintManagerWindow(QDialog):
         1) Marka & model kontrolü
         2) Parent içinden list_widget'i al
         3) create_order_label_from_orders(list_widget) çağır
-        4) Başarılıysa Result'u zenginleştir, **label_payload**'ı metin olarak göster, dialog'u kapat
+        4) Başarılıysa Result'u zenginleştir, label_payload'ı metin olarak göster, dialog'u kapat
         """
         try:
             brand = self.get_selected_brand_code()
@@ -184,8 +184,12 @@ class LabelPrintManagerWindow(QDialog):
 
             list_widget = parent.list_widget
 
-            # 🔗 Pipeline: seçili siparişlerden detayları çek
-            res = create_order_label_from_orders(list_widget)
+            # 🔗 Pipeline: seçili siparişlerden label payload üret
+            res = create_order_label_from_orders(
+                list_widget,
+                brand_code=brand,
+                model_code=model,
+            )
 
             if not res or not isinstance(res, Result):
                 MessageHandler.show(
@@ -200,21 +204,23 @@ class LabelPrintManagerWindow(QDialog):
                 MessageHandler.show(self, res, only_errors=True)
                 return
 
-            # ✅ Başarılı: datayı al ve şablon bilgisini ekle
+            # ✅ Başarılı: datayı al
             data = res.data or {}
-            data["brand_code"] = brand
-            data["model_code"] = model
-            res.data = data
-
-            # 🧪 TEST: **label_payload**'ı düz metin (pretty JSON) olarak göster
             payload = data.get("label_payload", {})
+
+            pages = payload.get("pages", [])
+            first_page = pages[0] if pages else {}
+
             preview_dict = {
-                "brand_code": brand,
-                "model_code": model,
+                "brand_code": payload.get("brand_code"),
+                "model_code": payload.get("model_code"),
                 "max_items_per_label": payload.get("max_items_per_label"),
+                "labels_per_page": payload.get("labels_per_page"),
                 "total_labels": payload.get("total_labels"),
-                "labels": payload.get("labels", []),  # istersen burada ilk N label'a kırpabilirsin
+                "total_pages": payload.get("total_pages"),
+                "first_page": first_page,  # sadece ilk sayfa
             }
+
             txt = json.dumps(preview_dict, ensure_ascii=False, indent=2)
             self._show_text_dump("Label Payload (TEST)", txt)
 
