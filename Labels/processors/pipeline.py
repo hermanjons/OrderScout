@@ -10,6 +10,15 @@ from Orders.views.actions import collect_selected_orders
 from Orders.processors.trendyol_pipeline import get_order_full_details_by_numbers
 
 
+from docxtpl import DocxTemplate, InlineImage
+from docx.shared import Mm
+import tempfile
+import os
+
+from Feedback.processors.pipeline import Result, map_error_to_message
+
+
+
 def create_order_label_from_orders(
     list_widget,
     *,
@@ -258,6 +267,63 @@ def generate_code128_barcode(
             "pil_image": pil_img if return_pil else None,
         }
         return Result.ok("Barkod üretildi.", close_dialog=False, data=data)
+
+    except Exception as e:
+        return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
+
+
+
+def export_labels_to_word(label_payload, template_path, output_path):
+    """
+    Word içinde hiçbir kod olmadan, sadece {{alan_adı}} yazılan yerlere
+    payload verilerini basar.
+
+    Word şablonu tek bir label içerir.
+    Kod bunu payload içindeki tüm label’lar için tekrar eder.
+    """
+    try:
+        pages = label_payload.get("pages") or []
+        labels = [lbl for page in pages for lbl in page]
+
+        if not labels:
+            return Result.fail("Yazdırılacak label yok.", close_dialog=False)
+
+        # Word şablonunu yükle
+        doc = DocxTemplate(template_path)
+
+        final_render_list = []
+
+        # geçici klasör
+        tmp_dir = os.path.join(tempfile.gettempdir(), "orderscout_barcode_cache")
+        os.makedirs(tmp_dir, exist_ok=True)
+
+        for i, lbl in enumerate(labels, start=1):
+            lbl = dict(lbl)
+
+            # barkod
+            barcode_val = lbl.get("barcode", "")
+            if barcode_val:
+                file_path = os.path.join(tmp_dir, f"barcode_{i}.png")
+                generate_code128_barcode(barcode_val, file_path)
+                lbl["barcode_img"] = InlineImage(doc, file_path, width=Mm(35))
+            else:
+                lbl["barcode_img"] = ""
+
+            final_render_list.append(lbl)
+
+        # Word içinde bir döngü çalıştıracağız
+        context = {
+            "labels": final_render_list
+        }
+
+        doc.render(context)
+        doc.save(output_path)
+
+        return Result.ok(
+            f"{len(final_render_list)} etiket Word dosyasına işlendi.",
+            data={"output_path": output_path},
+            close_dialog=False
+        )
 
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e, close_dialog=False)

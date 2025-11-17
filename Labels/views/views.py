@@ -12,6 +12,12 @@ from Labels.constants.constants import LABEL_BRANDS, LABEL_MODELS_BY_BRAND
 from Labels.processors.pipeline import create_order_label_from_orders  # 🔗 pipeline fonksiyonu
 import json
 
+import json
+from pathlib import Path
+from datetime import datetime
+
+from Labels.processors.pipeline import export_labels_to_word
+
 
 class LabelPrintManagerWindow(QDialog):
     """
@@ -156,7 +162,8 @@ class LabelPrintManagerWindow(QDialog):
         1) Marka & model kontrolü
         2) Parent içinden list_widget'i al
         3) create_order_label_from_orders(list_widget) çağır
-        4) Başarılıysa Result'u zenginleştir, label_payload'ı metin olarak göster, dialog'u kapat
+        4) Başarılıysa payload'tan Word çıktısı üret
+        5) İsteğe bağlı: label_payload'ın özetini text olarak göster
         """
         try:
             brand = self.get_selected_brand_code()
@@ -204,12 +211,61 @@ class LabelPrintManagerWindow(QDialog):
                 MessageHandler.show(self, res, only_errors=True)
                 return
 
-            # ✅ Başarılı: datayı al
+            # ✅ Başarılı: payload'u al
             data = res.data or {}
             payload = data.get("label_payload", {})
+            if not payload:
+                MessageHandler.show(
+                    self,
+                    Result.fail("Label payload üretilemedi.", close_dialog=False),
+                    only_errors=True
+                )
+                return
 
+            # --- Word template & output yolu ---
+            # Burayı kendi proje yapına göre düzenleyebilirsin.
+            # Örnek: templates/labels/TANEX_2736.docx
+            base_dir = Path.cwd()
+            template_path = base_dir / "Labels" / "assets"/f"{model}.docx"
+
+            if not template_path.exists():
+                MessageHandler.show(
+                    self,
+                    Result.fail(
+                        f"Word şablonu bulunamadı:\n{template_path}",
+                        close_dialog=False
+                    ),
+                    only_errors=True
+                )
+                return
+
+            output_dir = base_dir / "outputs" / "labels"
+            output_dir.mkdir(parents=True, exist_ok=True)
+
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_path = output_dir / f"labels_{model}_{ts}.docx"
+
+            # 📝 Worde bas
+            export_res = export_labels_to_word(
+                label_payload=payload,
+                template_path=str(template_path),
+                output_path=str(output_path),
+            )
+
+            if not export_res or not isinstance(export_res, Result) or not export_res.success:
+                MessageHandler.show(
+                    self,
+                    export_res if isinstance(export_res, Result) else Result.fail(
+                        "Word çıktısı oluşturulurken hata oluştu.",
+                        close_dialog=False
+                    ),
+                    only_errors=True
+                )
+                return
+
+            # 🧪 İSTEĞE BAĞLI: ilk sayfanın payload özetini göster (debug için güzel)
             pages = payload.get("pages", [])
-            first_page = pages[0] if pages else {}
+            first_page = pages[0] if pages else []
 
             preview_dict = {
                 "brand_code": payload.get("brand_code"),
@@ -218,13 +274,24 @@ class LabelPrintManagerWindow(QDialog):
                 "labels_per_page": payload.get("labels_per_page"),
                 "total_labels": payload.get("total_labels"),
                 "total_pages": payload.get("total_pages"),
-                "first_page": first_page,  # sadece ilk sayfa
+                "first_page": first_page,
+                "output_path": str(output_path),
             }
 
             txt = json.dumps(preview_dict, ensure_ascii=False, indent=2)
-            self._show_text_dump("Label Payload (TEST)", txt)
+            self._show_text_dump("Label Payload + Word Çıktısı (TEST)", txt)
 
-            # Son olarak Result'ı sakla (gerçek yazdırmada kullanacağız)
+            # Info mesajı (istersen kaldır)
+            MessageHandler.show(
+                self,
+                Result.ok(
+                    f"Word etiket dosyası oluşturuldu:\n{output_path}",
+                    close_dialog=False
+                ),
+                only_errors=False
+            )
+
+            # Son olarak Result'ı sakla (ileride tekrar lazım olabilir)
             self.label_result = res
             self.accept()
 
@@ -234,3 +301,4 @@ class LabelPrintManagerWindow(QDialog):
                 Result.fail(map_error_to_message(e), error=e, close_dialog=False),
                 only_errors=True
             )
+
