@@ -205,43 +205,27 @@ def create_order_label_from_orders(
 def generate_code128_barcode(
     value: str,
     *,
+    save_path: Optional[str] = None,
     write_text: bool = False,
     dpi: int = 300,
     writer_options: Optional[Dict[str, Any]] = None,
     return_pil: bool = False,
 ) -> Result:
     """
-    Verilen 'value' için Code128 barkod üretir ve PNG bytes döner.
-
-    Dönüş (success):
-        Result.data = {
-            "png_bytes": b"...",         # PNG ikili verisi
-            "width": int,
-            "height": int,
-            "dpi": int,
-            "pil_image": <PIL.Image> | None  # return_pil=True ise
-        }
-
-    Not: 'python-barcode' ve 'Pillow' gerektirir.
-         pip install python-barcode pillow
+    Code128 PNG üretir. save_path verilirse PNG dosya olarak kaydedilir.
     """
+
     try:
         if not value or not isinstance(value, str):
             return Result.fail("Geçersiz barkod değeri.", close_dialog=False)
 
-        try:
-            from barcode import Code128
-            from barcode.writer import ImageWriter
-        except Exception:
-            return Result.fail(
-                "Barkod kütüphaneleri eksik. 'python-barcode' ve 'Pillow' kurun.",
-                close_dialog=False
-            )
+        from barcode import Code128
+        from barcode.writer import ImageWriter
+        from io import BytesIO
 
-        # Varsayılan çizim ayarları
         opts = {
-            "module_width": 0.20,     # çizgi kalınlığı
-            "module_height": 15.0,    # barkod yüksekliği (mm)
+            "module_width": 0.20,
+            "module_height": 15.0,
             "font_size": 10,
             "text_distance": 1,
             "quiet_zone": 2.0,
@@ -252,24 +236,32 @@ def generate_code128_barcode(
             opts.update(writer_options)
 
         code = Code128(value, writer=ImageWriter())
-        pil_img = code.render(writer_options=opts)   # Pillow Image
+        pil_img = code.render(writer_options=opts)
 
         buf = BytesIO()
         pil_img.save(buf, format="PNG")
         png_bytes = buf.getvalue()
-        w, h = pil_img.size
 
-        data = {
-            "png_bytes": png_bytes,
-            "width": w,
-            "height": h,
-            "dpi": dpi,
-            "pil_image": pil_img if return_pil else None,
-        }
-        return Result.ok("Barkod üretildi.", close_dialog=False, data=data)
+        # ✔ Eğer kullanıcı save_path verdiyse diske yaz
+        if save_path:
+            with open(save_path, "wb") as f:
+                f.write(png_bytes)
+
+        return Result.ok(
+            "Barkod üretildi.",
+            data={
+                "png_bytes": png_bytes,
+                "pil_image": pil_img if return_pil else None,
+                "width": pil_img.size[0],
+                "height": pil_img.size[1],
+                "dpi": dpi,
+                "path": save_path,
+            },
+            close_dialog=False,
+        )
 
     except Exception as e:
-        return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
+        return Result.fail(str(e), close_dialog=False)
 
 
 
@@ -304,7 +296,11 @@ def export_labels_to_word(label_payload, template_path, output_path):
             barcode_val = lbl.get("barcode", "")
             if barcode_val:
                 file_path = os.path.join(tmp_dir, f"barcode_{i}.png")
-                generate_code128_barcode(barcode_val, file_path)
+                generate_code128_barcode(
+                    barcode_val,
+                    save_path=file_path
+                )
+
                 lbl["barcode_img"] = InlineImage(doc, file_path, width=Mm(35))
             else:
                 lbl["barcode_img"] = ""
