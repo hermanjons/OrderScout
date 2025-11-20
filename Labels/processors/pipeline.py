@@ -19,6 +19,102 @@ from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 import math
 
+
+
+
+
+
+
+def sort_label_payload(
+        label_payload: dict,
+        mode: str,
+) -> dict:
+    """
+    label_payload içindeki tüm label'ları verilen mode'a göre sıralar.
+
+    mode:
+        - "none"      : hiç dokunma
+        - "product"   : ilk dolu ürün adına göre (alfabetik)
+        - "quantity"  : toplam adet (yüksekten düşüğe), sonra ürün adına göre
+        - "optimal"   : önce ürün adına göre, sonra toplam adete göre (yüksekten düşüğe)
+
+    Not:
+        - Girdi payload'ı mutate etmiyor; yeni bir dict döndürüyor.
+    """
+    if not label_payload or mode == "none":
+        return label_payload
+
+    pages = label_payload.get("pages") or []
+    labels_per_page = label_payload.get("labels_per_page") or 24
+    max_items_per_label = label_payload.get("max_items_per_label") or 8
+
+    # Tüm label'ları flatten et
+    all_labels = [lbl for page in pages for lbl in page]
+
+    def extract_label_metrics(lbl: dict):
+        """
+        Bir label içinden:
+          - primary_product: ilk dolu prodX
+          - total_qty: tüm qtyX toplamı
+        """
+        primary_product = ""
+        total_qty = 0
+
+        for i in range(1, max_items_per_label + 1):
+            p = (lbl.get(f"prod{i}", "") or "").strip()
+            q = lbl.get(f"qty{i}", 0)
+
+            # primary product: ilk dolu ürün
+            if not primary_product and p:
+                primary_product = p
+
+            try:
+                q_int = int(q)
+            except (TypeError, ValueError):
+                q_int = 0
+
+            total_qty += q_int
+
+        return primary_product.lower(), total_qty
+
+    # Sıralama anahtarı
+    def sort_key(lbl: dict):
+        prod_name, total_qty = extract_label_metrics(lbl)
+
+        if mode == "product":
+            # Ürün adına göre (A-Z)
+            return (prod_name, -total_qty)  # aynı ürünlerde çok adedi öne alır
+        elif mode == "quantity":
+            # Toplam adede göre (yüksekten düşüğe), sonra ürün adına göre
+            return (-total_qty, prod_name)
+        elif mode == "optimal":
+            # Önce ürün adına göre grupla, her ürün grubunda çok adedi öne al
+            return (prod_name, -total_qty)
+        else:
+            # Bilinmeyen mode → dokunma
+            return (0,)
+
+    sorted_labels = sorted(all_labels, key=sort_key)
+
+    # Yeniden sayfalara böl
+    new_pages: list[list[dict]] = []
+    for i in range(0, len(sorted_labels), labels_per_page):
+        new_pages.append(sorted_labels[i:i + labels_per_page])
+
+    # Yeni payload
+    new_payload = dict(label_payload)
+    new_payload["pages"] = new_pages
+    new_payload["total_labels"] = len(sorted_labels)
+    new_payload["total_pages"] = len(new_pages)
+
+    return new_payload
+
+
+
+
+
+
+
 # ─────────────────────────────────────────
 # 1) LABEL PAYLOAD ÜRETİCİ
 # ─────────────────────────────────────────
@@ -502,7 +598,7 @@ def export_labels_to_word(
                 # --- Barkod görseli ---
                 if barcode_val:
                     file_path = os.path.join(
-                        barcode_tmp_dir, f"barcode_p{page_index+1}_{n}.png"
+                        barcode_tmp_dir, f"barcode_p{page_index + 1}_{n}.png"
                     )
                     res_bar = generate_code128_barcode(
                         barcode_val,
@@ -579,7 +675,7 @@ def export_labels_to_word(
             # Şablonu doldur ve geçici sayfa dosyasına kaydet
             doc.render(context)
             page_path = os.path.join(
-                pages_tmp_dir, f"orderscout_labels_page_{page_index+1}.docx"
+                pages_tmp_dir, f"orderscout_labels_page_{page_index + 1}.docx"
             )
             doc.save(page_path)
             page_files.append(page_path)
