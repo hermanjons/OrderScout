@@ -4,6 +4,7 @@ from Orders.models.trendyol.trendyol_models import OrderData
 from sqlalchemy.orm import aliased
 from sqlalchemy.orm import selectinload
 
+
 # -------------------------------------------------
 # 📦 ReadyToShip Siparişler (en güncel snapshot)
 # -------------------------------------------------
@@ -24,7 +25,6 @@ def latest_ready_to_ship_query():
     )
 
     # Ana query → subquery join + ReadyToShip filtrele
-
 
     OD = aliased(OrderData)
 

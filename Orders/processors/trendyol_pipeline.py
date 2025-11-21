@@ -10,6 +10,7 @@ from Orders.constants.trendyol_constants import ORDERDATA_UNIQ, ORDERITEM_UNIQ, 
 from Orders.models.trendyol.trendyol_custom_queries import latest_ready_to_ship_query
 from sqlmodel import Session, select
 from Orders.signals.signals import order_signals
+from sqlalchemy import func
 
 
 async def normalize_order_data(order_data: dict, comp_api_account_id: int):
@@ -376,6 +377,81 @@ def get_order_full_details_by_numbers(order_numbers: list) -> Result:
         )
 
     except Exception as e:
+        return Result.fail(
+            map_error_to_message(e),
+            error=e,
+            close_dialog=False
+        )
+
+
+def get_nonfinal_order_numbers(
+        final_statuses: Optional[list[str]] = None
+) -> Result:
+    """
+    Her sipariş için en güncel OrderData kaydını bulur.
+    Bu kaydın status değeri final_statuses içinde DEĞİLSE
+    o siparişin orderNumber'ını döner.
+
+    Varsayılan final statüler:
+        - Delivered
+        - Cancelled
+
+    Dönüş:
+        Result.data = {
+            "order_numbers": ["10627509219", "10703754325", ...]
+        }
+
+    NOT:
+    - Hiç non-final sipariş yoksa bile SUCCESS döner, sadece liste boş olur.
+    """
+    try:
+        # Dışarıdan liste gelmezse default final statüler
+        if final_statuses is None:
+            final_statuses = ["Delivered", "Cancelled"]
+
+        engine = get_engine(DB_NAME)
+        with Session(engine) as session:
+            # 1️⃣ Her header için en son OrderData.lastModifiedDate'i bul
+            subq = (
+                select(
+                    OrderData.order_header_id,
+                    func.max(OrderData.lastModifiedDate).label("max_last_modified"),
+                )
+                .group_by(OrderData.order_header_id)
+                .subquery()
+            )
+
+            # 2️⃣ Bu en güncel snapshot'ı OrderData ile join'le,
+            #    status final_statuses içinde OLMAYANları seç.
+            stmt = (
+                select(OrderHeader.orderNumber)
+                .join(subq, subq.c.order_header_id == OrderHeader.pk)
+                .join(
+                    OrderData,
+                    (OrderData.order_header_id == OrderHeader.pk)
+                    & (OrderData.lastModifiedDate == subq.c.max_last_modified),
+                )
+                .where(~OrderData.status.in_(final_statuses))  # 🔴 BURASI ÖNEMLİ: not_in DEĞİL!
+            )
+
+            rows = session.exec(stmt).all()
+
+        # OrderNumber'ları normalize et (str'e çevir, trimle, tekrarı at)
+        order_numbers_set = {
+            str(num).strip()
+            for num in rows
+            if num is not None and str(num).strip()
+        }
+        order_numbers = sorted(order_numbers_set)
+
+        return Result.ok(
+            f"{len(order_numbers)} adet final olmayan sipariş bulundu.",
+            close_dialog=False,
+            data={"order_numbers": order_numbers},
+        )
+
+    except Exception as e:
+        # Eğer hâlâ patlıyorsa buradan anlayacağız
         return Result.fail(
             map_error_to_message(e),
             error=e,

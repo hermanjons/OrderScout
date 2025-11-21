@@ -22,13 +22,14 @@ from settings import MEDIA_ROOT
 from Orders.processors.trendyol_pipeline import (
     fetch_orders_all,
     save_orders_to_db,
-    get_latest_ready_to_ship_orders
+    get_latest_ready_to_ship_orders,
+    get_nonfinal_order_numbers, normalize_order_data
 )
 from Orders.constants.trendyol_constants import TRENDYOL_STATUS_LIST
 from Account.models import ApiAccount
 from Account.views.actions import collect_selected_companies, get_company_by_id
 
-
+from Orders.api.trendyol_api import TrendyolApi
 # ============================================================
 # 🔹 1. OrdersListWidget — Liste render & seçim yönetimi
 # ============================================================
@@ -202,6 +203,89 @@ def refresh_cargo_filter(combo_box, orders: list) -> Result:
 # Yani `OrdersTab` içindeki “BAŞLAT” butonu ve `CircularProgressButton` akışı.
 # ============================================================
 
+
+async def _refresh_nonfinal_orders_async(
+    order_numbers: list[str],
+    comp_api_account_list: list,
+    progress_callback=None,
+) -> Result:
+    """
+    Non-final (Delivered / Cancelled olmayan) siparişleri,
+    orderNumber üzerinden Trendyol'dan tekrar çekip normalize eder.
+
+    Dönüş: save_orders_to_db ile uyumlu olacak şekilde
+        Result.data = {
+            "order_data_list": [...],
+            "order_item_list": [...],
+        }
+    """
+    try:
+        if not order_numbers:
+            return Result.ok(
+                "Güncellenecek non-final sipariş bulunamadı.",
+                close_dialog=False,
+                data={"order_data_list": [], "order_item_list": []},
+            )
+
+        all_orders: list[dict] = []
+        all_items: list[dict] = []
+
+        total_steps = max(len(order_numbers) * len(comp_api_account_list), 1)
+        current_step = 0
+
+        for comp_api_account in comp_api_account_list:
+            api_account_id = comp_api_account[0]
+            supplier_id = comp_api_account[1]
+            username = comp_api_account[2]
+            password = comp_api_account[3]
+
+            api = TrendyolApi(supplier_id, username, password)
+
+            for order_no in order_numbers:
+                res = await api.get_order_by_number(order_no)
+
+                if not res or not isinstance(res, Result):
+                    current_step += 1
+                    if progress_callback:
+                        progress_callback(current_step, total_steps)
+                    continue
+
+                if not res.success:
+                    current_step += 1
+                    if progress_callback:
+                        progress_callback(current_step, total_steps)
+                    continue
+
+                content = res.data.get("content", []) or []
+                if not content:
+                    current_step += 1
+                    if progress_callback:
+                        progress_callback(current_step, total_steps)
+                    continue
+
+                for raw_order in content:
+                    norm_orders, norm_items = await normalize_order_data(raw_order, api_account_id)
+                    all_orders.extend(norm_orders)
+                    all_items.extend(norm_items)
+
+                current_step += 1
+                if progress_callback:
+                    progress_callback(current_step, total_steps)
+
+        return Result.ok(
+            f"{len(all_orders)} adet order_data, {len(all_items)} adet order_item normalize edildi.",
+            close_dialog=False,
+            data={
+                "order_data_list": all_orders,
+                "order_item_list": all_items,
+            }
+        )
+
+    except Exception as e:
+        return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
+
+
+
 def get_orders_from_companies(parent_widget, company_list_widget, progress_target) -> Result:
     """
     🧩 Bağlantılı: OrdersTab.get_orders()
@@ -254,7 +338,53 @@ def get_orders_from_companies(parent_widget, company_list_widget, progress_targe
                 if not db_res.success:
                     parent_widget.on_orders_failed(db_res, progress_target)
                 else:
+                    # Normal akış: UI'yi güncelle
                     parent_widget.on_orders_fetched(db_res)
+
+                    # 🔥 BURADAN SONRASI: ARKA PLAN NON-FINAL SENKRONU
+                    try:
+                        print("işlem başlıyor")
+                        # 1) DB'den final olmayan sipariş numaralarını çek
+                        res_nonfinal = get_nonfinal_order_numbers()
+                        if not res_nonfinal.success:
+                            print("başarısız")
+                            return
+                        print("işlem devam ediyor")
+
+                        order_numbers = res_nonfinal.data.get("order_numbers", []) or []
+                        print(order_numbers)
+                        if not order_numbers:
+                            return  # güncellenecek non-final sipariş yoksa boşver
+
+                        # 2) Arka planda Trendyol senkronu için AsyncWorker başlat
+                        parent_widget.bg_api_worker = AsyncWorker(
+                            _refresh_nonfinal_orders_async,
+                            order_numbers,
+                            comp_api_account_list,
+                            kwargs={"progress_callback": None},  # tamamen sessiz
+                            parent=parent_widget
+                        )
+
+                        def handle_bg_api(bg_res: Result):
+                            # sessiz çalışacak, hata bile olsa mesaj yok
+                            if not bg_res or not isinstance(bg_res, Result) or not bg_res.success:
+                                return
+
+                            parent_widget.bg_db_worker = SyncWorker(save_orders_to_db, bg_res)
+
+                            def handle_bg_db(_db_res: Result):
+                                # İstersen burada log yazarsın; kullanıcıya mesaj yok.
+                                pass
+
+                            parent_widget.bg_db_worker.result_ready.connect(handle_bg_db)
+                            parent_widget.bg_db_worker.start()
+
+                        parent_widget.bg_api_worker.result_ready.connect(handle_bg_api)
+                        parent_widget.bg_api_worker.start()
+
+                    except Exception:
+                        # Arka plan hataları kullanıcıya gösterilmeyecek.
+                        return
 
             parent_widget.db_worker.result_ready.connect(handle_db_result)
             parent_widget.db_worker.start()
