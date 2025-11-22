@@ -12,7 +12,14 @@ class OrderHeader(SQLModel, table=True):
     orderNumber: str = Field(index=True)
     api_account_id: Optional[int] = Field(default=None, foreign_key="apiaccount.pk", index=True)
 
-    # 🔗 İlişkiler
+    # ✅ Yeni alanlar
+    is_printed: bool = Field(default=False, index=True)     # Sadece yazıcıya direkt basılmış mı?
+    is_extracted: bool = Field(default=False, index=True)   # Word/Excel gibi dosyaya çıkarılmış mı?
+
+    printed_at: Optional[int] = Field(default=None, index=True)  # epoch ms / epoch s nasıl tutuyorsan
+    extracted_at: Optional[int] = Field(default=None, index=True)
+
+    # İlişkiler
     api_account: Optional["ApiAccount"] = Relationship(back_populates="order_headers")
 
     snapshots: List["OrderData"] = Relationship(

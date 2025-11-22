@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout,
-    QLabel, QComboBox, QGroupBox, QPushButton, QTextEdit, QDialogButtonBox
+    QLabel, QComboBox, QGroupBox, QPushButton, QTextEdit, QDialogButtonBox, QFileDialog, QApplication
 )
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 
 from Feedback.processors.pipeline import Result, map_error_to_message, MessageHandler
 
@@ -18,18 +18,26 @@ from Labels.processors.pipeline import (
 import json
 from pathlib import Path
 from datetime import datetime
+from Core.views.views import CircularProgressButton  # yolunu projene göre ayarla
+from Core.threads.sync_worker import SyncWorker
+
+from time import time
+
+from Orders.models.trendyol.trendyol_models import OrderHeader
+from Core.utils.model_utils import update_records  # ← model_utils.py nin yolu neyse ona göre düzelt
 
 
 class LabelPrintManagerWindow(QDialog):
     """
-    Etiket yazdırma yönetim ekranı.
+    Etiket yazdırma / Word çıkartma yönetim ekranı.
     - Marka seçimi
     - Model seçimi
     - Sıralama seçimi
-    - Yazdır butonu:
+    - Word Çıkart butonu:
         - Seçili siparişlerden etiket datasını hazırlayan pipeline'ı tetikler.
+        - export_labels_to_word işlemini ayrı bir thread'de çalıştırır.
 
-    Yazdır'a basılıp işlem başarılı olursa:
+    İşlem başarılı olursa:
         - self.label_result içinde Result nesnesi
         - self.label_result.data içinde:
             - label_payload (sıralama uygulanmış haliyle)
@@ -37,14 +45,25 @@ class LabelPrintManagerWindow(QDialog):
         tutulur ve dialog accept() ile kapanır.
     """
 
+    progress_changed = pyqtSignal(int)  # worker → UI progress
+
     def __init__(self, parent=None):
         super().__init__(parent)
         try:
-            self.setWindowTitle("Etiket Yazdırma")
+            self.setWindowTitle("Etiket Yazdırma / Word Çıkart")
             self.setModal(True)
             self.setMinimumSize(450, 280)
 
             self.label_result: Result | None = None  # dışarıya veri taşımak için
+
+            # worker ve geçici state
+            self._worker: SyncWorker | None = None
+            self._current_payload: dict | None = None
+            self._current_sort_mode: str = "none"
+            self._current_output_path: Path | None = None
+
+            # progress sinyalini butona bağla
+            self.progress_changed.connect(self._on_progress_changed)
 
             main_layout = QVBoxLayout(self)
             main_layout.setContentsMargins(16, 16, 16, 16)
@@ -97,17 +116,17 @@ class LabelPrintManagerWindow(QDialog):
             main_layout.addWidget(selection_box)
 
             # ==============================
-            # 🔘 Yazdır Butonu
+            # 🔘 Word Çıkart Butonu (CircularProgressButton)
             # ==============================
             buttons_layout = QHBoxLayout()
             buttons_layout.setContentsMargins(0, 8, 0, 0)
             buttons_layout.addStretch()
 
-            self.print_button = QPushButton("Yazdır")
-            self.print_button.setDefault(True)
-            self.print_button.clicked.connect(self._on_print_clicked)
+            self.export_button = CircularProgressButton("Word Çıkart", parent=self)
+            self.export_button.setDefault(True)
+            self.export_button.clicked.connect(self._on_export_clicked)
 
-            buttons_layout.addWidget(self.print_button)
+            buttons_layout.addWidget(self.export_button)
             main_layout.addLayout(buttons_layout)
 
             # ==============================
@@ -183,22 +202,36 @@ class LabelPrintManagerWindow(QDialog):
         return data or "none"
 
     # --------------------------------------------------------
-    # Yazdır butonu handler
+    # Progress sinyal handler
     # --------------------------------------------------------
-    def _on_print_clicked(self):
+    def _on_progress_changed(self, pct: int):
+        """Worker'dan gelen progress'i butona yansıt."""
+        try:
+            self.export_button.setProgress(pct)
+        except Exception:
+            pass
+
+    # --------------------------------------------------------
+    # Word Çıkart butonu handler (thread'li)
+    # --------------------------------------------------------
+    def _on_export_clicked(self):
         """
         Akış:
-        1) Marka & model kontrolü
-        2) Parent içinden list_widget'i al
-        3) create_order_label_from_orders(list_widget) çağır
-        4) Kullanıcının seçtiği sıralama moduna göre label_payload'ı sırala
-        5) Başarılıysa payload'tan Word çıktısı üret
-        6) İsteğe bağlı: label_payload'ın özetini text olarak göster
+        0) Kullanıcıdan kaydedilecek Word dosyasının yolunu iste
+        1) Marka & model & list_widget kontrolü
+        2) create_order_label_from_orders → payload üret (MAIN THREAD)
+        3) sort_label_payload → sıralama (MAIN THREAD)
+        4) export_labels_to_word'u SyncWorker ile ayrı thread'de çalıştır
+        5) progress_cb → progress_changed sinyaliyle butona yansır
+        6) Worker bitince sonucu al, mesajları göster, dialog'u kapat
         """
         try:
+            # Aynı anda ikinci kez çalışmasın
+            if self._worker is not None and self._worker.isRunning():
+                return
+
             brand = self.get_selected_brand_code()
             model = self.get_selected_model_code()
-            sort_mode = self.get_sort_mode()
 
             if not brand or not model:
                 MessageHandler.show(
@@ -206,7 +239,30 @@ class LabelPrintManagerWindow(QDialog):
                     Result.fail("Lütfen marka ve model seçiniz.", close_dialog=False),
                     only_errors=True
                 )
+                self.export_button.reset()
                 return
+
+            # Varsayılan dosya adı
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            suggested_name = f"labels_{model}_{ts}.docx"
+
+            base_dir = Path.cwd()
+            default_dir = base_dir / "outputs" / "labels"
+            default_dir.mkdir(parents=True, exist_ok=True)
+
+            file_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "Word etiket dosyasını kaydet",
+                str(default_dir / suggested_name),
+                "Word Dosyası (*.docx)"
+            )
+
+            # Kullanıcı iptal ederse
+            if not file_path:
+                self.export_button.reset()
+                return
+
+            sort_mode = self.get_sort_mode()
 
             parent = self.parent()
             if parent is None or not hasattr(parent, "list_widget"):
@@ -218,11 +274,17 @@ class LabelPrintManagerWindow(QDialog):
                     ),
                     only_errors=True
                 )
+                self.export_button.fail()
                 return
 
             list_widget = parent.list_widget
 
-            # 🔗 Pipeline: seçili siparişlerden label payload üret
+            # 🌕 Butonu başlat
+            self.export_button.start()
+            self.progress_changed.emit(0)
+            QApplication.processEvents()
+
+            # 1) LABEL PAYLOAD → MAIN THREAD (list_widget'e dokunuyoruz)
             res = create_order_label_from_orders(
                 list_widget,
                 brand_code=brand,
@@ -236,13 +298,17 @@ class LabelPrintManagerWindow(QDialog):
                                 close_dialog=False),
                     only_errors=True
                 )
+                self.export_button.fail()
                 return
 
             if not res.success:
                 MessageHandler.show(self, res, only_errors=True)
+                self.export_button.fail()
                 return
 
-            # ✅ Başarılı: payload'u al
+            self.progress_changed.emit(10)
+            QApplication.processEvents()
+
             data = res.data or {}
             payload = data.get("label_payload", {})
             if not payload:
@@ -251,15 +317,14 @@ class LabelPrintManagerWindow(QDialog):
                     Result.fail("Label payload üretilemedi.", close_dialog=False),
                     only_errors=True
                 )
+                self.export_button.fail()
                 return
 
-            # 🔽 SIRALAMA: Kullanıcının seçtiği moda göre payload'ı düzenle
+            # SIRALAMA → MAIN THREAD
             try:
                 payload = sort_label_payload(payload, sort_mode)
-                # Dışarıya geri verilecek Result içinde de güncel payload dursun:
                 res.data["label_payload"] = payload
             except Exception as e:
-                # Sıralama fail ederse, kullanıcıya bilgi ver ama orijinal sırayla devam et istersen
                 MessageHandler.show(
                     self,
                     Result.fail(
@@ -268,11 +333,12 @@ class LabelPrintManagerWindow(QDialog):
                     ),
                     only_errors=True
                 )
+                # sıralama patlasa bile eski payload ile devam
+            self.progress_changed.emit(15)
+            QApplication.processEvents()
 
-            # --- Word template & output yolu ---
-            base_dir = Path.cwd()
+            # Şablon kontrolü
             template_path = base_dir / "Labels" / "assets" / f"{model}.docx"
-
             if not template_path.exists():
                 MessageHandler.show(
                     self,
@@ -282,33 +348,111 @@ class LabelPrintManagerWindow(QDialog):
                     ),
                     only_errors=True
                 )
+                self.export_button.fail()
                 return
 
-            output_dir = base_dir / "outputs" / "labels"
-            output_dir.mkdir(parents=True, exist_ok=True)
+            output_path = Path(file_path)
 
-            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_path = output_dir / f"labels_{model}_{ts}.docx"
+            # Bu değerleri worker tamamlandığında kullanmak için saklıyoruz
+            self._current_payload = payload
+            self._current_sort_mode = sort_mode
+            self._current_output_path = output_path
+            self.label_result = res  # payload sonucu, dialog dışına da taşımak istersen
 
-            # 📝 Word'e bas
-            export_res = export_labels_to_word(
+            # Progress callback: worker thread'den çağrılacak
+            def progress_cb(pct: int):
+                # worker thread → sinyal → UI thread
+                self.progress_changed.emit(pct)
+
+            # 2) WORD EXPORT → WORKER THREAD
+            self._worker = SyncWorker(
+                export_labels_to_word,
                 label_payload=payload,
-                template_path=str(template_path),
+                brand_code=brand,
+                model_code=model,
                 output_path=str(output_path),
+                template_path=str(template_path),
+                progress_cb=progress_cb,
             )
+            self._worker.result_ready.connect(self._on_export_worker_result)
+            self._worker.finished.connect(self._on_export_worker_finished)
+            self._worker.start()
 
-            if not export_res or not isinstance(export_res, Result) or not export_res.success:
+        except Exception as e:
+            MessageHandler.show(
+                self,
+                Result.fail(map_error_to_message(e), error=e, close_dialog=False),
+                only_errors=True
+            )
+            try:
+                self.export_button.fail()
+            except Exception:
+                pass
+
+    # --------------------------------------------------------
+    # Worker callback'leri
+    # --------------------------------------------------------
+    def _on_export_worker_result(self, result: Result):
+        """
+        SyncWorker içindeki export_labels_to_word bittikten sonra gelen Result.
+        Burada:
+          - Sonucu kontrol ediyoruz
+          - Başarılıysa OrderHeader üzerinde is_extracted / extracted_at güncelliyoruz
+          - Debug dump + bilgi mesajı gösteriyoruz
+        """
+        try:
+            if not result or not isinstance(result, Result):
                 MessageHandler.show(
                     self,
-                    export_res if isinstance(export_res, Result) else Result.fail(
-                        "Word çıktısı oluşturulurken hata oluştu.",
-                        close_dialog=False
-                    ),
+                    Result.fail("Word çıktısı oluşturulurken beklenmeyen bir yanıt alındı.",
+                                close_dialog=False),
                     only_errors=True
                 )
+                self.export_button.fail()
                 return
 
-            # 🧪 İSTEĞE BAĞLI: ilk sayfanın payload özetini göster (debug)
+            if not result.success:
+                MessageHandler.show(self, result, only_errors=True)
+                self.export_button.fail()
+                return
+
+            # %100'e çek (export tarafı da 100 dese bile garanti olsun)
+            self.progress_changed.emit(100)
+
+            # ⬇⬇⬇ OrderHeader.flag update (model_utils ile) ⬇⬇⬇
+            try:
+                # create_order_label_from_orders içinde set ettiğimiz data
+                lr_data = (self.label_result.data or {}) if self.label_result else {}
+                order_numbers = lr_data.get("order_numbers", []) or []
+
+                if order_numbers:
+                    now_ts = int(time() * 1000)  # diğer timestamp alanlarınla aynı formata göre
+
+                    for ord_no in order_numbers:
+                        # Her orderNumber için update_records çağırıyoruz
+                        upd_res = update_records(
+                            model=OrderHeader,
+                            filters={"orderNumber": ord_no},
+                            update_data={
+                                "is_extracted": True,
+                                "extracted_at": now_ts,
+                                # İleride direkt yazıcı kullanırsan:
+                                # "is_printed": True,
+                                # "printed_at": now_ts,
+                            },
+                        )
+                        # Hata olursa logla ama export'u bozmuyoruz
+                        if not upd_res.success:
+                            print(f"[OrderHeader update error] {ord_no} → {upd_res.message}")
+            except Exception as e:
+                # Flag güncellemesi patlasa bile export başarısını bozmuyoruz,
+                # sadece log / print yeterli.
+                print("OrderHeader flag update error:", e)
+
+            # ⬆⬆⬆ YENİ KISIM BİTTİ ⬆⬆⬆
+
+            # Debug için payload özetini göstermek istersen:
+            payload = self._current_payload or {}
             pages = payload.get("pages", [])
             first_page = pages[0] if pages else []
 
@@ -320,25 +464,24 @@ class LabelPrintManagerWindow(QDialog):
                 "total_labels": payload.get("total_labels"),
                 "total_pages": payload.get("total_pages"),
                 "first_page": first_page,
-                "output_path": str(output_path),
-                "sort_mode": sort_mode,
+                "output_path": str(self._current_output_path) if self._current_output_path else "",
+                "sort_mode": self._current_sort_mode,
             }
 
             txt = json.dumps(preview_dict, ensure_ascii=False, indent=2)
             self._show_text_dump("Label Payload + Word Çıktısı (TEST)", txt)
 
-            # Info mesajı
+            # Bilgi mesajı
             MessageHandler.show(
                 self,
                 Result.ok(
-                    f"Word etiket dosyası oluşturuldu:\n{output_path}",
+                    f"Word etiket dosyası oluşturuldu:\n{self._current_output_path}",
                     close_dialog=False
                 ),
                 only_errors=False
             )
 
-            # Son olarak Result'ı sakla (ileride tekrar lazım olabilir)
-            self.label_result = res
+            # İşlem başarılı → dialog'u kapat
             self.accept()
 
         except Exception as e:
@@ -347,3 +490,10 @@ class LabelPrintManagerWindow(QDialog):
                 Result.fail(map_error_to_message(e), error=e, close_dialog=False),
                 only_errors=True
             )
+            self.export_button.fail()
+
+    def _on_export_worker_finished(self):
+        """Worker bittiğinde referansı bırak."""
+        self._worker = None
+        # CircularProgressButton 100'e geldiğinde zaten reset logic'i var;
+        # fail durumunda da fail() çağrılıyor.

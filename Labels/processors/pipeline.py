@@ -1,7 +1,8 @@
 # Labels/pipeline.py
 from __future__ import annotations
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Callable
+
 import os
 import tempfile
 from pathlib import Path
@@ -18,11 +19,6 @@ from docx import Document
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 import math
-
-
-
-
-
 
 
 def sort_label_payload(
@@ -110,11 +106,6 @@ def sort_label_payload(
     return new_payload
 
 
-
-
-
-
-
 # ─────────────────────────────────────────
 # 1) LABEL PAYLOAD ÜRETİCİ
 # ─────────────────────────────────────────
@@ -125,8 +116,13 @@ def create_order_label_from_orders(
         model_code: str = "TANEX_2736",
 ) -> Result:
     """
-    Orders.get_order_full_details_by_numbers çıktısından,
-    Word şablonuna direkt gömülebilecek label payload üretir.
+    Seçili siparişlerden, Word şablonuna direkt gömülebilecek label payload üretir.
+
+    DÖNEN Result.data:
+        {
+            "label_payload": {...},
+            "order_numbers": [ ... ]   # ⬅ OrderHeader güncellemesi için
+        }
     """
     try:
         # 0️⃣ Seçilen marka/model için konfig
@@ -234,9 +230,9 @@ def create_order_label_from_orders(
 
             # 3️⃣ max_items_per_label'lik item chunk'ları
             chunks = [
-                         normalized[i:i + max_items_per_label]
-                         for i in range(0, len(normalized), max_items_per_label)
-                     ] or [[]]
+                normalized[i:i + max_items_per_label]
+                for i in range(0, len(normalized), max_items_per_label)
+            ] or [[]]
 
             for chunk in chunks:
                 label_dict: Dict[str, Any] = {
@@ -279,12 +275,16 @@ def create_order_label_from_orders(
 
         return Result.ok(
             f"{len(order_numbers)} sipariş için {len(final_labels)} label hazırlandı.",
-            data={"label_payload": payload},
+            data={
+                "label_payload": payload,
+                "order_numbers": order_numbers,  # ⬅ OrderHeader update için
+            },
             close_dialog=False,
         )
 
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
+
 
 
 # ─────────────────────────────────────────
@@ -429,6 +429,7 @@ def export_labels_to_word(
         output_path: str | None = None,
         *,
         template_path=None,
+        progress_cb: Optional[Callable[[int], None]] = None,
 ) -> Result:
     """
     Tüm label'ları, labels_per_page (örn. 24) adetlik sayfalara bölüp,
@@ -440,6 +441,19 @@ def export_labels_to_word(
         * qty > 1 ise kırmızı + bold yapılır.
     """
     try:
+        # ── Progress helper ─────────────────────────
+        def report_progress(pct: int):
+            if progress_cb is not None:
+                try:
+                    pct_int = max(0, min(100, int(pct)))
+                    progress_cb(pct_int)
+                except Exception:
+                    # UI tarafını asla patlatma
+                    pass
+
+        # başlangıç
+        report_progress(0)
+
         if not label_payload:
             return Result.fail("Boş label_payload alındı.", close_dialog=False)
 
@@ -524,6 +538,9 @@ def export_labels_to_word(
             return Result.fail("Yazdırılacak label yok.", close_dialog=False)
 
         total_pages = math.ceil(total_labels / labels_per_page)
+
+        # bir tık ilerlet (hazırlık bitti)
+        report_progress(5)
 
         # Barkod PNG’leri için geçici klasör
         barcode_tmp_dir = os.path.join(
@@ -680,6 +697,13 @@ def export_labels_to_word(
             doc.save(page_path)
             page_files.append(page_path)
 
+            # sayfa bazlı progress: 5 → 95 arası
+            if total_pages > 0:
+                base = 5
+                span = 90
+                pct = base + span * ((page_index + 1) / total_pages)
+                report_progress(pct)
+
         # Geçici sayfa dosyalarını tek docx'te birleştir
         if not page_files:
             return Result.fail("Hiç sayfa üretilemedi.", close_dialog=False)
@@ -691,6 +715,9 @@ def export_labels_to_word(
                 main_doc.element.body.append(element)
 
         main_doc.save(output_path)
+
+        # son nokta
+        report_progress(100)
 
         return Result.ok(
             f"{total_labels} etiket, {total_pages} Word sayfasına işlendi.",

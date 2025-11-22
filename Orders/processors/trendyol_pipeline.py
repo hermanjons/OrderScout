@@ -10,8 +10,8 @@ from Orders.constants.trendyol_constants import ORDERDATA_UNIQ, ORDERITEM_UNIQ, 
 from Orders.models.trendyol.trendyol_custom_queries import latest_ready_to_ship_query
 from sqlmodel import Session, select
 from Orders.signals.signals import order_signals
-from sqlalchemy import func
-
+from sqlalchemy import func, or_
+from sqlalchemy.orm import aliased
 
 async def normalize_order_data(order_data: dict, comp_api_account_id: int):
     """
@@ -237,6 +237,92 @@ def get_latest_ready_to_ship_orders() -> Result:
 
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e)
+
+
+
+
+def get_processed_ready_to_ship_orders(
+        *,
+        include_extracted: bool = True,
+        include_printed: bool = True,
+) -> Result:
+    """
+    ReadyToShip olup işlenmiş (Word/Excel'e çıkarılmış veya yazıcıya basılmış)
+    siparişleri getirir.
+
+    Kriter:
+      - OrderData tarafında:
+            shipmentPackageStatus == "ReadyToShip"
+        olan EN GÜNCEL snapshot (api_account_id + orderNumber + max(lastModifiedDate))
+      - OrderHeader tarafında:
+            is_extracted == True  ve/veya
+            is_printed  == True
+
+    Dönüş:
+        Result.data = {
+            "orders": [OrderData, ...]   # her sipariş için tek bir snapshot
+        }
+    """
+    try:
+        if not include_extracted and not include_printed:
+            return Result.fail(
+                "En az bir filtre seçilmeli (Word/Excel çıkarılanlar veya yazıcıya basılanlar).",
+                close_dialog=False
+            )
+
+        engine = get_engine(DB_NAME)
+        with Session(engine) as session:
+            # 1️⃣ Her api_account_id + orderNumber için en güncel snapshot'ı bul
+            subq = (
+                select(
+                    OrderData.api_account_id,
+                    OrderData.orderNumber,
+                    func.max(OrderData.lastModifiedDate).label("max_date"),
+                )
+                .group_by(OrderData.api_account_id, OrderData.orderNumber)
+                .subquery()
+            )
+
+            OD = aliased(OrderData)
+
+            # 2️⃣ En güncel snapshot + ReadyToShip + Header join
+            stmt = (
+                select(OD)
+                .join(
+                    subq,
+                    (OD.api_account_id == subq.c.api_account_id)
+                    & (OD.orderNumber == subq.c.orderNumber)
+                    & (OD.lastModifiedDate == subq.c.max_date),
+                )
+                .join(
+                    OrderHeader,
+                    (OrderHeader.api_account_id == OD.api_account_id)
+                    & (OrderHeader.orderNumber == OD.orderNumber),
+                )
+                .where(OD.shipmentPackageStatus == "ReadyToShip")
+            )
+
+            # 3️⃣ is_extracted / is_printed filtreleri
+            conds = []
+            if include_extracted:
+                conds.append(OrderHeader.is_extracted == True)   # noqa: E712
+            if include_printed:
+                conds.append(OrderHeader.is_printed == True)     # noqa: E712
+
+            if conds:
+                stmt = stmt.where(or_(*conds))
+
+            # 4️⃣ Çek → her sipariş için tek snapshot
+            rows = session.exec(stmt).all() or []
+
+        return Result.ok(
+            f"ReadyToShip + işlenmiş siparişler çekildi. (toplam sipariş: {len(rows)})",
+            close_dialog=False,
+            data={"orders": rows},
+        )
+
+    except Exception as e:
+        return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
 
 
 def get_order_full_details_by_numbers(order_numbers: list) -> Result:

@@ -36,6 +36,7 @@ from Labels.views.views import LabelPrintManagerWindow
 
 from Account.views.views import CompanyListWidget
 from Feedback.processors.pipeline import MessageHandler, Result, map_error_to_message
+from Orders.processors.trendyol_pipeline import get_processed_ready_to_ship_orders
 
 
 # ============================================================
@@ -58,10 +59,14 @@ class OrdersListWidget(QListWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setSelectionMode(QListWidget.SelectionMode.NoSelection)
-        self.orders: list = []
-        self.filtered_orders: list = []
 
-        # 🔌 Siparişler değiştiğinde kendini yenile
+        self.orders: list = []  # DB'den gelen RAW veri
+        self.filtered_orders: list = []  # aktif filtre ile gelen sonuçlar
+
+        # ⚡ Eklenen yeni özellik:
+        self.status_filter: str = "all"  # all | unprocessed | extracted | printed | both
+
+        # Siparişler değiştiğinde kendini yenile
         order_signals.orders_changed.connect(self.reload_orders)
 
     # ============================================================
@@ -70,11 +75,11 @@ class OrdersListWidget(QListWidget):
     def showEvent(self, event):
         """Widget ilk gösterildiğinde siparişleri yükle."""
         super().showEvent(event)
-        if not self.orders:  # sadece ilk kez
+        if not self.orders:
             self.reload_orders()
 
     # ============================================================
-    # 🧩 Ana İşlemler
+    # 🔄 Ana Yeniden Yükleme
     # ============================================================
     def reload_orders(self):
         """
@@ -86,47 +91,98 @@ class OrdersListWidget(QListWidget):
                 MessageHandler.show(self, result, only_errors=True)
                 return
 
-            # 🔁 Verileri güncelle
+            # RAW veriyi al
             self.orders = result.data.get("records", [])
-            self.filtered_orders = list(self.orders)
+            # filtreyi uygula
+            self.filtered_orders = self._apply_internal_status_filter(self.orders)
 
-            # ✅ Listeyi inşa et
-            self._safe_build(self.orders)
+            self._safe_build(self.filtered_orders)
 
-            # 📢 UI’ya siparişlerin yüklendiğini bildir
-            order_signals.orders_loaded.emit(self.orders)
+            order_signals.orders_loaded.emit(self.filtered_orders)
 
         except Exception as e:
             msg = map_error_to_message(e)
             MessageHandler.show(self, Result.fail(msg, error=e), only_errors=True)
 
+    # ============================================================
+    # 🎚 DIŞTAN GELEN FİLTRE
+    # ============================================================
     def apply_filter_result(self, filtered_orders: list):
-        """Filtrelenmiş sipariş listesini uygular (yeniden çizim)."""
-        self.filtered_orders = filtered_orders
-        self._safe_build(filtered_orders)
+        """
+        FilterWorker'dan gelen text / tarih / kargo filtreleri.
+        Bu filtrelerin üzerine işlem durumu filtresini uygular.
+        """
+        final = self._apply_internal_status_filter(filtered_orders)
+        self.filtered_orders = final
+        self._safe_build(final)
 
     # ============================================================
-    # 🧰 Yardımcı İşlemler
+    # 🧠 Dahili İşlem Durumu Filtresi
+    # ============================================================
+    def set_status_filter(self, mode: str):
+        """
+        OrdersManagerWindow tarafından çağrılabilir.
+        mode: all | unprocessed | extracted | printed | both
+        """
+        self.status_filter = mode
+        # aktif filtered_orders üzerinde yeniden uygula
+        final = self._apply_internal_status_filter(self.filtered_orders)
+        self.filtered_orders = final
+        self._safe_build(final)
+
+    def _apply_internal_status_filter(self, orders: list):
+        """
+        is_extracted / is_printed alanlarına göre filtre uygular.
+        """
+        mode = self.status_filter
+
+        if mode == "all":
+            return list(orders)
+
+        result = []
+
+        for o in orders:
+            ex = getattr(o, "is_extracted", False)
+            pr = getattr(o, "is_printed", False)
+
+            if mode == "unprocessed":
+                if not ex and not pr:
+                    result.append(o)
+
+            elif mode == "extracted":
+                if ex and not pr:
+                    result.append(o)
+
+            elif mode == "printed":
+                if pr:
+                    result.append(o)
+
+            elif mode == "both":
+                if ex and pr:
+                    result.append(o)
+
+        return result
+
+    # ============================================================
+    # 🧰 Listeyi İnşa Et
     # ============================================================
     def _safe_build(self, orders: list):
-        """
-        Build işlemini güvenli biçimde gerçekleştirir.
-        Memory leak koruması içerir.
-        """
         try:
-            # 🧹 Gereksiz render engelleme
             if not orders and not self.count():
                 return
 
-            # 🧽 Qt memory leak koruması
+            # Leaks önleme
             for i in range(self.count()):
                 widget = self.itemWidget(self.item(i))
                 if widget:
                     widget.deleteLater()
+
             self.clear()
 
-            # 🏗️ Listeyi actions.py'deki builder ile inşa et
-            result = build_order_list(self, orders, self.on_item_interaction, self.clear_other_selections)
+            result = build_order_list(self, orders,
+                                      self.on_item_interaction,
+                                      self.clear_other_selections)
+
             if not result.success:
                 MessageHandler.show(self, result, only_errors=True)
 
@@ -175,7 +231,7 @@ class OrdersManagerWindow(QWidget):
         self.setWindowTitle("Kargoya Hazır Siparişler")
         self.setGeometry(200, 200, 1000, 650)
 
-        # === ANA LAYOUT ARTIK YATAY ===
+        # === ANA LAYOUT YATAY ===
         main_layout = QHBoxLayout(self)
 
         # SOL PANEL: filtreler + liste + sayaç + toplu seçim
@@ -199,6 +255,7 @@ class OrdersManagerWindow(QWidget):
         filter_box = QGroupBox("Filtreler")
         filter_layout = QGridLayout(filter_box)
 
+        # --- Metin / kargo / tarih filtreleri ---
         self.global_search = QLineEdit()
         self.global_search.setPlaceholderText("Genel Ara (müşteri, ürün, sipariş no, kargo...)")
 
@@ -236,12 +293,21 @@ class OrdersManagerWindow(QWidget):
             lambda _: self._toggle_date_inputs(self.date_filter_enable.isChecked())
         )
 
-        # Debounce timer
+        # --- Yeni: İşlem Durumu filtresi ---
+        self.status_filter_combo = QComboBox()
+        self.status_filter_combo.addItem("Tümü (İşlem Durumu)", userData="all")
+        self.status_filter_combo.addItem("İşlenmemişler", userData="unprocessed")
+        self.status_filter_combo.addItem("Word / Excel Çıkartılanlar", userData="extracted")
+        self.status_filter_combo.addItem("Yazıcıya Basılanlar", userData="printed")
+        self.status_filter_combo.addItem("Hem Çıkartılan Hem Yazdırılan", userData="both")
+        self.status_filter_combo.currentIndexChanged.connect(self._on_status_filter_changed)
+
+        # Debounce timer (metin/tarih filtresi için)
         self.filter_timer = QTimer()
         self.filter_timer.setSingleShot(True)
         self.filter_timer.timeout.connect(self.apply_filters)
 
-        # filtre input'larını debounce'a bağla
+        # filtre input'larını debounce'a bağla (işlem durumu hariç)
         inputs = [
             self.global_search, self.search_input, self.customer_input,
             self.cargo_filter, self.date_filter_enable, self.date_from, self.date_to
@@ -256,13 +322,15 @@ class OrdersManagerWindow(QWidget):
             elif hasattr(w, "dateChanged"):
                 w.dateChanged.connect(self._trigger_debounce)
 
-        # filtre layout yerleşimi
+        # --- filtre layout yerleşimi ---
         filter_layout.addWidget(QLabel("Genel Ara:"), 0, 0)
         filter_layout.addWidget(self.global_search, 0, 1, 1, 3)
+
         filter_layout.addWidget(QLabel("Sipariş No:"), 1, 0)
         filter_layout.addWidget(self.search_input, 1, 1)
         filter_layout.addWidget(QLabel("Kargo:"), 1, 2)
         filter_layout.addWidget(self.cargo_filter, 1, 3)
+
         filter_layout.addWidget(QLabel("Müşteri:"), 2, 0)
         filter_layout.addWidget(self.customer_input, 2, 1)
         filter_layout.addWidget(self.date_filter_enable, 2, 2)
@@ -273,6 +341,10 @@ class OrdersManagerWindow(QWidget):
         dates_row.addWidget(self.date_to)
         dates_row.addStretch()
         filter_layout.addLayout(dates_row, 2, 3)
+
+        # Yeni satır: işlem durumu filtresi
+        filter_layout.addWidget(QLabel("İşlem Durumu:"), 3, 0)
+        filter_layout.addWidget(self.status_filter_combo, 3, 1, 1, 3)
 
         # sol panel'e ekle
         left_panel.addWidget(filter_box)
@@ -312,7 +384,6 @@ class OrdersManagerWindow(QWidget):
         # 👉 Sağ Panel: Aksiyon Butonu
         # ============================================================
         self.action_button = ActionPulseButton(text="Yazdır")
-        # self.action_button.setIconPixmap(":/icons/printer.png")   # ikon eklersin
         self.action_button.setEnabled(False)  # başta kapalı
         self.action_button.clicked.connect(self._on_action_button_clicked)
 
@@ -331,14 +402,13 @@ class OrdersManagerWindow(QWidget):
         self.action_button.setEnabled(len(selected_list) > 0)
 
     # ============================================================
-    # 🔘 Buton tıklama davranışı (ileride yazdır flow buraya girecek)
+    # 🔘 Yazdır Butonu davranışı
     # ============================================================
     def _on_action_button_clicked(self):
         chosen_orders = self.get_selected_orders()
         if not chosen_orders:
             return
 
-        # parent VERME
         self.label_window = LabelPrintManagerWindow(self)
         self.label_window.exec()
         self.label_window.setWindowModality(Qt.WindowModality.NonModal)
@@ -346,7 +416,7 @@ class OrdersManagerWindow(QWidget):
         self.label_window.activateWindow()
 
     # ============================================================
-    # (geri kalan fonksiyonların değişmiyor)
+    # 🔄 Kargo filtresi vs.
     # ============================================================
     def _refresh_cargo_filter(self, orders=None):
         res = refresh_cargo_filter(self.cargo_filter, self.list_widget.orders)
@@ -388,7 +458,6 @@ class OrdersManagerWindow(QWidget):
         self.selected_count_label.setText(
             f"Seçili: {len(selected)} / Toplam: {total} (Filtreli: {filtered})"
         )
-        # seçili sayısı değişince butonu da güncelle
         self._update_action_button_state()
 
     def select_all(self):
@@ -412,12 +481,25 @@ class OrdersManagerWindow(QWidget):
             return res.data.get("selected_orders", [])
         return []
 
+    # ============================================================
+    # 🆕 İşlem Durumu filtresi değiştiğinde
+    # ============================================================
+    def _on_status_filter_changed(self, index: int):
+        mode = self.status_filter_combo.currentData()
+        if not mode:
+            mode = "all"
+        # OrdersListWidget içindeki internal filtreyi güncelle
+        self.list_widget.set_status_filter(mode)
+        # sayaçları güncelle
+        self._update_label()
+
+
 
 # ============================================================
 # 🔹 3. OrdersTab — Ana Tab / Veri Çekme Arayüzü
 # ============================================================
 # Bu kısım Trendyol API'sinden sipariş çeker, progress bar’ı yönetir,
-# OrdersManagerWindow’u açar.
+# OrdersManagerWindow’u ve işlenmiş siparişler penceresini açar.
 # ============================================================
 
 class OrdersTab(QWidget):
@@ -431,12 +513,15 @@ class OrdersTab(QWidget):
 
         # 🟡 Üst bilgilendirme yazısı
         self.info_label = QLabel("Siparişleri buradan yönetebilirsin.")
+
+        # 🔵 Ana sipariş yönetim penceresi butonu
         self.order_btn = PackageButton("Siparişler", icon_path="images/orders_img.png")
         self.order_btn.clicked.connect(self.open_orders_window)
+
         layout.addWidget(self.order_btn)
         layout.addWidget(self.info_label)
 
-        # 🟢 Başlatma butonu
+        # 🟢 Başlatma butonu (API'den sipariş çekme)
         self.fetch_button = CircularProgressButton("BAŞLAT")
         self.fetch_button.clicked.connect(self.get_orders)
 
@@ -464,6 +549,9 @@ class OrdersTab(QWidget):
 
         layout.addWidget(self.bottom_panel)
 
+        # referanslar
+        self.orders_window = None
+
     # ============================================================
     # 📡 Siparişleri API'den Getir
     # ============================================================
@@ -483,8 +571,15 @@ class OrdersTab(QWidget):
     # ============================================================
     def open_orders_window(self):
         """Filtreleme ve listeleme penceresini açar."""
-        self.orders_window = OrdersManagerWindow()
-        self.orders_window.show()
+        try:
+            if self.orders_window is None:
+                self.orders_window = OrdersManagerWindow()
+            self.orders_window.show()
+            self.orders_window.raise_()
+            self.orders_window.activateWindow()
+        except Exception as e:
+            res = Result.fail(map_error_to_message(e), error=e, close_dialog=False)
+            MessageHandler.show(self, res, only_errors=True)
 
     # ============================================================
     # ⚠️ Worker Callback — Hata Durumu
