@@ -25,6 +25,7 @@ from time import time
 
 from Orders.models.trendyol.trendyol_models import OrderHeader
 from Core.utils.model_utils import update_records  # ← model_utils.py nin yolu neyse ona göre düzelt
+from Orders.signals.signals import order_signals
 
 
 class LabelPrintManagerWindow(QDialog):
@@ -482,6 +483,7 @@ class LabelPrintManagerWindow(QDialog):
             )
 
             # İşlem başarılı → dialog'u kapat
+            order_signals.orders_changed.emit()
             self.accept()
 
         except Exception as e:

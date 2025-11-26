@@ -12,6 +12,8 @@ from sqlmodel import Session, select
 from Orders.signals.signals import order_signals
 from sqlalchemy import func, or_
 from sqlalchemy.orm import aliased
+from sqlalchemy.orm import selectinload
+
 
 async def normalize_order_data(order_data: dict, comp_api_account_id: int):
     """
@@ -221,58 +223,26 @@ def save_orders_to_db(result: Result, db_name: str = DB_NAME) -> Result:
         return Result.fail(map_error_to_message(e), error=e)
 
 
+import copy
+
+
 def get_latest_ready_to_ship_orders() -> Result:
-    try:
-
-        stmt = latest_ready_to_ship_query()
-
-        res = get_records(db_name=DB_NAME, custom_stmt=stmt)
-        if not res.success:
-            return res
-
-        return Result.ok(
-            f"ReadyToShip siparişler başarıyla çekildi. (toplam: {len(res.data.get('records', []))})",
-            data={"orders": res.data.get("records", [])}
-        )
-
-    except Exception as e:
-        return Result.fail(map_error_to_message(e), error=e)
-
-
-
-
-def get_processed_ready_to_ship_orders(
-        *,
-        include_extracted: bool = True,
-        include_printed: bool = True,
-) -> Result:
     """
-    ReadyToShip olup işlenmiş (Word/Excel'e çıkarılmış veya yazıcıya basılmış)
-    siparişleri getirir.
-
-    Kriter:
-      - OrderData tarafında:
-            shipmentPackageStatus == "ReadyToShip"
-        olan EN GÜNCEL snapshot (api_account_id + orderNumber + max(lastModifiedDate))
-      - OrderHeader tarafında:
-            is_extracted == True  ve/veya
-            is_printed  == True
-
-    Dönüş:
-        Result.data = {
-            "orders": [OrderData, ...]   # her sipariş için tek bir snapshot
-        }
+    ReadyToShip siparişlerin son snapshot'ını OrderHeader JOIN ile döndürür.
+    Runtime olarak OrderData instance'larına şu alanlar eklenir:
+        - is_extracted
+        - is_printed
+        - extracted_at
+        - printed_at
+    Deepcopy KALDIRILMIŞTIR (runtime attribute'lar kaybolmasın diye).
+    Dönen tüm OrderData nesneleri Session kapandığı için detached'tır → UI'da güvenlidir.
     """
-    try:
-        if not include_extracted and not include_printed:
-            return Result.fail(
-                "En az bir filtre seçilmeli (Word/Excel çıkarılanlar veya yazıcıya basılanlar).",
-                close_dialog=False
-            )
 
+    try:
         engine = get_engine(DB_NAME)
         with Session(engine) as session:
-            # 1️⃣ Her api_account_id + orderNumber için en güncel snapshot'ı bul
+
+            # 1️⃣ Son snapshot subquery
             subq = (
                 select(
                     OrderData.api_account_id,
@@ -285,7 +255,7 @@ def get_processed_ready_to_ship_orders(
 
             OD = aliased(OrderData)
 
-            # 2️⃣ En güncel snapshot + ReadyToShip + Header join
+            # 2️⃣ Son snapshot + ReadyToShip + Header JOIN
             stmt = (
                 select(OD)
                 .join(
@@ -300,25 +270,36 @@ def get_processed_ready_to_ship_orders(
                     & (OrderHeader.orderNumber == OD.orderNumber),
                 )
                 .where(OD.shipmentPackageStatus == "ReadyToShip")
+                .options(
+                    selectinload(OD.api_account),  # logo için
+                    selectinload(OD.header),  # extracted/printed için
+                    # ❗ items lazy, ama UI'da lazy kaldığında sorun olmuyor
+                )
             )
 
-            # 3️⃣ is_extracted / is_printed filtreleri
-            conds = []
-            if include_extracted:
-                conds.append(OrderHeader.is_extracted == True)   # noqa: E712
-            if include_printed:
-                conds.append(OrderHeader.is_printed == True)     # noqa: E712
+            rows: list[OrderData] = session.exec(stmt).all() or []
 
-            if conds:
-                stmt = stmt.where(or_(*conds))
+            # 3️⃣ Runtime flag'leri ekle
+            for od in rows:
+                h = od.header
+                if h:
+                    object.__setattr__(od, "is_extracted", bool(h.is_extracted))
+                    object.__setattr__(od, "is_printed", bool(h.is_printed))
+                    object.__setattr__(od, "extracted_at", h.extracted_at)
+                    object.__setattr__(od, "printed_at", h.printed_at)
+                else:
+                    object.__setattr__(od, "is_extracted", False)
+                    object.__setattr__(od, "is_printed", False)
+                    object.__setattr__(od, "extracted_at", None)
+                    object.__setattr__(od, "printed_at", None)
 
-            # 4️⃣ Çek → her sipariş için tek snapshot
-            rows = session.exec(stmt).all() or []
+        # 4️⃣ Session kapandı → tüm objeler artık detached → UI için güvenli
+        # deepcopy YOK → runtime flag'ler kaybolmaz
 
         return Result.ok(
-            f"ReadyToShip + işlenmiş siparişler çekildi. (toplam sipariş: {len(rows)})",
-            close_dialog=False,
+            f"ReadyToShip çekildi (toplam: {len(rows)})",
             data={"orders": rows},
+            close_dialog=False
         )
 
     except Exception as e:

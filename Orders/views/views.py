@@ -36,7 +36,6 @@ from Labels.views.views import LabelPrintManagerWindow
 
 from Account.views.views import CompanyListWidget
 from Feedback.processors.pipeline import MessageHandler, Result, map_error_to_message
-from Orders.processors.trendyol_pipeline import get_processed_ready_to_ship_orders
 
 
 # ============================================================
@@ -85,6 +84,8 @@ class OrdersListWidget(QListWidget):
         """
         DB'den siparişleri çekip listeyi yeniden oluşturur.
         """
+        print("🔥 RELOAD ORDERS ÇALIŞTI !!!")
+
         try:
             result = load_ready_to_ship_orders()
             if not result.success:
@@ -97,6 +98,8 @@ class OrdersListWidget(QListWidget):
             self.filtered_orders = self._apply_internal_status_filter(self.orders)
 
             self._safe_build(self.filtered_orders)
+            # 👇 reload sonrası işlemsel filtreyi yeniden uygula
+            self.set_status_filter(self.status_filter)
 
             order_signals.orders_loaded.emit(self.filtered_orders)
 
@@ -255,7 +258,6 @@ class OrdersManagerWindow(QWidget):
         filter_box = QGroupBox("Filtreler")
         filter_layout = QGridLayout(filter_box)
 
-        # --- Metin / kargo / tarih filtreleri ---
         self.global_search = QLineEdit()
         self.global_search.setPlaceholderText("Genel Ara (müşteri, ürün, sipariş no, kargo...)")
 
@@ -293,24 +295,29 @@ class OrdersManagerWindow(QWidget):
             lambda _: self._toggle_date_inputs(self.date_filter_enable.isChecked())
         )
 
-        # --- Yeni: İşlem Durumu filtresi ---
-        self.status_filter_combo = QComboBox()
-        self.status_filter_combo.addItem("Tümü (İşlem Durumu)", userData="all")
-        self.status_filter_combo.addItem("İşlenmemişler", userData="unprocessed")
-        self.status_filter_combo.addItem("Word / Excel Çıkartılanlar", userData="extracted")
-        self.status_filter_combo.addItem("Yazıcıya Basılanlar", userData="printed")
-        self.status_filter_combo.addItem("Hem Çıkartılan Hem Yazdırılan", userData="both")
-        self.status_filter_combo.currentIndexChanged.connect(self._on_status_filter_changed)
+        # 🟣 YENİ: İşlenme durumu filtresi
+        self.processed_filter = QComboBox()
+        # default olarak BEKLEYENLER
+        self.processed_filter.addItem("Yazdırılmayı / Çıkartılmayı Bekleyenler", userData="pending")
+        self.processed_filter.addItem("İşlenmiş Siparişler (Yazdırılmış / Çıkartılmış)", userData="processed")
+        self.processed_filter.addItem("Tümü", userData="all")
+        self.processed_filter.setCurrentIndex(0)
 
-        # Debounce timer (metin/tarih filtresi için)
+        # Debounce timer
         self.filter_timer = QTimer()
         self.filter_timer.setSingleShot(True)
         self.filter_timer.timeout.connect(self.apply_filters)
 
-        # filtre input'larını debounce'a bağla (işlem durumu hariç)
+        # filtre input'larını debounce'a bağla
         inputs = [
-            self.global_search, self.search_input, self.customer_input,
-            self.cargo_filter, self.date_filter_enable, self.date_from, self.date_to
+            self.global_search,
+            self.search_input,
+            self.customer_input,
+            self.cargo_filter,
+            self.date_filter_enable,
+            self.date_from,
+            self.date_to,
+            self.processed_filter,  # 🟣 YENİ
         ]
         for w in inputs:
             if isinstance(w, QComboBox):
@@ -322,15 +329,13 @@ class OrdersManagerWindow(QWidget):
             elif hasattr(w, "dateChanged"):
                 w.dateChanged.connect(self._trigger_debounce)
 
-        # --- filtre layout yerleşimi ---
+        # filtre layout yerleşimi
         filter_layout.addWidget(QLabel("Genel Ara:"), 0, 0)
         filter_layout.addWidget(self.global_search, 0, 1, 1, 3)
-
         filter_layout.addWidget(QLabel("Sipariş No:"), 1, 0)
         filter_layout.addWidget(self.search_input, 1, 1)
         filter_layout.addWidget(QLabel("Kargo:"), 1, 2)
         filter_layout.addWidget(self.cargo_filter, 1, 3)
-
         filter_layout.addWidget(QLabel("Müşteri:"), 2, 0)
         filter_layout.addWidget(self.customer_input, 2, 1)
         filter_layout.addWidget(self.date_filter_enable, 2, 2)
@@ -342,9 +347,9 @@ class OrdersManagerWindow(QWidget):
         dates_row.addStretch()
         filter_layout.addLayout(dates_row, 2, 3)
 
-        # Yeni satır: işlem durumu filtresi
-        filter_layout.addWidget(QLabel("İşlem Durumu:"), 3, 0)
-        filter_layout.addWidget(self.status_filter_combo, 3, 1, 1, 3)
+        # 🟣 Durum filtresi satırı
+        filter_layout.addWidget(QLabel("Durum:"), 3, 0)
+        filter_layout.addWidget(self.processed_filter, 3, 1, 1, 3)
 
         # sol panel'e ekle
         left_panel.addWidget(filter_box)
@@ -362,6 +367,9 @@ class OrdersManagerWindow(QWidget):
         order_signals.orders_loaded.connect(self._refresh_cargo_filter)
         order_signals.orders_loaded.connect(self._update_label)
         order_signals.orders_loaded.connect(self._update_action_button_state)
+
+        # 🟣 YENİ: Sipariş her yüklendiğinde filtreyi otomatik uygula
+        order_signals.orders_loaded.connect(lambda _orders: self._trigger_debounce())
 
         # ============================================================
         # 🧰 Toplu İşlemler
@@ -391,6 +399,9 @@ class OrdersManagerWindow(QWidget):
         right_panel.addWidget(self.action_button, alignment=Qt.AlignmentFlag.AlignTop)
         right_panel.addStretch()
 
+        # 🟣 Pencere açılır açılmaz “bekleyenler” filtresini çalıştır
+        QTimer.singleShot(0, self._trigger_debounce)
+
     # ============================================================
     # 🔁 Butonun aktif/pasif olması (seçime göre)
     # ============================================================
@@ -402,7 +413,7 @@ class OrdersManagerWindow(QWidget):
         self.action_button.setEnabled(len(selected_list) > 0)
 
     # ============================================================
-    # 🔘 Yazdır Butonu davranışı
+    # 🔘 Buton tıklama davranışı
     # ============================================================
     def _on_action_button_clicked(self):
         chosen_orders = self.get_selected_orders()
@@ -416,7 +427,7 @@ class OrdersManagerWindow(QWidget):
         self.label_window.activateWindow()
 
     # ============================================================
-    # 🔄 Kargo filtresi vs.
+    # Yardımcılar (değişmiyor, sadece apply_filters güncelleniyor)
     # ============================================================
     def _refresh_cargo_filter(self, orders=None):
         res = refresh_cargo_filter(self.cargo_filter, self.list_widget.orders)
@@ -441,6 +452,8 @@ class OrdersManagerWindow(QWidget):
                 "date_enabled": self.date_filter_enable.isChecked(),
                 "date_from": self.date_from.date().toPyDate(),
                 "date_to": self.date_to.date().toPyDate(),
+                # 🟣 YENİ: processed_mode paramı
+                "processed_mode": self.processed_filter.currentData() or "pending",
             }
 
             self.selected_count_label.setText("🔄 Filtre uygulanıyor...")
@@ -480,19 +493,6 @@ class OrdersManagerWindow(QWidget):
         if res.success:
             return res.data.get("selected_orders", [])
         return []
-
-    # ============================================================
-    # 🆕 İşlem Durumu filtresi değiştiğinde
-    # ============================================================
-    def _on_status_filter_changed(self, index: int):
-        mode = self.status_filter_combo.currentData()
-        if not mode:
-            mode = "all"
-        # OrdersListWidget içindeki internal filtreyi güncelle
-        self.list_widget.set_status_filter(mode)
-        # sayaçları güncelle
-        self._update_label()
-
 
 
 # ============================================================

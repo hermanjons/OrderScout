@@ -30,6 +30,8 @@ from Account.models import ApiAccount
 from Account.views.actions import collect_selected_companies, get_company_by_id
 
 from Orders.api.trendyol_api import TrendyolApi
+
+
 # ============================================================
 # 🔹 1. OrdersListWidget — Liste render & seçim yönetimi
 # ============================================================
@@ -165,15 +167,28 @@ def extract_cargo_names(orders: list) -> list[str]:
 
 def load_ready_to_ship_orders() -> Result:
     """
-    🧩 Bağlantılı: OrdersListWidget.reload_orders()
     ReadyToShip siparişleri pipeline’dan çeker ve UI’ye döndürür.
+    DEBUG: is_extracted ve is_printed ekrana yazılır.
     """
     try:
         result = get_latest_ready_to_ship_orders()
         if not result.success:
             return result
+
+        orders = result.data.get("orders", [])
+
+        print("\n===== DEBUG: RTS ORDERS (load_ready_to_ship_orders) =====")
+        for od in orders:
+            print(
+                f"Order {getattr(od, 'orderNumber', None)} | "
+                f"is_extracted={getattr(od, 'is_extracted', None)} | "
+                f"is_printed={getattr(od, 'is_printed', None)}"
+            )
+        print("===== DEBUG END =====\n")
+
         return Result.ok("ReadyToShip siparişler yüklendi.",
-                         data={"records": result.data.get("orders", [])})
+                         data={"records": orders})
+
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e)
 
@@ -205,9 +220,9 @@ def refresh_cargo_filter(combo_box, orders: list) -> Result:
 
 
 async def _refresh_nonfinal_orders_async(
-    order_numbers: list[str],
-    comp_api_account_list: list,
-    progress_callback=None,
+        order_numbers: list[str],
+        comp_api_account_list: list,
+        progress_callback=None,
 ) -> Result:
     """
     Non-final (Delivered / Cancelled olmayan) siparişleri,
@@ -283,7 +298,6 @@ async def _refresh_nonfinal_orders_async(
 
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
-
 
 
 def get_orders_from_companies(parent_widget, company_list_widget, progress_target) -> Result:
@@ -439,6 +453,31 @@ def filter_orders(orders: list, filters: dict) -> Result:
     try:
         filtered = list(orders)
 
+        # 🟣 Yazdırma / çıkartma durumu filtresi
+        #  - "pending"   → hem is_printed = False hem is_extracted = False
+        #  - "processed" → is_printed = True veya is_extracted = True
+        #  - "all"       → durum filtresi yok
+        processed_mode = filters.get("processed_mode", "pending")
+
+        if processed_mode in ("pending", "processed"):
+            tmp = []
+            for o in filtered:
+                is_pr = bool(getattr(o, "is_printed", False))
+                is_ex = bool(getattr(o, "is_extracted", False))
+
+                if processed_mode == "pending":
+                    # Hiç işlenmemiş (ne yazdırılmış ne çıkartılmış)
+                    if not is_pr and not is_ex:
+                        tmp.append(o)
+                else:  # processed
+                    # En az bir işlem görmüş
+                    if is_pr or is_ex:
+                        tmp.append(o)
+            filtered = tmp
+
+        # ========================================================
+        # 🔍 Diğer filtreler (senin mevcut mantığın)
+        # ========================================================
         gtxt = filters.get("global", "").lower()
         order_no = filters.get("order_no", "").lower()
         cargo = filters.get("cargo")

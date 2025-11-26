@@ -19,6 +19,7 @@ from docx import Document
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 import math
+from Orders.signals.signals import order_signals
 
 
 def sort_label_payload(
@@ -230,9 +231,9 @@ def create_order_label_from_orders(
 
             # 3️⃣ max_items_per_label'lik item chunk'ları
             chunks = [
-                normalized[i:i + max_items_per_label]
-                for i in range(0, len(normalized), max_items_per_label)
-            ] or [[]]
+                         normalized[i:i + max_items_per_label]
+                         for i in range(0, len(normalized), max_items_per_label)
+                     ] or [[]]
 
             for chunk in chunks:
                 label_dict: Dict[str, Any] = {
@@ -284,7 +285,6 @@ def create_order_label_from_orders(
 
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
-
 
 
 # ─────────────────────────────────────────
@@ -614,9 +614,12 @@ def export_labels_to_word(
 
                 # --- Barkod görseli ---
                 if barcode_val:
+                    safe_val = barcode_val.replace("/", "_").replace("\\", "_")
                     file_path = os.path.join(
-                        barcode_tmp_dir, f"barcode_p{page_index + 1}_{n}.png"
+                        barcode_tmp_dir,
+                        f"barcode_{safe_val}_{page_index + 1}_{n}.png"
                     )
+
                     res_bar = generate_code128_barcode(
                         barcode_val,
                         save_path=file_path,
@@ -719,11 +722,13 @@ def export_labels_to_word(
         # son nokta
         report_progress(100)
 
+
         return Result.ok(
             f"{total_labels} etiket, {total_pages} Word sayfasına işlendi.",
             data={"output_path": output_path},
             close_dialog=False,
         )
+
 
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
