@@ -12,16 +12,20 @@ from Orders.views.actions import collect_selected_orders
 from Orders.processors.trendyol_pipeline import get_order_full_details_by_numbers
 
 from docxtpl import DocxTemplate, InlineImage, RichText
-from docx.shared import Mm, RGBColor, Pt  # Pt, RGBColor gerekirse ekleriz
-
-from Labels.constants.constants import get_label_model_config
+from docx.shared import Mm
 from docx import Document
-from docx.oxml.ns import qn
-from docx.oxml import OxmlElement
 import math
-from Orders.signals.signals import order_signals
+from Orders.signals.signals import order_signals  # noqa: F401
+from io import BytesIO
+from docxcompose.composer import Composer
+
+# 🔴 Buraya dikkat: LABEL_ASSETS_DIR de import edildi
+from Labels.constants.constants import get_label_model_config, LABEL_ASSETS_DIR
 
 
+# ─────────────────────────────────────────
+# 0) LABEL PAYLOAD SIRALAYICI
+# ─────────────────────────────────────────
 def sort_label_payload(
         label_payload: dict,
         mode: str,
@@ -35,8 +39,9 @@ def sort_label_payload(
         - "quantity"  : toplam adet (yüksekten düşüğe), sonra ürün adına göre
         - "optimal"   : önce ürün adına göre, sonra toplam adete göre (yüksekten düşüğe)
 
-    Not:
-        - Girdi payload'ı mutate etmiyor; yeni bir dict döndürüyor.
+    Değişmez kural:
+        - Aynı orderNumber'a sahip label'lar HER ZAMAN arka arkaya kalır.
+          (Yani tek siparişin 2 etiketi birbirinden kopmaz.)
     """
     if not label_payload or mode == "none":
         return label_payload
@@ -46,41 +51,63 @@ def sort_label_payload(
     max_items_per_label = label_payload.get("max_items_per_label") or 8
 
     # Tüm label'ları flatten et
-    all_labels = [lbl for page in pages for lbl in page]
+    all_labels: List[Dict[str, Any]] = [lbl for page in pages for lbl in page]
+    if not all_labels:
+        return label_payload
 
-    def extract_label_metrics(lbl: dict):
+    # 0️⃣ Aynı orderNumber'a sahipleri grupla, ama ilk görüldükleri sırayı koru
+    groups: list[tuple[str, list[dict]]] = []
+    group_map: dict[str, list[dict]] = {}
+
+    for idx, lbl in enumerate(all_labels):
+        order_no = (lbl.get("orderNumber") or "").strip()
+
+        if order_no:
+            key = order_no
+        else:
+            # orderNumber yoksa her label kendi başına grup olsun
+            key = f"__SINGLE__{idx}"
+
+        if key not in group_map:
+            group_map[key] = []
+            groups.append((key, group_map[key]))
+
+        group_map[key].append(lbl)
+
+    def extract_group_metrics(group_labels: list[dict]):
         """
-        Bir label içinden:
-          - primary_product: ilk dolu prodX
-          - total_qty: tüm qtyX toplamı
+        Bir sipariş grubundan:
+          - primary_product: toplamdaki ilk dolu prodX
+          - total_qty: tüm qtyX toplamı (TÜM etiketler dahil)
         """
         primary_product = ""
         total_qty = 0
 
-        for i in range(1, max_items_per_label + 1):
-            p = (lbl.get(f"prod{i}", "") or "").strip()
-            q = lbl.get(f"qty{i}", 0)
+        for lbl in group_labels:
+            for i in range(1, max_items_per_label + 1):
+                p = (lbl.get(f"prod{i}", "") or "").strip()
+                q = lbl.get(f"qty{i}", 0)
 
-            # primary product: ilk dolu ürün
-            if not primary_product and p:
-                primary_product = p
+                if not primary_product and p:
+                    primary_product = p
 
-            try:
-                q_int = int(q)
-            except (TypeError, ValueError):
-                q_int = 0
+                try:
+                    q_int = int(q)
+                except (TypeError, ValueError):
+                    q_int = 0
 
-            total_qty += q_int
+                total_qty += q_int
 
         return primary_product.lower(), total_qty
 
-    # Sıralama anahtarı
-    def sort_key(lbl: dict):
-        prod_name, total_qty = extract_label_metrics(lbl)
+    # Sıralama anahtarı (grup bazlı)
+    def sort_key(group: tuple[str, list[dict]]):
+        _, glabels = group
+        prod_name, total_qty = extract_group_metrics(glabels)
 
         if mode == "product":
-            # Ürün adına göre (A-Z)
-            return (prod_name, -total_qty)  # aynı ürünlerde çok adedi öne alır
+            # Ürün adına göre (A-Z), eşitlerde çok adedi öne
+            return (prod_name, -total_qty)
         elif mode == "quantity":
             # Toplam adede göre (yüksekten düşüğe), sonra ürün adına göre
             return (-total_qty, prod_name)
@@ -91,7 +118,12 @@ def sort_label_payload(
             # Bilinmeyen mode → dokunma
             return (0,)
 
-    sorted_labels = sorted(all_labels, key=sort_key)
+    sorted_groups = sorted(groups, key=sort_key)
+
+    # Grupları tekrar tek listeye aç
+    sorted_labels: list[dict] = []
+    for _, glabels in sorted_groups:
+        sorted_labels.extend(glabels)
 
     # Yeniden sayfalara böl
     new_pages: list[list[dict]] = []
@@ -124,6 +156,12 @@ def create_order_label_from_orders(
             "label_payload": {...},
             "order_numbers": [ ... ]   # ⬅ OrderHeader güncellemesi için
         }
+
+    ÖNEMLİ:
+        - Bir sipariş birden fazla etikete bölünürse:
+            - İlk etiket: is_primary_for_order = True
+            - Devam etiketleri: is_primary_for_order = False
+          Bu bilgi Word'e dökerken barkod / uyarı görseli seçmekte kullanılır.
     """
     try:
         # 0️⃣ Seçilen marka/model için konfig
@@ -158,6 +196,7 @@ def create_order_label_from_orders(
         orders = detail_res.data.get("orders", []) or []
 
         final_labels: List[Dict[str, Any]] = []
+        label_index = 0  # debug için
 
         for pkg in orders:
             header = pkg.get("header")
@@ -208,12 +247,9 @@ def create_order_label_from_orders(
                             parts.append(str(v).strip())
                     address = ", ".join(parts)
 
-                # kargo bilgileri
+                # kargo bilgileri (HAM veri)
                 cargo_tracking = (getattr(latest, "cargoTrackingNumber", "") or "").strip()
                 cargo_provider_name = (getattr(latest, "cargoProviderName", "") or "").strip()
-
-            # barkodda öncelik kargo takip numarası, yoksa order no
-            barcode_value = cargo_tracking or order_no
 
             # 2.b) OrderItem → prod/qty normalize
             normalized: List[Dict[str, Any]] = []
@@ -235,14 +271,20 @@ def create_order_label_from_orders(
                          for i in range(0, len(normalized), max_items_per_label)
                      ] or [[]]
 
-            for chunk in chunks:
+            for chunk_idx, chunk in enumerate(chunks):
+                label_index += 1
+
                 label_dict: Dict[str, Any] = {
-                    "barcode": barcode_value,
-                    "ordernumber": order_no,
+                    # ham alanlar
+                    "orderNumber": order_no,
+                    "cargoTrackingNumber": cargo_tracking,
                     "fullname": fullname,
                     "address": address,
                     "cargoProviderName": cargo_provider_name,
-                    "cargotrackingnumber": barcode_value,
+                    # debug
+                    "debug_index": label_index,
+                    # 🔴 Siparişin ilk etiketi mi?
+                    "is_primary_for_order": (chunk_idx == 0),
                 }
 
                 # prod1..prodN / qty1..qtyN
@@ -323,7 +365,6 @@ def generate_code128_barcode(
         try:
             from barcode import Code128
             from barcode.writer import ImageWriter
-            from io import BytesIO
         except Exception:
             return Result.fail(
                 "Barkod kütüphaneleri eksik. 'python-barcode' ve 'Pillow' kurun.",
@@ -414,8 +455,6 @@ def _make_rich_text(
         kwargs["bold"] = bold
 
     rt.add(str(value), **kwargs)
-    # debug için istersen:
-    # print("RICH:", value, kwargs)
     return rt
 
 
@@ -435,29 +474,26 @@ def export_labels_to_word(
     Tüm label'ları, labels_per_page (örn. 24) adetlik sayfalara bölüp,
     her sayfa için ayrı docx üretir ve en sonunda TEK Word dosyasında birleştirir.
 
-    - Alan stilleri constants.py → fields içinden gelir.
-    - qty alanları için:
-        * fields["qty"] temel font ayarını verir
-        * qty > 1 ise kırmızı + bold yapılır.
+    Özel davranış:
+        - Bir sipariş birden fazla etikete bölünmüşse:
+            - is_primary_for_order == True  → normal barkod
+            - is_primary_for_order == False → barkod yerine uyarı görseli:
+                  assets/images/split_order_attention_img.png
     """
     try:
-        # ── Progress helper ─────────────────────────
         def report_progress(pct: int):
             if progress_cb is not None:
                 try:
                     pct_int = max(0, min(100, int(pct)))
                     progress_cb(pct_int)
                 except Exception:
-                    # UI tarafını asla patlatma
                     pass
 
-        # başlangıç
         report_progress(0)
 
         if not label_payload:
             return Result.fail("Boş label_payload alındı.", close_dialog=False)
 
-        # Brand / model'i payload'dan tamamla
         if brand_code is None:
             brand_code = label_payload.get("brand_code")
         if model_code is None:
@@ -475,7 +511,6 @@ def export_labels_to_word(
                 close_dialog=False,
             )
 
-        # Model konfigi
         cfg = get_label_model_config(brand_code, model_code)
         if not cfg:
             return Result.fail(
@@ -486,7 +521,6 @@ def export_labels_to_word(
         labels_per_page = cfg.get("labels_per_page", 24)
         max_items_per_label = cfg.get("max_items_per_label", 8)
 
-        # Alan bazlı stiller
         field_styles = cfg.get("fields", {}) or {}
 
         def fs(key: str) -> dict:
@@ -501,9 +535,15 @@ def export_labels_to_word(
         product_style = fs("product")
         qty_style = fs("qty")
 
-        # Barkod ayarları
+        # 🔴 Barkod + uyarı görseli boyutları
         barcode_cfg = cfg.get("barcode", {}) or {}
         image_width_mm = barcode_cfg.get("image_width_mm", 44)
+
+        attention_image_width_mm = barcode_cfg.get(
+            "attention_image_width_mm",
+            image_width_mm,  # tanımlı değilse barkodla aynı olsun
+        )
+        attention_image_height_mm = barcode_cfg.get("attention_image_height_mm")  # opsiyonel
 
         writer_opts: Dict[str, float | int] = {}
         if "module_width" in barcode_cfg:
@@ -517,7 +557,6 @@ def export_labels_to_word(
         if "quiet_zone" in barcode_cfg:
             writer_opts["quiet_zone"] = barcode_cfg["quiet_zone"]
 
-        # Template path
         if template_path is None:
             tp = cfg.get("template_path")
         else:
@@ -529,7 +568,10 @@ def export_labels_to_word(
                 close_dialog=False,
             )
 
-        # Tüm label'ları flatten et
+        # 🔸 Uyarı görselinin yolu
+        attention_img_path = LABEL_ASSETS_DIR / "images" / "split_order_attention_img.png"
+        attention_img_exists = attention_img_path.is_file()
+
         pages = label_payload.get("pages") or []
         labels = [lbl for page in pages for lbl in page]
 
@@ -539,16 +581,8 @@ def export_labels_to_word(
 
         total_pages = math.ceil(total_labels / labels_per_page)
 
-        # bir tık ilerlet (hazırlık bitti)
         report_progress(5)
 
-        # Barkod PNG’leri için geçici klasör
-        barcode_tmp_dir = os.path.join(
-            tempfile.gettempdir(), "orderscout_barcode_cache_tpl"
-        )
-        os.makedirs(barcode_tmp_dir, exist_ok=True)
-
-        # Sayfa docx'leri için geçici klasör
         pages_tmp_dir = os.path.join(
             tempfile.gettempdir(), "orderscout_label_pages"
         )
@@ -556,7 +590,6 @@ def export_labels_to_word(
 
         page_files: list[str] = []
 
-        # Küçük helper: stil dict'inden RichText üret
         def style_text(value: str, style: dict):
             if not value:
                 return ""
@@ -568,7 +601,6 @@ def export_labels_to_word(
                 bold=style.get("bold"),
             )
 
-        # Her SAYFA için ayrı docx üret
         for page_index in range(total_pages):
             doc = DocxTemplate(str(tp))
             context: Dict[str, object] = {}
@@ -577,17 +609,22 @@ def export_labels_to_word(
             end = min(start + labels_per_page, total_labels)
             num_labels_this_page = end - start
 
-            # Bu sayfadaki label slotlarını doldur
             for slot, global_idx in enumerate(range(start, end), start=1):
                 lbl = dict(labels[global_idx])
-                n = slot  # 1..labels_per_page (sayfa içi index)
+                n = slot  # 1..labels_per_page
 
-                order_no = lbl.get("ordernumber", "") or ""
-                full_name = lbl.get("fullname", "") or ""
-                address = lbl.get("address", "") or ""
-                cargo_tr_no = lbl.get("cargotrackingnumber", "") or ""
-                cargo_provider = lbl.get("cargoProviderName", "") or ""
-                barcode_val = lbl.get("barcode", "") or ""
+                order_no = (lbl.get("orderNumber") or "").strip()
+                full_name = (lbl.get("fullname") or "").strip()
+                address = (lbl.get("address") or "").strip()
+                cargo_raw = (lbl.get("cargoTrackingNumber") or "").strip()
+                cargo_provider = (lbl.get("cargoProviderName") or "").strip()
+
+                # 🔐 TEK KAYNAK: barkod değeri + görünen kargo takip numarası
+                barcode_val = cargo_raw or order_no
+                cargo_tr_no = barcode_val
+
+                # Bu label siparişin ilk etiketi mi?
+                is_primary_for_order = bool(lbl.get("is_primary_for_order", True))
 
                 # isim / soyisim parçalama
                 name_part = ""
@@ -600,7 +637,6 @@ def export_labels_to_word(
                         surname_part = parts[-1]
                         name_part = " ".join(parts[:-1])
 
-                # --- Metin alanları (her zaman stil uygulanmış RichText) ---
                 context[f"ordernumber_{n}"] = style_text(order_no, ordernumber_style)
                 context[f"name_{n}"] = style_text(name_part, name_style)
                 context[f"surname_{n}"] = style_text(surname_part, surname_style)
@@ -612,31 +648,50 @@ def export_labels_to_word(
                     cargo_provider, cargoprovider_style
                 )
 
-                # --- Barkod görseli ---
-                if barcode_val:
-                    safe_val = barcode_val.replace("/", "_").replace("\\", "_")
-                    file_path = os.path.join(
-                        barcode_tmp_dir,
-                        f"barcode_{safe_val}_{page_index + 1}_{n}.png"
-                    )
-
+                # --- Barkod görseli / Uyarı görseli ---
+                if is_primary_for_order and barcode_val:
+                    # ✅ İlk etiket → normal barkod
                     res_bar = generate_code128_barcode(
                         barcode_val,
-                        save_path=file_path,
+                        save_path=None,
                         writer_options=writer_opts or None,
                     )
                     if isinstance(res_bar, Result) and res_bar.success:
-                        context[f"barcode_{n}"] = InlineImage(
-                            doc,
-                            file_path,
-                            width=Mm(image_width_mm),
-                        )
+                        png_bytes = res_bar.data.get("png_bytes")
+                        if png_bytes:
+                            stream = BytesIO(png_bytes)
+                            context[f"barcode_{n}"] = InlineImage(
+                                doc,
+                                stream,
+                                width=Mm(image_width_mm),
+                            )
+                        else:
+                            context[f"barcode_{n}"] = barcode_val
                     else:
                         context[f"barcode_{n}"] = barcode_val
                 else:
-                    context[f"barcode_{n}"] = ""
+                    # ✅ Devam etiketi → barkod yerine uyarı görseli
+                    if attention_img_exists:
+                        attention_kwargs = {}
+                        if attention_image_width_mm:
+                            attention_kwargs["width"] = Mm(attention_image_width_mm)
+                        if attention_image_height_mm:
+                            attention_kwargs["height"] = Mm(attention_image_height_mm)
 
-                # --- Ürünler (prod1..8 / qty1..8) ---
+                        context[f"barcode_{n}"] = InlineImage(
+                            doc,
+                            str(attention_img_path),
+                            **attention_kwargs,
+                        )
+                    else:
+                        # Görsel bulunamazsa boş bırak (veya istersen sabit text)
+                        context[f"barcode_{n}"] = ""
+
+                # Debug için label indexini de taşıyalım istersen
+                debug_idx = lbl.get("debug_index")
+                context[f"debug_{n}"] = str(debug_idx) if debug_idx is not None else ""
+
+                # Ürünler
                 for i in range(1, max_items_per_label + 1):
                     prod_key = f"prod{i}"
                     qty_key = f"qty{i}"
@@ -644,10 +699,8 @@ def export_labels_to_word(
                     prod_val = lbl.get(prod_key, "") or ""
                     qty_val = lbl.get(qty_key, "")
 
-                    # ürün adı → stil uygulanmış RichText
                     context[f"{prod_key}_{n}"] = style_text(prod_val, product_style)
 
-                    # adet → koşullu RichText
                     if qty_val in (None, ""):
                         context[f"{qty_key}_{n}"] = ""
                     else:
@@ -663,7 +716,6 @@ def export_labels_to_word(
                         base_color = qty_style.get("color")
                         base_bold = qty_style.get("bold")
 
-                        # ŞART: 1'den büyükse kırmızı + bold
                         if qty_int > 1:
                             final_color = "FF0000"
                             final_bold = True
@@ -679,9 +731,10 @@ def export_labels_to_word(
                             bold=final_bold,
                         )
 
-            # Bu sayfada kullanılmayan slotları boşla
+            # Kullanılmayan slotlar
             for n in range(num_labels_this_page + 1, labels_per_page + 1):
                 context[f"barcode_{n}"] = ""
+                context[f"debug_{n}"] = ""
                 context[f"ordernumber_{n}"] = ""
                 context[f"name_{n}"] = ""
                 context[f"surname_{n}"] = ""
@@ -692,7 +745,6 @@ def export_labels_to_word(
                     context[f"prod{i}_{n}"] = ""
                     context[f"qty{i}_{n}"] = ""
 
-            # Şablonu doldur ve geçici sayfa dosyasına kaydet
             doc.render(context)
             page_path = os.path.join(
                 pages_tmp_dir, f"orderscout_labels_page_{page_index + 1}.docx"
@@ -700,28 +752,26 @@ def export_labels_to_word(
             doc.save(page_path)
             page_files.append(page_path)
 
-            # sayfa bazlı progress: 5 → 95 arası
             if total_pages > 0:
                 base = 5
                 span = 90
                 pct = base + span * ((page_index + 1) / total_pages)
                 report_progress(pct)
 
-        # Geçici sayfa dosyalarını tek docx'te birleştir
         if not page_files:
             return Result.fail("Hiç sayfa üretilemedi.", close_dialog=False)
 
+        # ✅ docxcompose ile sorunsuz merge
         main_doc = Document(page_files[0])
+        composer = Composer(main_doc)
+
         for extra_path in page_files[1:]:
             sub_doc = Document(extra_path)
-            for element in sub_doc.element.body:
-                main_doc.element.body.append(element)
+            composer.append(sub_doc)
 
-        main_doc.save(output_path)
+        composer.save(output_path)
 
-        # son nokta
         report_progress(100)
-
 
         return Result.ok(
             f"{total_labels} etiket, {total_pages} Word sayfasına işlendi.",
@@ -729,6 +779,6 @@ def export_labels_to_word(
             close_dialog=False,
         )
 
-
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
+

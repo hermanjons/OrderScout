@@ -78,13 +78,22 @@ LABEL_MODELS_BY_BRAND = {
                     "font_size": 20,
                     # istersen defaultları da koy:
                     # "color": "000000",
-                     "bold": False,
+                    "bold": False,
                 },
             },
 
-            # 🔴 Barkod ayarları
+            # 🔴 Barkod / uyarı görseli ayarları
             "barcode": {
+                # Normal barkod genişliği
                 "image_width_mm": 44,
+
+                # Uyarı görseli için ayrı genişlik / yükseklik
+                # (etiketi taşırmasın diye daha küçük tuttuk;
+                # istersen burayı 26–32 arası oynayıp idealini bulursun)
+                "attention_image_width_mm": 36.5,
+                # İstersen yükseklik de kullanırsın, şimdilik None gibi davranılır:
+                # "attention_image_height_mm": 15,
+
                 "module_width": 0.20,
                 "module_height": 8.0,
                 "font_size": 10,
