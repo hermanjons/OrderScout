@@ -468,317 +468,307 @@ def export_labels_to_word(
         output_path: str | None = None,
         *,
         template_path=None,
-        progress_cb: Optional[Callable[[int], None]] = None,
+        progress_cb=None,
 ) -> Result:
-    """
-    Tüm label'ları, labels_per_page (örn. 24) adetlik sayfalara bölüp,
-    her sayfa için ayrı docx üretir ve en sonunda TEK Word dosyasında birleştirir.
-
-    Özel davranış:
-        - Bir sipariş birden fazla etikete bölünmüşse:
-            - is_primary_for_order == True  → normal barkod
-            - is_primary_for_order == False → barkod yerine uyarı görseli:
-                  assets/images/split_order_attention_img.png
-    """
     try:
-        def report_progress(pct: int):
-            if progress_cb is not None:
+        # ---------------------------------
+        # PROGRESS CB
+        # ---------------------------------
+        def report(p):
+            if progress_cb:
                 try:
-                    pct_int = max(0, min(100, int(pct)))
-                    progress_cb(pct_int)
+                    progress_cb(max(0, min(100, int(p))))
                 except Exception:
-                    pass
+                    Result.ok("Progress callback hatası.")
 
-        report_progress(0)
+        report(0)
 
+        # ---------------------------------
+        # KONTROLLER
+        # ---------------------------------
         if not label_payload:
-            return Result.fail("Boş label_payload alındı.", close_dialog=False)
+            return Result.fail("Boş etiket payload alındı.")
 
         if brand_code is None:
             brand_code = label_payload.get("brand_code")
+
         if model_code is None:
             model_code = label_payload.get("model_code")
 
-        if not brand_code or not model_code:
-            return Result.fail(
-                "Etiket markası / modeli belirlenemedi.",
-                close_dialog=False,
-            )
-
-        if not output_path:
-            return Result.fail(
-                "Çıkış dosya yolu (output_path) belirtilmedi.",
-                close_dialog=False,
-            )
-
         cfg = get_label_model_config(brand_code, model_code)
         if not cfg:
-            return Result.fail(
-                f"Etiket konfigi bulunamadı: {brand_code}/{model_code}",
-                close_dialog=False,
-            )
+            return Result.fail("Etiket konfigi bulunamadı.")
 
         labels_per_page = cfg.get("labels_per_page", 24)
-        max_items_per_label = cfg.get("max_items_per_label", 8)
+        max_items = cfg.get("max_items_per_label", 8)
 
-        field_styles = cfg.get("fields", {}) or {}
-
-        def fs(key: str) -> dict:
-            return field_styles.get(key, {}) or {}
-
-        ordernumber_style = fs("ordernumber")
-        name_style = fs("name")
-        surname_style = fs("surname")
-        address_style = fs("address")
-        cargotracking_style = fs("cargotrackingnumber")
-        cargoprovider_style = fs("cargoprovidername")
-        product_style = fs("product")
-        qty_style = fs("qty")
-
-        # 🔴 Barkod + uyarı görseli boyutları
-        barcode_cfg = cfg.get("barcode", {}) or {}
-        image_width_mm = barcode_cfg.get("image_width_mm", 44)
-
-        attention_image_width_mm = barcode_cfg.get(
-            "attention_image_width_mm",
-            image_width_mm,  # tanımlı değilse barkodla aynı olsun
-        )
-        attention_image_height_mm = barcode_cfg.get("attention_image_height_mm")  # opsiyonel
-
-        writer_opts: Dict[str, float | int] = {}
-        if "module_width" in barcode_cfg:
-            writer_opts["module_width"] = barcode_cfg["module_width"]
-        if "module_height" in barcode_cfg:
-            writer_opts["module_height"] = barcode_cfg["module_height"]
-        if "font_size" in barcode_cfg:
-            writer_opts["font_size"] = barcode_cfg["font_size"]
-        if "text_distance" in barcode_cfg:
-            writer_opts["text_distance"] = barcode_cfg["text_distance"]
-        if "quiet_zone" in barcode_cfg:
-            writer_opts["quiet_zone"] = barcode_cfg["quiet_zone"]
-
-        if template_path is None:
-            tp = cfg.get("template_path")
-        else:
-            tp = Path(template_path)
-
+        # Template
+        tp = template_path or cfg.get("template_path")
         if not tp or not Path(tp).is_file():
-            return Result.fail(
-                f"Word şablonu bulunamadı: {tp}",
-                close_dialog=False,
-            )
+            return Result.fail(f"Word şablonu bulunamadı: {tp}")
 
-        # 🔸 Uyarı görselinin yolu
-        attention_img_path = LABEL_ASSETS_DIR / "images" / "split_order_attention_img.png"
-        attention_img_exists = attention_img_path.is_file()
+        # Split görseli (uyarı)
+        attention_info = cfg["barcode"]
+        attention_w = attention_info.get("attention_image_width_mm", 30)
+        attention_h = attention_info.get("attention_image_height_mm")
 
-        pages = label_payload.get("pages") or []
+        attention_path = LABEL_ASSETS_DIR / "images" / "split_order_attention_img.png"
+        has_attention_image = attention_path.is_file()
+        if not has_attention_image:
+            Result.ok("Split uyarı görseli bulunamadı.")
+
+        # Barkod config
+        barcode_cfg = cfg["barcode"]
+        barcode_width = barcode_cfg.get("image_width_mm", 44)
+
+        writer_opts = {
+            k: barcode_cfg[k]
+            for k in ("module_width", "module_height", "font_size", "text_distance", "quiet_zone")
+            if k in barcode_cfg
+        }
+
+        # Kargo logo mapping
+        cargo_logo_cfg = cfg.get("cargo_provider_logos", {}) or {}
+
+        # Styles
+        field_styles = cfg.get("fields", {}) or {}
+        def fs(k): return field_styles.get(k, {})
+
+        style_order = fs("ordernumber")
+        style_name = fs("name")
+        style_surname = fs("surname")
+        style_address = fs("address")
+        style_cargo_tr = fs("cargotrackingnumber")
+        style_cargo_provider = fs("cargoprovidername")
+        style_product = fs("product")
+        style_qty = fs("qty")
+
+        # Flatten labels
+        pages = label_payload["pages"]
         labels = [lbl for page in pages for lbl in page]
+        total = len(labels)
 
-        total_labels = len(labels)
-        if not total_labels:
-            return Result.fail("Yazdırılacak label yok.", close_dialog=False)
+        if not total:
+            return Result.fail("Yazdırılacak etiket bulunamadı.")
 
-        total_pages = math.ceil(total_labels / labels_per_page)
+        total_pages = math.ceil(total / labels_per_page)
 
-        report_progress(5)
+        # Temp dir
+        tmp_dir = Path(tempfile.gettempdir()) / "orderscout_label_pages"
+        tmp_dir.mkdir(exist_ok=True)
 
-        pages_tmp_dir = os.path.join(
-            tempfile.gettempdir(), "orderscout_label_pages"
-        )
-        os.makedirs(pages_tmp_dir, exist_ok=True)
+        page_files = []
 
-        page_files: list[str] = []
-
-        def style_text(value: str, style: dict):
+        # Style helper
+        def style_text(value, st):
             if not value:
                 return ""
             return _make_rich_text(
                 value,
-                font_name=style.get("font_name"),
-                font_size=style.get("font_size"),
-                color=style.get("color"),
-                bold=style.get("bold"),
+                font_name=st.get("font_name"),
+                font_size=st.get("font_size"),
+                color=st.get("color"),
+                bold=st.get("bold"),
             )
 
-        for page_index in range(total_pages):
-            doc = DocxTemplate(str(tp))
-            context: Dict[str, object] = {}
+        # ---------------------------------
+        # PAGE LOOP
+        # ---------------------------------
+        for pidx in range(total_pages):
+            try:
+                doc = DocxTemplate(str(tp))
+            except Exception as e:
+                return Result.fail("Şablon yüklenemedi.", error=e)
 
-            start = page_index * labels_per_page
-            end = min(start + labels_per_page, total_labels)
-            num_labels_this_page = end - start
+            ctx = {}
 
+            start = pidx * labels_per_page
+            end = min(start + labels_per_page, total)
+            num_this_page = end - start
+
+            # ---------------------------------
+            # LABEL LOOP
+            # ---------------------------------
             for slot, global_idx in enumerate(range(start, end), start=1):
-                lbl = dict(labels[global_idx])
-                n = slot  # 1..labels_per_page
+                lbl = labels[global_idx]
+                n = slot
 
                 order_no = (lbl.get("orderNumber") or "").strip()
-                full_name = (lbl.get("fullname") or "").strip()
-                address = (lbl.get("address") or "").strip()
-                cargo_raw = (lbl.get("cargoTrackingNumber") or "").strip()
+                fullname = (lbl.get("fullname") or "").strip()
+                address_val = (lbl.get("address") or "").strip()
                 cargo_provider = (lbl.get("cargoProviderName") or "").strip()
+                cargo_raw = (lbl.get("cargoTrackingNumber") or "").strip()
 
-                # 🔐 TEK KAYNAK: barkod değeri + görünen kargo takip numarası
                 barcode_val = cargo_raw or order_no
-                cargo_tr_no = barcode_val
+                is_primary = lbl.get("is_primary_for_order", True)
 
-                # Bu label siparişin ilk etiketi mi?
-                is_primary_for_order = bool(lbl.get("is_primary_for_order", True))
-
-                # isim / soyisim parçalama
-                name_part = ""
+                # --------------------
+                # İsim-parçalama
+                # --------------------
+                parts = fullname.split()
+                name_part = fullname
                 surname_part = ""
-                if full_name:
-                    parts = full_name.split()
-                    if len(parts) == 1:
-                        name_part = parts[0]
+                if len(parts) > 1:
+                    surname_part = parts[-1]
+                    name_part = " ".join(parts[:-1])
+
+                # --------------------
+                # METİN ALANLARI
+                # --------------------
+                ctx[f"ordernumber_{n}"] = style_text(order_no, style_order)
+                ctx[f"name_{n}"] = style_text(name_part, style_name)
+                ctx[f"surname_{n}"] = style_text(surname_part, style_surname)
+                ctx[f"address_{n}"] = style_text(address_val, style_address)
+                ctx[f"cargotrackingnumber_{n}"] = style_text(barcode_val, style_cargo_tr)
+
+                # ---------------------------------
+                # CARGO LOGO — yazı YOK, logo yoksa BOŞ
+                # ---------------------------------
+                cargo_logo_el = None
+
+                if cargo_provider:
+                    # Mapping'te birebir arıyoruz (sen zaten adı tam veriyorsun)
+                    info = cargo_logo_cfg.get(cargo_provider)
+
+                    if info:
+                        logo_path = LABEL_ASSETS_DIR / "images" / info["filename"]
+
+                        if logo_path.is_file():
+                            try:
+                                cargo_logo_el = InlineImage(
+                                    doc,
+                                    str(logo_path),
+                                    width=Mm(info.get("width_mm", 12))
+                                )
+                            except Exception:
+                                Result.ok(f"Kargo logosu işlenemedi: {cargo_provider}")
+                        else:
+                            Result.ok(f"Kargo logosu bulunamadı: {logo_path}")
+
                     else:
-                        surname_part = parts[-1]
-                        name_part = " ".join(parts[:-1])
+                        Result.ok(f"Kargo provider mapping bulunamadı: {cargo_provider}")
 
-                context[f"ordernumber_{n}"] = style_text(order_no, ordernumber_style)
-                context[f"name_{n}"] = style_text(name_part, name_style)
-                context[f"surname_{n}"] = style_text(surname_part, surname_style)
-                context[f"address_{n}"] = style_text(address, address_style)
-                context[f"cargotrackingnumber_{n}"] = style_text(
-                    cargo_tr_no, cargotracking_style
-                )
-                context[f"cargoprovidername_{n}"] = style_text(
-                    cargo_provider, cargoprovider_style
-                )
+                # Logo varsa logo, yoksa boş
+                ctx[f"cargoprovidername_{n}"] = cargo_logo_el if cargo_logo_el else ""
 
-                # --- Barkod görseli / Uyarı görseli ---
-                if is_primary_for_order and barcode_val:
-                    # ✅ İlk etiket → normal barkod
+                # ---------------------------------
+                # BARKOD / SPLIT UYARI
+                # ---------------------------------
+                if is_primary:
+                    # Ana etiket → barkod bas
                     res_bar = generate_code128_barcode(
                         barcode_val,
-                        save_path=None,
-                        writer_options=writer_opts or None,
+                        writer_options=writer_opts,
+                        save_path=None
                     )
-                    if isinstance(res_bar, Result) and res_bar.success:
-                        png_bytes = res_bar.data.get("png_bytes")
-                        if png_bytes:
-                            stream = BytesIO(png_bytes)
-                            context[f"barcode_{n}"] = InlineImage(
-                                doc,
-                                stream,
-                                width=Mm(image_width_mm),
-                            )
-                        else:
-                            context[f"barcode_{n}"] = barcode_val
-                    else:
-                        context[f"barcode_{n}"] = barcode_val
-                else:
-                    # ✅ Devam etiketi → barkod yerine uyarı görseli
-                    if attention_img_exists:
-                        attention_kwargs = {}
-                        if attention_image_width_mm:
-                            attention_kwargs["width"] = Mm(attention_image_width_mm)
-                        if attention_image_height_mm:
-                            attention_kwargs["height"] = Mm(attention_image_height_mm)
 
-                        context[f"barcode_{n}"] = InlineImage(
+                    if not res_bar.success:
+                        Result.ok(f"Barkod üretilemedi: {barcode_val}")
+                        ctx[f"barcode_{n}"] = ""
+                    else:
+                        ctx[f"barcode_{n}"] = InlineImage(
                             doc,
-                            str(attention_img_path),
-                            **attention_kwargs,
+                            BytesIO(res_bar.data["png_bytes"]),
+                            width=Mm(barcode_width),
+                        )
+
+                else:
+                    # Split etiket → uyarı görseli
+                    if has_attention_image:
+                        kwargs = {"width": Mm(attention_w)}
+                        if attention_h:
+                            kwargs["height"] = Mm(attention_h)
+
+                        ctx[f"barcode_{n}"] = InlineImage(
+                            doc,
+                            str(attention_path),
+                            **kwargs
                         )
                     else:
-                        # Görsel bulunamazsa boş bırak (veya istersen sabit text)
-                        context[f"barcode_{n}"] = ""
+                        Result.ok("Split uyarı görseli yok.")
+                        ctx[f"barcode_{n}"] = ""
 
-                # Debug için label indexini de taşıyalım istersen
-                debug_idx = lbl.get("debug_index")
-                context[f"debug_{n}"] = str(debug_idx) if debug_idx is not None else ""
+                # ---------------------------------
+                # ÜRÜNLER
+                # ---------------------------------
+                for i in range(1, max_items + 1):
+                    pkey = f"prod{i}"
+                    qkey = f"qty{i}"
 
-                # Ürünler
-                for i in range(1, max_items_per_label + 1):
-                    prod_key = f"prod{i}"
-                    qty_key = f"qty{i}"
+                    pv = lbl.get(pkey, "") or ""
+                    qv = lbl.get(qkey, "")
 
-                    prod_val = lbl.get(prod_key, "") or ""
-                    qty_val = lbl.get(qty_key, "")
+                    ctx[f"{pkey}_{n}"] = style_text(pv, style_product)
 
-                    context[f"{prod_key}_{n}"] = style_text(prod_val, product_style)
-
-                    if qty_val in (None, ""):
-                        context[f"{qty_key}_{n}"] = ""
+                    if not qv:
+                        ctx[f"{qkey}_{n}"] = ""
                     else:
                         try:
-                            qty_int = int(qty_val)
-                        except (TypeError, ValueError):
-                            qty_int = 0
+                            qint = int(qv)
+                        except:
+                            qint = 0
 
-                        qty_text = str(qty_val)
+                        color = "FF0000" if qint > 1 else style_qty.get("color")
+                        bold = True if qint > 1 else style_qty.get("bold")
 
-                        base_font = qty_style.get("font_name")
-                        base_size = qty_style.get("font_size")
-                        base_color = qty_style.get("color")
-                        base_bold = qty_style.get("bold")
-
-                        if qty_int > 1:
-                            final_color = "FF0000"
-                            final_bold = True
-                        else:
-                            final_color = base_color
-                            final_bold = base_bold
-
-                        context[f"{qty_key}_{n}"] = _make_rich_text(
-                            qty_text,
-                            font_name=base_font,
-                            font_size=base_size,
-                            color=final_color,
-                            bold=final_bold,
+                        ctx[f"{qkey}_{n}"] = _make_rich_text(
+                            str(qv),
+                            font_name=style_qty.get("font_name"),
+                            font_size=style_qty.get("font_size"),
+                            color=color,
+                            bold=bold,
                         )
 
-            # Kullanılmayan slotlar
-            for n in range(num_labels_this_page + 1, labels_per_page + 1):
-                context[f"barcode_{n}"] = ""
-                context[f"debug_{n}"] = ""
-                context[f"ordernumber_{n}"] = ""
-                context[f"name_{n}"] = ""
-                context[f"surname_{n}"] = ""
-                context[f"address_{n}"] = ""
-                context[f"cargotrackingnumber_{n}"] = ""
-                context[f"cargoprovidername_{n}"] = ""
-                for i in range(1, max_items_per_label + 1):
-                    context[f"prod{i}_{n}"] = ""
-                    context[f"qty{i}_{n}"] = ""
+            # ---------------------------------
+            # BOŞ SLOT TEMİZLE
+            # ---------------------------------
+            for n in range(num_this_page + 1, labels_per_page + 1):
+                ctx[f"ordernumber_{n}"] = ""
+                ctx[f"name_{n}"] = ""
+                ctx[f"surname_{n}"] = ""
+                ctx[f"address_{n}"] = ""
+                ctx[f"cargotrackingnumber_{n}"] = ""
+                ctx[f"cargoprovidername_{n}"] = ""
+                ctx[f"barcode_{n}"] = ""
+                for i in range(1, max_items + 1):
+                    ctx[f"prod{i}_{n}"] = ""
+                    ctx[f"qty{i}_{n}"] = ""
 
-            doc.render(context)
-            page_path = os.path.join(
-                pages_tmp_dir, f"orderscout_labels_page_{page_index + 1}.docx"
-            )
-            doc.save(page_path)
-            page_files.append(page_path)
+            # ---------------------------------
+            # SAYFAYI KAYDET
+            # ---------------------------------
+            try:
+                doc.render(ctx)
+                outp = tmp_dir / f"page_{pidx+1}.docx"
+                doc.save(outp)
+                page_files.append(str(outp))
+            except Exception as e:
+                return Result.fail("Sayfa oluşturulamadı.", error=e)
 
-            if total_pages > 0:
-                base = 5
-                span = 90
-                pct = base + span * ((page_index + 1) / total_pages)
-                report_progress(pct)
+            report(5 + (pidx + 1) * 90 / total_pages)
 
-        if not page_files:
-            return Result.fail("Hiç sayfa üretilemedi.", close_dialog=False)
+        # ---------------------------------
+        # MERGE
+        # ---------------------------------
+        try:
+            main_doc = Document(page_files[0])
+            comp = Composer(main_doc)
 
-        # ✅ docxcompose ile sorunsuz merge
-        main_doc = Document(page_files[0])
-        composer = Composer(main_doc)
+            for pf in page_files[1:]:
+                comp.append(Document(pf))
 
-        for extra_path in page_files[1:]:
-            sub_doc = Document(extra_path)
-            composer.append(sub_doc)
+            comp.save(output_path)
 
-        composer.save(output_path)
+        except Exception as e:
+            return Result.fail("Word dosyaları birleştirilirken hata oluştu.", error=e)
 
-        report_progress(100)
+        report(100)
 
         return Result.ok(
-            f"{total_labels} etiket, {total_pages} Word sayfasına işlendi.",
-            data={"output_path": output_path},
+            f"{total} etiket başarıyla oluşturuldu.",
             close_dialog=False,
+            data={"output_path": output_path}
         )
 
     except Exception as e:
-        return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
-
+        return Result.fail("Beklenmeyen hata.", error=e)

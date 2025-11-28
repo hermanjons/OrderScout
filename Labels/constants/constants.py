@@ -100,6 +100,24 @@ LABEL_MODELS_BY_BRAND = {
                 "text_distance": 1.0,
                 "quiet_zone": 2.0,
             },
+            # 🔵 Kargo firması logoları
+            "cargo_provider_logos": {
+                # key'ler lower-case karşılaştırma için:
+                "Trendyol Express Marketplace": {
+                    "filename": "express-logo.png",
+                    "width_mm": 8,
+                },
+                "Aras Kargo Marketplace": {
+                    "filename": "aras-logo.png",
+                    "width_mm": 10,
+                },
+                "yurtiçi kargo": {
+                    "filename": "logo_yurtici.png",
+                    "width_mm": 12,
+                },
+                # vs vs, elinde hangi logo varsa ekle
+            },
+
         },
     ],
 }
