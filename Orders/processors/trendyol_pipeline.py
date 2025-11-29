@@ -3,6 +3,7 @@ from Core.utils.model_utils import create_records, get_records, get_engine
 import asyncio
 from typing import Optional, Callable
 from Orders.models.trendyol.trendyol_models import OrderItem, OrderData, OrderHeader
+from Account.models import ApiAccount
 from Feedback.processors.pipeline import Result, map_error_to_message
 from settings import DB_NAME
 from Orders.constants.trendyol_constants import ORDERDATA_UNIQ, ORDERITEM_UNIQ, ORDERDATA_NORMALIZER, \
@@ -312,13 +313,9 @@ def get_order_full_details_by_numbers(order_numbers: list) -> Result:
     - OrderHeader
     - OrderData
     - OrderItem
+    - ApiAccount (store_name + platform için)
 
     hepsini tek seferde toplar ve Result içinde döner.
-
-    Kullanım:
-        - Yazdırma (etiket) akışı
-        - Sipariş detay ekranı (ileride)
-        - Toplu işlem ekranları
 
     data yapısı:
         {
@@ -327,6 +324,8 @@ def get_order_full_details_by_numbers(order_numbers: list) -> Result:
                     "header": OrderHeader,
                     "data": [OrderData, ...],
                     "items": [OrderItem, ...],
+                    "store_name": str,
+                    "platform": str,
                 },
                 ...
             ],
@@ -390,6 +389,30 @@ def get_order_full_details_by_numbers(order_numbers: list) -> Result:
                 }
             )
 
+        # 🔹 ApiAccount'ları header'lardaki FK üzerinden çek (lazy ilişkiye DOKUNMADAN)
+        api_account_ids = {
+            getattr(h, "api_account_id", None)
+            for h in headers
+            if getattr(h, "api_account_id", None) is not None
+        }
+
+        api_accounts_by_id: dict[int, ApiAccount] = {}
+        if api_account_ids:
+            res_acc = get_records(
+                model=ApiAccount,
+                db_name=DB_NAME,
+                filters={"pk": list(api_account_ids)},
+            )
+            if not res_acc.success:
+                return res_acc
+
+            api_list: list[ApiAccount] = res_acc.data.get("records", []) or []
+            api_accounts_by_id = {
+                acc.pk: acc
+                for acc in api_list
+                if getattr(acc, "pk", None) is not None
+            }
+
         # 2️⃣ OrderData kayıtları
         res_data = get_records(
             model=OrderData,
@@ -423,13 +446,27 @@ def get_order_full_details_by_numbers(order_numbers: list) -> Result:
             if hid is not None:
                 items_by_header.setdefault(hid, []).append(oi)
 
-        # 5️⃣ Tek tek paketle
+        # 5️⃣ Tek tek paketle (DetachedInstanceError YOK ➜ api_account ilişkisinden veri çekmiyoruz)
         orders = []
         for h in headers:
+            api_acc = None
+            store_name = ""
+            platform = ""
+
+            acc_id = getattr(h, "api_account_id", None)
+            if acc_id is not None:
+                api_acc = api_accounts_by_id.get(acc_id)
+
+            if api_acc is not None:
+                store_name = (getattr(api_acc, "comp_name", "") or "").strip()
+                platform = (getattr(api_acc, "platform", "") or "").strip()
+
             orders.append({
                 "header": h,
                 "data": data_by_header.get(h.pk, []),
                 "items": items_by_header.get(h.pk, []),
+                "store_name": store_name,
+                "platform": platform,
             })
 
         return Result.ok(
@@ -449,6 +486,7 @@ def get_order_full_details_by_numbers(order_numbers: list) -> Result:
             error=e,
             close_dialog=False
         )
+
 
 
 def get_nonfinal_order_numbers(

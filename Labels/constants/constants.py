@@ -85,7 +85,7 @@ LABEL_MODELS_BY_BRAND = {
             # 🔴 Barkod / uyarı görseli ayarları
             "barcode": {
                 # Normal barkod genişliği
-                "image_width_mm": 44,
+                "image_width_mm": 45,
 
                 # Uyarı görseli için ayrı genişlik / yükseklik
                 # (etiketi taşırmasın diye daha küçük tuttuk;
@@ -105,11 +105,11 @@ LABEL_MODELS_BY_BRAND = {
                 # key'ler lower-case karşılaştırma için:
                 "Trendyol Express Marketplace": {
                     "filename": "express-logo.png",
-                    "width_mm": 8,
+                    "width_mm": 18,
                 },
                 "Aras Kargo Marketplace": {
                     "filename": "aras-logo.png",
-                    "width_mm": 10,
+                    "width_mm": 18,
                 },
                 "yurtiçi kargo": {
                     "filename": "logo_yurtici.png",

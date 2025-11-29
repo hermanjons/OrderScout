@@ -18,7 +18,7 @@ import math
 from Orders.signals.signals import order_signals  # noqa: F401
 from io import BytesIO
 from docxcompose.composer import Composer
-
+from datetime import datetime
 # 🔴 Buraya dikkat: LABEL_ASSETS_DIR de import edildi
 from Labels.constants.constants import get_label_model_config, LABEL_ASSETS_DIR
 
@@ -161,7 +161,10 @@ def create_order_label_from_orders(
         - Bir sipariş birden fazla etikete bölünürse:
             - İlk etiket: is_primary_for_order = True
             - Devam etiketleri: is_primary_for_order = False
-          Bu bilgi Word'e dökerken barkod / uyarı görseli seçmekte kullanılır.
+        - Her label'da ayrıca:
+            - storeName
+            - platform
+            - agreedDeliveryDate_ms  (ms cinsinden son teslim tarihi)
     """
     try:
         # 0️⃣ Seçilen marka/model için konfig
@@ -186,7 +189,7 @@ def create_order_label_from_orders(
         if not order_numbers:
             return Result.fail("Hiçbir sipariş seçilmedi.", close_dialog=False)
 
-        # 2️⃣ Detaylar (header + data + items)
+        # 2️⃣ Detaylar (header + data + items + store_name/platform)
         detail_res = get_order_full_details_by_numbers(order_numbers)
         if not detail_res or not isinstance(detail_res, Result):
             return Result.fail("Sipariş detayları alınamadı.", close_dialog=False)
@@ -203,6 +206,10 @@ def create_order_label_from_orders(
             snapshots = pkg.get("data", []) or []
             items = pkg.get("items", []) or []
 
+            # 🔹 get_order_full_details_by_numbers içinde eklediğimiz alanlar:
+            store_name = (pkg.get("store_name") or "").strip()
+            platform = (pkg.get("platform") or "").strip()
+
             if not header:
                 continue
 
@@ -213,6 +220,7 @@ def create_order_label_from_orders(
             address = ""
             cargo_tracking = ""
             cargo_provider_name = ""
+            agreed_delivery_ms = None  # ✅ yeni: agreedDeliveryDate (ms)
 
             if snapshots:
                 # son snapshot
@@ -251,6 +259,14 @@ def create_order_label_from_orders(
                 cargo_tracking = (getattr(latest, "cargoTrackingNumber", "") or "").strip()
                 cargo_provider_name = (getattr(latest, "cargoProviderName", "") or "").strip()
 
+                # ✅ son teslim tarihi (ms)
+                agreed_delivery_ms = getattr(latest, "agreedDeliveryDate", None)
+                try:
+                    if agreed_delivery_ms is not None:
+                        agreed_delivery_ms = int(agreed_delivery_ms)
+                except (TypeError, ValueError):
+                    agreed_delivery_ms = None
+
             # 2.b) OrderItem → prod/qty normalize
             normalized: List[Dict[str, Any]] = []
             for it in items:
@@ -281,6 +297,10 @@ def create_order_label_from_orders(
                     "fullname": fullname,
                     "address": address,
                     "cargoProviderName": cargo_provider_name,
+                    # 🔹 yeni alanlar
+                    "storeName": store_name,
+                    "platform": platform,
+                    "agreedDeliveryDate_ms": agreed_delivery_ms,
                     # debug
                     "debug_index": label_index,
                     # 🔴 Siparişin ilk etiketi mi?
@@ -303,7 +323,7 @@ def create_order_label_from_orders(
         # 4️⃣ Sayfalama
         pages: List[List[Dict[str, Any]]] = [
             final_labels[i:i + labels_per_page]
-            for i in range(0, len(final_labels), labels_per_page)
+            for i in range(0, len(final_labels), max_items_per_label * 0 + labels_per_page)
         ]
 
         payload = {
@@ -327,6 +347,7 @@ def create_order_label_from_orders(
 
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
+
 
 
 # ─────────────────────────────────────────
@@ -532,7 +553,9 @@ def export_labels_to_word(
 
         # Styles
         field_styles = cfg.get("fields", {}) or {}
-        def fs(k): return field_styles.get(k, {})
+
+        def fs(k):
+            return field_styles.get(k, {}) or {}
 
         style_order = fs("ordernumber")
         style_name = fs("name")
@@ -542,6 +565,9 @@ def export_labels_to_word(
         style_cargo_provider = fs("cargoprovidername")
         style_product = fs("product")
         style_qty = fs("qty")
+        style_store = fs("storename")
+        style_platform = fs("platform")
+        style_sla_hours = fs("sla_hours_left")  # ✅ yeni alan
 
         # Flatten labels
         pages = label_payload["pages"]
@@ -599,6 +625,11 @@ def export_labels_to_word(
                 cargo_provider = (lbl.get("cargoProviderName") or "").strip()
                 cargo_raw = (lbl.get("cargoTrackingNumber") or "").strip()
 
+                store_name = (lbl.get("storeName") or "").strip()
+                platform_val = (lbl.get("platform") or "").strip()
+
+                agreed_ms = lbl.get("agreedDeliveryDate_ms")
+
                 barcode_val = cargo_raw or order_no
                 is_primary = lbl.get("is_primary_for_order", True)
 
@@ -613,6 +644,23 @@ def export_labels_to_word(
                     name_part = " ".join(parts[:-1])
 
                 # --------------------
+                # SLA kalan saat hesaplama
+                # --------------------
+                sla_hours_left_txt = ""
+                if agreed_ms:
+                    try:
+                        agreed_ms_int = int(agreed_ms)
+                        deadline_utc = datetime.utcfromtimestamp(agreed_ms_int / 1000.0)
+                        now_utc = datetime.utcnow()
+                        delta = deadline_utc - now_utc
+                        hours = int(delta.total_seconds() // 3600)
+                        if hours < 0:
+                            hours = 0  # istersen negatif olsun dersen burayı kaldır
+                        sla_hours_left_txt = str(hours)
+                    except Exception:
+                        sla_hours_left_txt = ""
+
+                # --------------------
                 # METİN ALANLARI
                 # --------------------
                 ctx[f"ordernumber_{n}"] = style_text(order_no, style_order)
@@ -621,13 +669,18 @@ def export_labels_to_word(
                 ctx[f"address_{n}"] = style_text(address_val, style_address)
                 ctx[f"cargotrackingnumber_{n}"] = style_text(barcode_val, style_cargo_tr)
 
+                ctx[f"storename_{n}"] = style_text(store_name, style_store)
+                ctx[f"platform_{n}"] = style_text(platform_val, style_platform)
+
+                # SLA saat (labelde gösterilecek)
+                ctx[f"sla_hours_left_{n}"] = style_text(sla_hours_left_txt, style_sla_hours)
+
                 # ---------------------------------
                 # CARGO LOGO — yazı YOK, logo yoksa BOŞ
                 # ---------------------------------
                 cargo_logo_el = None
 
                 if cargo_provider:
-                    # Mapping'te birebir arıyoruz (sen zaten adı tam veriyorsun)
                     info = cargo_logo_cfg.get(cargo_provider)
 
                     if info:
@@ -644,18 +697,15 @@ def export_labels_to_word(
                                 Result.ok(f"Kargo logosu işlenemedi: {cargo_provider}")
                         else:
                             Result.ok(f"Kargo logosu bulunamadı: {logo_path}")
-
                     else:
                         Result.ok(f"Kargo provider mapping bulunamadı: {cargo_provider}")
 
-                # Logo varsa logo, yoksa boş
                 ctx[f"cargoprovidername_{n}"] = cargo_logo_el if cargo_logo_el else ""
 
                 # ---------------------------------
                 # BARKOD / SPLIT UYARI
                 # ---------------------------------
                 if is_primary:
-                    # Ana etiket → barkod bas
                     res_bar = generate_code128_barcode(
                         barcode_val,
                         writer_options=writer_opts,
@@ -671,9 +721,7 @@ def export_labels_to_word(
                             BytesIO(res_bar.data["png_bytes"]),
                             width=Mm(barcode_width),
                         )
-
                 else:
-                    # Split etiket → uyarı görseli
                     if has_attention_image:
                         kwargs = {"width": Mm(attention_w)}
                         if attention_h:
@@ -705,7 +753,7 @@ def export_labels_to_word(
                     else:
                         try:
                             qint = int(qv)
-                        except:
+                        except Exception:
                             qint = 0
 
                         color = "FF0000" if qint > 1 else style_qty.get("color")
@@ -730,16 +778,19 @@ def export_labels_to_word(
                 ctx[f"cargotrackingnumber_{n}"] = ""
                 ctx[f"cargoprovidername_{n}"] = ""
                 ctx[f"barcode_{n}"] = ""
+                ctx[f"storename_{n}"] = ""
+                ctx[f"platform_{n}"] = ""
+                ctx[f"sla_hours_left_{n}"] = ""
                 for i in range(1, max_items + 1):
                     ctx[f"prod{i}_{n}"] = ""
                     ctx[f"qty{i}_{n}"] = ""
-
+                print("CTX LİSTE :",ctx)
             # ---------------------------------
             # SAYFAYI KAYDET
             # ---------------------------------
             try:
                 doc.render(ctx)
-                outp = tmp_dir / f"page_{pidx+1}.docx"
+                outp = tmp_dir / f"page_{pidx + 1}.docx"
                 doc.save(outp)
                 page_files.append(str(outp))
             except Exception as e:
@@ -772,3 +823,5 @@ def export_labels_to_word(
 
     except Exception as e:
         return Result.fail("Beklenmeyen hata.", error=e)
+
+
