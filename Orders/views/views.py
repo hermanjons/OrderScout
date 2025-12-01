@@ -82,30 +82,42 @@ class OrdersListWidget(QListWidget):
     # ============================================================
     def reload_orders(self):
         """
-        DB'den siparişleri çekip listeyi yeniden oluşturur.
+        DB'den siparişleri ÇALIŞAN THREAD içinde çekip,
+        UI'yi sinyal ile günceller.
         """
-        print("🔥 RELOAD ORDERS ÇALIŞTI !!!")
+        print("🔥 RELOAD ORDERS (ASYNC) ÇALIŞTI !!!")
 
-        try:
-            result = load_ready_to_ship_orders()
+        # İstersen burada "yükleniyor" state'i aç
+        # self.show_orders_loading_state()
+
+        # Worker oluştur
+        self.reload_worker = SyncWorker(load_ready_to_ship_orders)
+
+        def handle_reload_result(result: Result):
+            # Worker bittiğinde tetiklenecek slot
+            # self.hide_orders_loading_state()
+
             if not result.success:
                 MessageHandler.show(self, result, only_errors=True)
                 return
 
             # RAW veriyi al
-            self.orders = result.data.get("records", [])
+            self.orders = result.data.get("records", []) or []
+
             # filtreyi uygula
             self.filtered_orders = self._apply_internal_status_filter(self.orders)
 
+            # Tabloyu güvenli şekilde yeniden kur
             self._safe_build(self.filtered_orders)
-            # 👇 reload sonrası işlemsel filtreyi yeniden uygula
+
+            # reload sonrası işlemsel filtreyi yeniden uygula
             self.set_status_filter(self.status_filter)
 
+            # "siparişler yüklendi" sinyali
             order_signals.orders_loaded.emit(self.filtered_orders)
 
-        except Exception as e:
-            msg = map_error_to_message(e)
-            MessageHandler.show(self, Result.fail(msg, error=e), only_errors=True)
+        self.reload_worker.result_ready.connect(handle_reload_result)
+        self.reload_worker.start()
 
     # ============================================================
     # 🎚 DIŞTAN GELEN FİLTRE

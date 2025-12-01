@@ -184,9 +184,9 @@ def get_company_by_id(pks: list[int]) -> Result:
     Birden fazla şirketi primary key (pk) listesi üzerinden getirir.
     """
     try:
-
         if not pks:
             return Result.fail("Hiçbir şirket seçilmedi.", close_dialog=False)
+
         print(pks)
         engine = get_engine("orders.db")
         res = get_records(
@@ -203,15 +203,26 @@ def get_company_by_id(pks: list[int]) -> Result:
         if not records:
             return Result.fail("Seçilen şirketler bulunamadı.", close_dialog=False)
 
+        # ⚙️ accounts yapısını BOZMADAN, sona last_used_at ekliyoruz
+        accounts_payload = [
+            [
+                r.pk,
+                r.api_key,
+                r.api_secret,
+                str(r.account_id),
+                getattr(r, "last_used_at", None),  # YENİ: last_used_at kolonu
+            ]
+            for r in records
+        ]
+
         return Result.ok(
             f"{len(records)} şirket bulundu.",
             close_dialog=False,
             data={
                 "records": records,
-                "accounts": [[r.pk, r.api_key, r.api_secret, str(r.account_id)] for r in records]
+                "accounts": accounts_payload,
             }
         )
-
 
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e, close_dialog=False)

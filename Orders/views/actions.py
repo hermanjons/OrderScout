@@ -15,6 +15,8 @@ from Core.utils.model_utils import get_engine
 from Core.utils.time_utils import coerce_to_date, time_for_now, time_stamp_calculator
 from Feedback.processors.pipeline import MessageHandler, Result, map_error_to_message
 from settings import MEDIA_ROOT
+from datetime import datetime, timezone
+from Orders.processors.trendyol_pipeline import update_last_used_at_for_accounts
 
 # ============================================================
 # 🧩 DOMAIN IMPORTS
@@ -177,14 +179,6 @@ def load_ready_to_ship_orders() -> Result:
 
         orders = result.data.get("orders", [])
 
-        print("\n===== DEBUG: RTS ORDERS (load_ready_to_ship_orders) =====")
-        for od in orders:
-            print(
-                f"Order {getattr(od, 'orderNumber', None)} | "
-                f"is_extracted={getattr(od, 'is_extracted', None)} | "
-                f"is_printed={getattr(od, 'is_printed', None)}"
-            )
-        print("===== DEBUG END =====\n")
 
         return Result.ok("ReadyToShip siparişler yüklendi.",
                          data={"records": orders})
@@ -300,11 +294,32 @@ async def _refresh_nonfinal_orders_async(
         return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
 
 
+
+def make_master_progress_callback(progress_target, master_total, phase_offset):
+    """
+    Ana tarama + non-final tarama için birleşik progress callback üretir.
+    """
+    def _cb(current, total):
+        # current = mevcut worker'ın iterasyonu
+        # total = mevcut worker'ın total'ı
+        real_current = phase_offset + current
+        update_progress(progress_target, real_current, master_total)
+    return _cb
+
+
 def get_orders_from_companies(parent_widget, company_list_widget, progress_target) -> Result:
     """
     🧩 Bağlantılı: OrdersTab.get_orders()
     Seçilen şirketlerden API bilgilerini alır ve worker zincirini başlatır.
     (Async → API, ardından Sync → DB kaydı)
+
+    Akış:
+      1) Ana tarama (fetch_orders_all) → save_orders_to_db
+      2) Non-final siparişler varsa → _refresh_nonfinal_orders_async → save_orders_to_db
+      3) Her iki aşama da TEK progress bar üzerinden gösterilir:
+         - Ana tarama: 0–69 arası
+         - Non-final tarama: 70–99 arası
+      4) En sonda 100/100 ve last_used_at epoch olarak güncellenir.
     """
     try:
         # 1️⃣ Seçilen şirketleri topla
@@ -320,75 +335,161 @@ def get_orders_from_companies(parent_widget, company_list_widget, progress_targe
             return res_creds
 
         comp_api_account_list = res_creds.data.get("accounts", [])
+        print(comp_api_account_list)
+
         if not comp_api_account_list:
             return Result.fail("Seçili şirketler için API bilgisi bulunamadı.", close_dialog=False)
 
-        # 3️⃣ Tarih aralığı belirle
-        search_range_hour = 200
-        start_ep_time = time_for_now()
-        final_ep_time = time_for_now() - time_stamp_calculator(search_range_hour)
+        # 3️⃣ Tarih aralığı belirle (last_used_at varsa ona göre, yoksa 200 saat)
+        now_ep = time_for_now()
+        last_used_epochs: list[int] = []
 
-        # 4️⃣ Async Worker (API)
+        for acc in comp_api_account_list:
+            # acc = [pk, api_key, api_secret, account_id, last_used_at]
+            last_used = acc[4] if isinstance(acc, (list, tuple)) and len(acc) >= 5 else None
+            if not last_used:
+                continue
+
+            try:
+                if isinstance(last_used, datetime):
+                    if last_used.tzinfo is None:
+                        last_used = last_used.replace(tzinfo=timezone.utc)
+                    ep = int(last_used.timestamp())
+                elif isinstance(last_used, (int, float)):
+                    ep = int(last_used)
+                elif isinstance(last_used, str):
+                    try:
+                        dt = datetime.fromisoformat(last_used)
+                        if dt.tzinfo is None:
+                            dt = dt.replace(tzinfo=timezone.utc)
+                        ep = int(dt.timestamp())
+                    except ValueError:
+                        ep = int(last_used)
+                else:
+                    continue
+            except Exception:
+                continue
+
+            last_used_epochs.append(ep)
+
+        # Dinamik saat aralığı
+        if last_used_epochs:
+            final_ep_time = min(last_used_epochs)
+            if final_ep_time > now_ep:
+                final_ep_time = now_ep
+            start_ep_time = now_ep
+        else:
+            search_range_hour = 200
+            start_ep_time = now_ep
+            final_ep_time = now_ep - time_stamp_calculator(search_range_hour)
+
+        # ─────────────────────────────
+        # Progress helper’lar
+        # ─────────────────────────────
+        def main_progress(c: int, t: int):
+            # Ana tarama: 0–69 arası
+            try:
+                t = max(t, 1)
+                percent = int(c * 69 / t)
+                if percent < 0:
+                    percent = 0
+                if percent > 69:
+                    percent = 69
+            except Exception:
+                percent = 0
+            update_progress(progress_target, percent, 100)
+
+        def nonfinal_progress(c: int, t: int):
+            # Non-final tarama: 70–99 arası
+            try:
+                t = max(t, 1)
+                percent = 70 + int(c * 29 / t)
+                if percent < 70:
+                    percent = 70
+                if percent > 99:
+                    percent = 99
+            except Exception:
+                percent = 70
+            update_progress(progress_target, percent, 100)
+
+        # ─────────────────────────────
+        # 4️⃣ ANA ASYNC Worker (fetch_orders_all)
+        # ─────────────────────────────
         parent_widget.api_worker = AsyncWorker(
             fetch_orders_all,
             TRENDYOL_STATUS_LIST,
             final_ep_time,
             start_ep_time,
             comp_api_account_list,
-            kwargs={"progress_callback": lambda c, t: update_progress(progress_target, c, t)},
             parent=parent_widget
         )
 
-        # 🧩 Callback zinciri
-        def handle_api_result(res: Result):
-            if not res.success:
-                parent_widget.on_orders_failed(res, progress_target)
+        # Ana tarama progress → 0–69
+        parent_widget.api_worker.progress_changed.connect(
+            lambda c, t: main_progress(c, t)
+        )
+
+        # Ana API sonucu
+        def handle_api_result(main_res: Result):
+            if not main_res.success:
+                parent_widget.on_orders_failed(main_res, progress_target)
+                update_progress(progress_target, 0, 100)
                 return
 
-            # ✅ API başarılı → DB Worker başlat
-            parent_widget.db_worker = SyncWorker(save_orders_to_db, res)
+            # 5️⃣ Ana sonucu DB'ye yaz
+            parent_widget.db_worker = SyncWorker(save_orders_to_db, main_res)
 
-            def handle_db_result(db_res: Result):
+            def handle_db_result_main(db_res: Result):
                 if not db_res.success:
                     parent_widget.on_orders_failed(db_res, progress_target)
+                    update_progress(progress_target, 0, 100)
                 else:
-                    # Normal akış: UI'yi güncelle
+                    # Ana tarama DB yazımı bitti → UI'yi güncelle
                     parent_widget.on_orders_fetched(db_res)
 
-                    # 🔥 BURADAN SONRASI: ARKA PLAN NON-FINAL SENKRONU
+                    # 6️⃣ Non-final sipariş numaralarını DB'den çek
                     try:
-                        print("işlem başlıyor")
-                        # 1) DB'den final olmayan sipariş numaralarını çek
                         res_nonfinal = get_nonfinal_order_numbers()
                         if not res_nonfinal.success:
-                            print("başarısız")
+                            # Non-final çekilemezse → burada bırak, last_used güncelle, progress 100
+                            update_last_used_at_for_accounts(comp_api_account_list)
+                            update_progress(progress_target, 100, 100)
                             return
-                        print("işlem devam ediyor")
 
                         order_numbers = res_nonfinal.data.get("order_numbers", []) or []
-                        print(order_numbers)
                         if not order_numbers:
-                            return  # güncellenecek non-final sipariş yoksa boşver
+                            # Non-final sipariş yok → işlem tamam
+                            update_last_used_at_for_accounts(comp_api_account_list)
+                            update_progress(progress_target, 100, 100)
+                            return
 
-                        # 2) Arka planda Trendyol senkronu için AsyncWorker başlat
+                        # 7️⃣ Non-final ASYNC Worker
                         parent_widget.bg_api_worker = AsyncWorker(
                             _refresh_nonfinal_orders_async,
                             order_numbers,
                             comp_api_account_list,
-                            kwargs={"progress_callback": None},  # tamamen sessiz
                             parent=parent_widget
                         )
 
+                        # Non-final progress → 70–99
+                        parent_widget.bg_api_worker.progress_changed.connect(
+                            lambda c, t: nonfinal_progress(c, t)
+                        )
+
                         def handle_bg_api(bg_res: Result):
-                            # sessiz çalışacak, hata bile olsa mesaj yok
                             if not bg_res or not isinstance(bg_res, Result) or not bg_res.success:
+                                # Non-final başarısız → ana zaten kaydedildi, last_used güncelle
+                                update_last_used_at_for_accounts(comp_api_account_list)
+                                update_progress(progress_target, 100, 100)
                                 return
 
+                            # 8️⃣ Non-final sonucu DB'ye yaz
                             parent_widget.bg_db_worker = SyncWorker(save_orders_to_db, bg_res)
 
                             def handle_bg_db(_db_res: Result):
-                                # İstersen burada log yazarsın; kullanıcıya mesaj yok.
-                                pass
+                                # Non-final sonrası last_used_at güncelle
+                                update_last_used_at_for_accounts(comp_api_account_list)
+                                update_progress(progress_target, 100, 100)
 
                             parent_widget.bg_db_worker.result_ready.connect(handle_bg_db)
                             parent_widget.bg_db_worker.start()
@@ -396,11 +497,14 @@ def get_orders_from_companies(parent_widget, company_list_widget, progress_targe
                         parent_widget.bg_api_worker.result_ready.connect(handle_bg_api)
                         parent_widget.bg_api_worker.start()
 
-                    except Exception:
-                        # Arka plan hataları kullanıcıya gösterilmeyecek.
+                    except Exception as e:
+                        print(f"Non-final pipeline exception: {e}")
+                        # Non-final kısmı patlasa bile ana kısım başarılı → last_used yaz
+                        update_last_used_at_for_accounts(comp_api_account_list)
+                        update_progress(progress_target, 100, 100)
                         return
 
-            parent_widget.db_worker.result_ready.connect(handle_db_result)
+            parent_widget.db_worker.result_ready.connect(handle_db_result_main)
             parent_widget.db_worker.start()
 
         parent_widget.api_worker.result_ready.connect(handle_api_result)
@@ -411,6 +515,11 @@ def get_orders_from_companies(parent_widget, company_list_widget, progress_targe
     except Exception as e:
         msg = map_error_to_message(e)
         return Result.fail(msg, error=e, close_dialog=False)
+
+
+
+
+
 
 
 def update_progress(view_instance, current: int, total: int):

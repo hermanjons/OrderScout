@@ -24,7 +24,7 @@ LABEL_MODELS_BY_BRAND = {
 
             # Kapasiteler
             "labels_per_page": 24,
-            "max_items_per_label": 8,
+            "max_items_per_label": 4,
 
             # 🔹 Placeholder isimleri (mantıksal alan → Word'deki pattern)
             # n = label index (1..24), i = ürün index (1..8)
@@ -38,6 +38,11 @@ LABEL_MODELS_BY_BRAND = {
                 "cargoprovidername": "cargoprovidername_{n}",
                 "product": "prod{i}_{n}",
                 "qty": "qty{i}_{n}",
+                # ekstra alanlar:
+                # mağaza adı + platform + SLA ikonu
+                "storename": "storename_{n}",
+                "platform": "platform_{n}",
+                "sla_hours_left": "sla_hours_left_{n}",
             },
 
             # 🔹 Alan bazlı stil:
@@ -46,15 +51,15 @@ LABEL_MODELS_BY_BRAND = {
             "fields": {
                 "ordernumber": {
                     "font_name": "Arial",
-                    "font_size": 9,
+                    "font_size": 11,
                 },
                 "name": {
                     "font_name": "Segoe UI",
-                    "font_size": 12,
+                    "font_size": 14,
                 },
                 "surname": {
                     "font_name": "Segoe UI",
-                    "font_size": 12,
+                    "font_size": 14,
                 },
                 "address": {
                     "font_name": "Arial",
@@ -62,7 +67,7 @@ LABEL_MODELS_BY_BRAND = {
                 },
                 "cargotrackingnumber": {
                     "font_name": "Arial",
-                    "font_size": 9,
+                    "font_size": 11,
                 },
                 "cargoprovidername": {
                     "font_name": "Arial",
@@ -70,28 +75,36 @@ LABEL_MODELS_BY_BRAND = {
                 },
                 "product": {
                     "font_name": "Arial",
-                    "font_size": 16,
+                    "font_size": 18,
                 },
+
                 # qty için temel stil (renk/bold koşullu override edilecek)
                 "qty": {
                     "font_name": "Bebas Neue",
                     "font_size": 20,
-                    # istersen defaultları da koy:
                     # "color": "000000",
                     "bold": False,
+                },
+
+                # mağaza adı
+                "storename": {
+                    "font_name": "Segoe UI",
+                    "font_size": 10,
+                },
+                # platform (TRENDYOL vb.)
+                "platform": {
+                    "font_name": "Arial",
+                    "font_size": 10,
                 },
             },
 
             # 🔴 Barkod / uyarı görseli ayarları
             "barcode": {
                 # Normal barkod genişliği
-                "image_width_mm": 45,
+                "image_width_mm": 46,
 
                 # Uyarı görseli için ayrı genişlik / yükseklik
-                # (etiketi taşırmasın diye daha küçük tuttuk;
-                # istersen burayı 26–32 arası oynayıp idealini bulursun)
                 "attention_image_width_mm": 36.5,
-                # İstersen yükseklik de kullanırsın, şimdilik None gibi davranılır:
                 # "attention_image_height_mm": 15,
 
                 "module_width": 0.20,
@@ -100,9 +113,15 @@ LABEL_MODELS_BY_BRAND = {
                 "text_distance": 1.0,
                 "quiet_zone": 2.0,
             },
+
+            # SLA (kalan süre) görseli için genişlik
+            # export_labels_to_word içinde cfg.get("sla_image_width_mm", 10) ile okunuyor
+            "sla_image_width_mm": 18,
+            # istersen ileride yükseklik de kullanırsın:
+            # "sla_image_height_mm": 6,
+
             # 🔵 Kargo firması logoları
             "cargo_provider_logos": {
-                # key'ler lower-case karşılaştırma için:
                 "Trendyol Express Marketplace": {
                     "filename": "express-logo.png",
                     "width_mm": 18,
@@ -115,7 +134,7 @@ LABEL_MODELS_BY_BRAND = {
                     "filename": "logo_yurtici.png",
                     "width_mm": 12,
                 },
-                # vs vs, elinde hangi logo varsa ekle
+                # elindeki diğer logoları da buraya ekleyebilirsin
             },
 
         },

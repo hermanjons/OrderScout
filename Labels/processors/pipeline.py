@@ -551,10 +551,17 @@ def export_labels_to_word(
         # Kargo logo mapping
         cargo_logo_cfg = cfg.get("cargo_provider_logos", {}) or {}
 
+        # SLA görselleri
+        sla_width_mm = cfg.get("sla_image_width_mm", 10)
+        finish_img_path = LABEL_ASSETS_DIR / "images" / "finish_time_attention.png"
+        enough_img_path = LABEL_ASSETS_DIR / "images" / "enough_time_info.png"
+        has_finish_img = finish_img_path.is_file()
+        has_enough_img = enough_img_path.is_file()
+
         # Styles
         field_styles = cfg.get("fields", {}) or {}
 
-        def fs(k):
+        def fs(k: str):
             return field_styles.get(k, {}) or {}
 
         style_order = fs("ordernumber")
@@ -562,12 +569,11 @@ def export_labels_to_word(
         style_surname = fs("surname")
         style_address = fs("address")
         style_cargo_tr = fs("cargotrackingnumber")
-        style_cargo_provider = fs("cargoprovidername")
         style_product = fs("product")
         style_qty = fs("qty")
         style_store = fs("storename")
         style_platform = fs("platform")
-        style_sla_hours = fs("sla_hours_left")  # ✅ yeni alan
+        # sla_hours_left için style gerekmiyor (görsel basıyoruz)
 
         # Flatten labels
         pages = label_payload["pages"]
@@ -628,6 +634,7 @@ def export_labels_to_word(
                 store_name = (lbl.get("storeName") or "").strip()
                 platform_val = (lbl.get("platform") or "").strip()
 
+                # agreedDeliveryDate (ms)
                 agreed_ms = lbl.get("agreedDeliveryDate_ms")
 
                 barcode_val = cargo_raw or order_no
@@ -644,23 +651,6 @@ def export_labels_to_word(
                     name_part = " ".join(parts[:-1])
 
                 # --------------------
-                # SLA kalan saat hesaplama
-                # --------------------
-                sla_hours_left_txt = ""
-                if agreed_ms:
-                    try:
-                        agreed_ms_int = int(agreed_ms)
-                        deadline_utc = datetime.utcfromtimestamp(agreed_ms_int / 1000.0)
-                        now_utc = datetime.utcnow()
-                        delta = deadline_utc - now_utc
-                        hours = int(delta.total_seconds() // 3600)
-                        if hours < 0:
-                            hours = 0  # istersen negatif olsun dersen burayı kaldır
-                        sla_hours_left_txt = str(hours)
-                    except Exception:
-                        sla_hours_left_txt = ""
-
-                # --------------------
                 # METİN ALANLARI
                 # --------------------
                 ctx[f"ordernumber_{n}"] = style_text(order_no, style_order)
@@ -672,8 +662,33 @@ def export_labels_to_word(
                 ctx[f"storename_{n}"] = style_text(store_name, style_store)
                 ctx[f"platform_{n}"] = style_text(platform_val, style_platform)
 
-                # SLA saat (labelde gösterilecek)
-                ctx[f"sla_hours_left_{n}"] = style_text(sla_hours_left_txt, style_sla_hours)
+                # --------------------
+                # SLA GÖRSELİ
+                # --------------------
+                sla_img = None
+                if agreed_ms is not None:
+                    try:
+                        agreed_ms_int = int(agreed_ms)
+                        deadline_utc = datetime.utcfromtimestamp(agreed_ms_int / 1000.0)
+                        now_utc = datetime.utcnow()
+                        delta_hours = (deadline_utc - now_utc).total_seconds() / 3600.0
+
+                        if delta_hours <= 24 and has_finish_img:
+                            sla_img = InlineImage(
+                                doc,
+                                str(finish_img_path),
+                                width=Mm(sla_width_mm),
+                            )
+                        elif delta_hours > 24 and has_enough_img:
+                            sla_img = InlineImage(
+                                doc,
+                                str(enough_img_path),
+                                width=Mm(sla_width_mm),
+                            )
+                    except Exception:
+                        sla_img = None
+
+                ctx[f"sla_hours_left_{n}"] = sla_img if sla_img else ""
 
                 # ---------------------------------
                 # CARGO LOGO — yazı YOK, logo yoksa BOŞ
@@ -706,6 +721,7 @@ def export_labels_to_word(
                 # BARKOD / SPLIT UYARI
                 # ---------------------------------
                 if is_primary:
+                    # Ana etiket → barkod bas
                     res_bar = generate_code128_barcode(
                         barcode_val,
                         writer_options=writer_opts,
@@ -721,7 +737,9 @@ def export_labels_to_word(
                             BytesIO(res_bar.data["png_bytes"]),
                             width=Mm(barcode_width),
                         )
+
                 else:
+                    # Split etiket → uyarı görseli
                     if has_attention_image:
                         kwargs = {"width": Mm(attention_w)}
                         if attention_h:
@@ -784,7 +802,7 @@ def export_labels_to_word(
                 for i in range(1, max_items + 1):
                     ctx[f"prod{i}_{n}"] = ""
                     ctx[f"qty{i}_{n}"] = ""
-                print("CTX LİSTE :",ctx)
+
             # ---------------------------------
             # SAYFAYI KAYDET
             # ---------------------------------
@@ -823,5 +841,6 @@ def export_labels_to_word(
 
     except Exception as e:
         return Result.fail("Beklenmeyen hata.", error=e)
+
 
 

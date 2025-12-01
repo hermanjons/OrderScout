@@ -1,5 +1,5 @@
 from Orders.api.trendyol_api import TrendyolApi
-from Core.utils.model_utils import create_records, get_records, get_engine
+from Core.utils.model_utils import create_records, get_records, get_engine,update_records
 import asyncio
 from typing import Optional, Callable
 from Orders.models.trendyol.trendyol_models import OrderItem, OrderData, OrderHeader
@@ -14,6 +14,7 @@ from Orders.signals.signals import order_signals
 from sqlalchemy import func, or_
 from sqlalchemy.orm import aliased
 from sqlalchemy.orm import selectinload
+from Core.utils.time_utils import time_for_now
 
 
 async def normalize_order_data(order_data: dict, comp_api_account_id: int):
@@ -132,6 +133,31 @@ async def fetch_orders_all(
         return Result.fail(map_error_to_message(e), error=e)
 
 
+def update_last_used_at_for_accounts(comp_api_account_list: list[list]):
+    """
+    ApiAccount.last_used_at alanını datetime olarak günceller.
+    """
+    from datetime import datetime, timezone
+    from Core.utils.model_utils import update_records
+    from Account.models import ApiAccount
+
+    now_dt = datetime.now(timezone.utc)
+
+    for acc in comp_api_account_list:
+        if not isinstance(acc, (list, tuple)) or not acc:
+            continue
+
+        api_pk = acc[0]  # ApiAccount.pk
+
+        update_records(
+            model=ApiAccount,
+            filters={"pk": api_pk},
+            update_data={"last_used_at": now_dt},
+            db_name="orders.db",
+        )
+
+
+
 def save_orders_to_db(result: Result, db_name: str = DB_NAME) -> Result:
     """
     worker.result_ready -> Result.success + Result.data = {"order_data_list": [...], "order_item_list": [...]}
@@ -191,7 +217,7 @@ def save_orders_to_db(result: Result, db_name: str = DB_NAME) -> Result:
                 conflict_keys=ORDERDATA_UNIQ,
                 mode="ignore",
                 normalizer=ORDERDATA_NORMALIZER,
-                chunk_size=100,
+                chunk_size=30,
                 drop_unknown=True,
                 rename_map={},
             )
@@ -211,7 +237,7 @@ def save_orders_to_db(result: Result, db_name: str = DB_NAME) -> Result:
                 conflict_keys=ORDERITEM_UNIQ,
                 mode="ignore",
                 normalizer=ORDERITEM_NORMALIZER,
-                chunk_size=100,
+                chunk_size=30,
                 drop_unknown=True,
                 rename_map={"3pByTrendyol": "byTrendyol3"},
             )
@@ -486,7 +512,6 @@ def get_order_full_details_by_numbers(order_numbers: list) -> Result:
             error=e,
             close_dialog=False
         )
-
 
 
 def get_nonfinal_order_numbers(

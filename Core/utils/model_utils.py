@@ -1,5 +1,5 @@
 # model_utils.py
-from sqlmodel import SQLModel, Session, select
+from sqlmodel import SQLModel, Session, select, text
 from typing import Type, Iterable, Callable, Optional, Any
 from settings import DB_NAME, DEFAULT_DATABASE_DIR
 from sqlalchemy.engine import Engine
@@ -11,15 +11,36 @@ import pandas as pd
 from Feedback.processors.pipeline import Result, map_error_to_message
 from sqlalchemy.sql.elements import BindParameter, ClauseElement
 
-
 # ---------- Engine ----------
+_ENGINE_CACHE: dict[str, Engine] = {}
+
+
 def get_engine(db_name: str):
     """
-    Belirtilen veritabanı ismine göre SQLite engine döner.
-    Örn: get_engine("orders.db") → sqlite:///databases/orders.db
+    PyQt6 + multi-thread + SQLite kullanımına uygun, tam optimize engine.
+    WAL + busy_timeout + thread-safe bağlantı.
     """
+    # Cache varsa direkt onu döndür
+    if db_name in _ENGINE_CACHE:
+        return _ENGINE_CACHE[db_name]
+
     db_path = os.path.join(DEFAULT_DATABASE_DIR, db_name)
-    engine = create_engine(f"sqlite:///{db_path}", echo=False)
+
+    engine = create_engine(
+        f"sqlite:///{db_path}",
+        echo=False,
+        connect_args={
+            "check_same_thread": False,  # ❗ Thread güvenliği için şart
+        }
+    )
+
+    # PRAGMA ayarlarını sadece bir kere yapalım
+    with engine.connect() as conn:
+        conn.execute(text("PRAGMA journal_mode=WAL;"))  # ❗ Aynı anda okuma/yazma
+        conn.execute(text("PRAGMA synchronous=NORMAL;"))  # daha performanslı
+        conn.execute(text("PRAGMA busy_timeout=5000;"))  # ❗ 5 saniye bekle, freeze yapma
+
+    _ENGINE_CACHE[db_name] = engine
     return engine
 
 
