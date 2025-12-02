@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (
     QLabel, QHBoxLayout, QSizePolicy, QGraphicsDropShadowEffect
 )
 from PyQt6.QtCore import Qt, QTimer, QRectF, QPointF, QPropertyAnimation, QEasingCurve, pyqtProperty, pyqtSignal, \
-    QAbstractAnimation
+    QAbstractAnimation,QSize
 from PyQt6.QtGui import QPainter, QColor, QPen, QFont, QFontDatabase, QPixmap, QPalette
 from Feedback.processors.pipeline import Result, map_error_to_message
 
@@ -143,25 +143,36 @@ class ListSmartItemWidget(QWidget):
             self._selected = False
             self.setCursor(Qt.CursorShape.PointingHandCursor)
 
+            # 🔹 Title'ın tam halini sakla (ellipsis öncesi)
+            self._full_title_text = title or ""
+
             layout = QHBoxLayout(self)
             layout.setContentsMargins(12, 8, 12, 8)
             layout.setSpacing(12)
 
+            # ────────── Sol: Icon ──────────
             if icon_path:
                 self.icon = QLabel()
-                pixmap = QPixmap(icon_path).scaled(28, 28, Qt.AspectRatioMode.KeepAspectRatio,
-                                                   Qt.TransformationMode.SmoothTransformation)
+                pixmap = QPixmap(icon_path).scaled(
+                    28, 28,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation
+                )
                 self.icon.setPixmap(pixmap)
                 self.icon.setFixedSize(28, 28)
                 layout.addWidget(self.icon, alignment=Qt.AlignmentFlag.AlignTop)
             else:
                 self.icon = None
 
+            # ────────── Orta: Metinler ──────────
             text_layout = QVBoxLayout()
             text_layout.setSpacing(2)
 
-            self.label_title = QLabel(title)
+            # Title – genişliğe göre ... ile kısaltılacak
+            self.label_title = QLabel()
             self.label_title.setStyleSheet("font-weight: bold; font-size: 14px; color: #222;")
+            self.label_title.setWordWrap(False)
+            # Eski davranışı bozmamak için yine seçilebilir bırakıyorum
             self.label_title.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
             text_layout.addWidget(self.label_title)
 
@@ -169,6 +180,7 @@ class ListSmartItemWidget(QWidget):
             if subtitle:
                 self.label_subtitle = QLabel(subtitle)
                 self.label_subtitle.setStyleSheet("color: #444; font-size: 12px;")
+                self.label_subtitle.setWordWrap(False)
                 self.label_subtitle.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
                 text_layout.addWidget(self.label_subtitle)
 
@@ -176,18 +188,23 @@ class ListSmartItemWidget(QWidget):
             if extra:
                 self.label_extra = QLabel(extra)
                 self.label_extra.setStyleSheet("color: #666; font-size: 12px;")
+                self.label_extra.setWordWrap(False)
                 self.label_extra.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
                 text_layout.addWidget(self.label_extra)
 
             layout.addLayout(text_layout, stretch=1)
 
+            # ────────── Sağ: Opsiyonel widget (SwitchButton vb.) ──────────
             self.right_widget = optional_widget
             if self.right_widget:
                 self.right_widget.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
-                layout.addWidget(self.right_widget,
-                                 alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                layout.addWidget(
+                    self.right_widget,
+                    alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+                )
                 self._connect_right_widget()
 
+            # Shadow / background – senin aynısı
             self._shadow = QGraphicsDropShadowEffect(self)
             self._shadow.setBlurRadius(12)
             self._shadow.setXOffset(0)
@@ -199,9 +216,15 @@ class ListSmartItemWidget(QWidget):
             self.setAutoFillBackground(True)
             self._apply_background("#ffffff")
 
+            # Başlangıçta title'ı elide ederek göster
+            self._update_elided_title()
+
         except Exception as e:
             print(Result.fail(map_error_to_message(e), error=e))
 
+    # =========================================================
+    # 🔗 Sağdaki widget bağlantıları (aynı)
+    # =========================================================
     def _connect_right_widget(self):
         if hasattr(self.right_widget, "clicked"):
             self.right_widget.clicked.connect(self._on_right_widget_clicked)
@@ -214,6 +237,9 @@ class ListSmartItemWidget(QWidget):
     def _on_right_widget_state_changed(self, state):
         self.interaction.emit(self.identifier, state)
 
+    # =========================================================
+    # 🖱️ Etkileşim / seçim (aynı)
+    # =========================================================
     def mousePressEvent(self, event):
         if self.right_widget and self.right_widget.geometry().contains(event.pos()):
             return super().mousePressEvent(event)
@@ -236,6 +262,9 @@ class ListSmartItemWidget(QWidget):
         self.update_style()
         super().leaveEvent(event)
 
+    # =========================================================
+    # 🎨 Arka plan / stil (aynen)
+    # =========================================================
     def _apply_background(self, hex_color: str):
         pal = self.palette()
         pal.setColor(QPalette.ColorRole.Window, QColor(hex_color))
@@ -244,6 +273,58 @@ class ListSmartItemWidget(QWidget):
     def update_style(self):
         self.update()
 
+    # =========================================================
+    # ✂️ Title'ı ellipsis ile kısaltma
+    # =========================================================
+    def _update_elided_title(self):
+        """
+        Title label'ın mevcut genişliğine göre metni '...' ile kısalt.
+        Burada sadece label'ın kendi genişliğini kullanıyoruz ki
+        widget ve item genişliğini şişirmesin.
+        """
+        if not self.label_title:
+            return
+
+        fm = self.label_title.fontMetrics()
+        avail = self.label_title.width()
+
+        # İlk seferde width 0 gelebilir; layout oturunca tekrar deneriz
+        if avail <= 0:
+            QTimer.singleShot(0, self._update_elided_title)
+            return
+
+        # Biraz güvenlik payı
+        if avail < 50:
+            avail = 50
+
+        elided = fm.elidedText(
+            self._full_title_text,
+            Qt.TextElideMode.ElideRight,
+            int(avail)
+        )
+        self.label_title.setText(elided)
+
+    def resizeEvent(self, event):
+        """
+        Widget yeniden boyutlanınca ellipsis'i güncelle.
+        """
+        super().resizeEvent(event)
+        self._update_elided_title()
+
+    # =========================================================
+    # 📐 sizeHint: genişliği sabit tut → yatay taşma olmasın
+    # =========================================================
+    def sizeHint(self):
+        """
+        QListWidgetItem genişliğini şişirmemek için width'i küçük döndürüyoruz.
+        Yükseklik super'dan alınır, genişliği QListWidget viewport’una uyduruyor.
+        """
+        base = super().sizeHint()
+        return QSize(10, base.height())
+
+    # =========================================================
+    # 🖌️ Paint (senin kodun)
+    # =========================================================
     def paintEvent(self, event):
         try:
             painter = QPainter(self)
@@ -275,6 +356,7 @@ class ListSmartItemWidget(QWidget):
 
         except Exception as e:
             print(Result.fail(map_error_to_message(e), error=e))
+
 
 
 # ========================

@@ -178,14 +178,45 @@ def create_order_label_from_orders(
         max_items_per_label: int = cfg.get("max_items_per_label", 8)
         labels_per_page: int = cfg.get("labels_per_page", 24)
 
-        # 1️⃣ Seçili siparişler
-        sel_res = collect_selected_orders(list_widget)
-        if not sel_res or not isinstance(sel_res, Result):
-            return Result.fail("Seçili siparişler okunamadı.", close_dialog=False)
-        if not sel_res.success:
-            return sel_res
+        # 1️⃣ Seçili siparişler → önce OrdersListWidget.get_selected_orders, sonra fallback collect_selected_orders
+        order_numbers: List[str] = []
 
-        order_numbers: List[str] = sel_res.data.get("selected_orders", []) or []
+        # 🆕 A) OrdersListWidget ise model tabanlı seçim (_selected flag, tüm sayfalar)
+        if hasattr(list_widget, "get_selected_orders"):
+            try:
+                selected_objs = list_widget.get_selected_orders() or []
+                for o in selected_objs:
+                    num = getattr(o, "orderNumber", None)
+                    if num is None:
+                        num = getattr(o, "order_number", None)
+                    if num is None:
+                        continue
+                    order_numbers.append(str(num).strip())
+            except Exception:
+                # bir şey patlarsa fallback'e geçeceğiz
+                order_numbers = []
+
+        # 🧯 B) Fallback: Eski davranış (collect_selected_orders)
+        if not order_numbers:
+            sel_res = collect_selected_orders(list_widget)
+            if not sel_res or not isinstance(sel_res, Result):
+                return Result.fail("Seçili siparişler okunamadı.", close_dialog=False)
+            if not sel_res.success:
+                return sel_res
+
+            raw_list = sel_res.data.get("selected_orders", []) or []
+            for v in raw_list:
+                # obje ise
+                if hasattr(v, "orderNumber") or hasattr(v, "order_number"):
+                    num = getattr(v, "orderNumber", getattr(v, "order_number", None))
+                    if num is not None:
+                        order_numbers.append(str(num).strip())
+                else:
+                    # direkt string/num verilmişse
+                    order_numbers.append(str(v).strip())
+
+        # Hâlâ yoksa → gerçekten seçim yok
+        order_numbers = [n for n in order_numbers if n]
         if not order_numbers:
             return Result.fail("Hiçbir sipariş seçilmedi.", close_dialog=False)
 
@@ -236,19 +267,19 @@ def create_order_label_from_orders(
 
                 # adres
                 addr_dict = (
-                        getattr(latest, "shipmentAddress", None)
-                        or getattr(latest, "invoiceAddress", None)
-                        or {}
+                    getattr(latest, "shipmentAddress", None)
+                    or getattr(latest, "invoiceAddress", None)
+                    or {}
                 )
                 if isinstance(addr_dict, dict):
                     parts = []
                     for key in (
-                            "fullAddress",
-                            "address",
-                            "neighborhood",
-                            "district",
-                            "city",
-                            "postalCode",
+                        "fullAddress",
+                        "address",
+                        "neighborhood",
+                        "district",
+                        "city",
+                        "postalCode",
                     ):
                         v = addr_dict.get(key)
                         if v:
@@ -323,7 +354,7 @@ def create_order_label_from_orders(
         # 4️⃣ Sayfalama
         pages: List[List[Dict[str, Any]]] = [
             final_labels[i:i + labels_per_page]
-            for i in range(0, len(final_labels), max_items_per_label * 0 + labels_per_page)
+            for i in range(0, len(final_labels), labels_per_page)
         ]
 
         payload = {
@@ -347,6 +378,7 @@ def create_order_label_from_orders(
 
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
+
 
 
 

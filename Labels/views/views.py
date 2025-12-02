@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import (
     QLabel, QComboBox, QGroupBox, QPushButton, QTextEdit, QDialogButtonBox, QFileDialog, QApplication
 )
 from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QIcon  # 🆕 pencere ve buton ikonu için
 
 from Feedback.processors.pipeline import Result, map_error_to_message, MessageHandler
 
@@ -18,32 +19,19 @@ from Labels.processors.pipeline import (
 import json
 from pathlib import Path
 from datetime import datetime
-from Core.views.views import CircularProgressButton  # yolunu projene göre ayarla
+from Core.views.views import CircularProgressButton
 from Core.threads.sync_worker import SyncWorker
 
 from time import time
 
 from Orders.models.trendyol.trendyol_models import OrderHeader
-from Core.utils.model_utils import update_records  # ← model_utils.py nin yolu neyse ona göre düzelt
+from Core.utils.model_utils import update_records
 from Orders.signals.signals import order_signals
 
 
 class LabelPrintManagerWindow(QDialog):
     """
     Etiket yazdırma / Word çıkartma yönetim ekranı.
-    - Marka seçimi
-    - Model seçimi
-    - Sıralama seçimi
-    - Word Çıkart butonu:
-        - Seçili siparişlerden etiket datasını hazırlayan pipeline'ı tetikler.
-        - export_labels_to_word işlemini ayrı bir thread'de çalıştırır.
-
-    İşlem başarılı olursa:
-        - self.label_result içinde Result nesnesi
-        - self.label_result.data içinde:
-            - label_payload (sıralama uygulanmış haliyle)
-            - diğer sipariş verileri
-        tutulur ve dialog accept() ile kapanır.
     """
 
     progress_changed = pyqtSignal(int)  # worker → UI progress
@@ -51,7 +39,10 @@ class LabelPrintManagerWindow(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         try:
+            # 🖨️ Pencere başlığı + ikon
             self.setWindowTitle("Etiket Yazdırma / Word Çıkart")
+            # proje yapına göre yolu ayarlarsın, ben images/ altına koydun varsaydım
+            self.setWindowIcon(QIcon("images/print_extract.ico"))
             self.setModal(True)
             self.setMinimumSize(450, 280)
 
@@ -105,7 +96,6 @@ class LabelPrintManagerWindow(QDialog):
 
             self.sort_combo = QComboBox()
             self.sort_combo.setEditable(False)
-            # userData ile sıralama modlarını tutuyoruz
             self.sort_combo.addItem("Orijinal sıra", userData="none")
             self.sort_combo.addItem("Ürün adına göre", userData="product")
             self.sort_combo.addItem("Adete göre", userData="quantity")
@@ -123,8 +113,10 @@ class LabelPrintManagerWindow(QDialog):
             buttons_layout.setContentsMargins(0, 8, 0, 0)
             buttons_layout.addStretch()
 
-            self.export_button = CircularProgressButton("Word Çıkart", parent=self)
+            self.export_button = CircularProgressButton(" Word Çıkart", parent=self)
             self.export_button.setDefault(True)
+            # 🖨️ Butona da aynı icon
+            self.export_button.setIcon(QIcon("images/print_extract.ico"))
             self.export_button.clicked.connect(self._on_export_clicked)
 
             buttons_layout.addWidget(self.export_button)
@@ -138,24 +130,6 @@ class LabelPrintManagerWindow(QDialog):
 
         except Exception as e:
             print(Result.fail(map_error_to_message(e), error=e))
-
-    # --------------------------------------------------------
-    # Yardımcı: Metin dump gösterici (debug)
-    # --------------------------------------------------------
-    def _show_text_dump(self, title: str, text: str):
-        dlg = QDialog(self)
-        dlg.setWindowTitle(title)
-        lay = QVBoxLayout(dlg)
-        view = QTextEdit()
-        view.setReadOnly(True)
-        view.setPlainText(text)
-        lay.addWidget(view)
-        btns = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
-        btns.rejected.connect(dlg.reject)
-        btns.accepted.connect(dlg.accept)
-        lay.addWidget(btns)
-        dlg.resize(800, 600)
-        dlg.exec()
 
     # --------------------------------------------------------
     # Marka / Model doldurma
@@ -195,10 +169,6 @@ class LabelPrintManagerWindow(QDialog):
         return self.model_combo.currentData()
 
     def get_sort_mode(self) -> str:
-        """
-        Kullanıcının seçtiği sıralama modunu döner.
-        none / product / quantity / optimal
-        """
         data = self.sort_combo.currentData()
         return data or "none"
 
@@ -206,7 +176,6 @@ class LabelPrintManagerWindow(QDialog):
     # Progress sinyal handler
     # --------------------------------------------------------
     def _on_progress_changed(self, pct: int):
-        """Worker'dan gelen progress'i butona yansıt."""
         try:
             self.export_button.setProgress(pct)
         except Exception:
@@ -217,17 +186,10 @@ class LabelPrintManagerWindow(QDialog):
     # --------------------------------------------------------
     def _on_export_clicked(self):
         """
-        Akış:
-        0) Kullanıcıdan kaydedilecek Word dosyasının yolunu iste
-        1) Marka & model & list_widget kontrolü
-        2) create_order_label_from_orders → payload üret (MAIN THREAD)
-        3) sort_label_payload → sıralama (MAIN THREAD)
-        4) export_labels_to_word'u SyncWorker ile ayrı thread'de çalıştır
-        5) progress_cb → progress_changed sinyaliyle butona yansır
-        6) Worker bitince sonucu al, mesajları göster, dialog'u kapat
+        Akış aynı, sadece artık Orders tarafındaki
+        collect_selected_orders tüm sayfalardaki seçimleri görecek.
         """
         try:
-            # Aynı anda ikinci kez çalışmasın
             if self._worker is not None and self._worker.isRunning():
                 return
 
@@ -243,28 +205,7 @@ class LabelPrintManagerWindow(QDialog):
                 self.export_button.reset()
                 return
 
-            # Varsayılan dosya adı
-            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-            suggested_name = f"labels_{model}_{ts}.docx"
-
-            base_dir = Path.cwd()
-            default_dir = base_dir / "outputs" / "labels"
-            default_dir.mkdir(parents=True, exist_ok=True)
-
-            file_path, _ = QFileDialog.getSaveFileName(
-                self,
-                "Word etiket dosyasını kaydet",
-                str(default_dir / suggested_name),
-                "Word Dosyası (*.docx)"
-            )
-
-            # Kullanıcı iptal ederse
-            if not file_path:
-                self.export_button.reset()
-                return
-
-            sort_mode = self.get_sort_mode()
-
+            # Seçili sipariş var mı? (model tabanlı kontrol)
             parent = self.parent()
             if parent is None or not hasattr(parent, "list_widget"):
                 MessageHandler.show(
@@ -279,13 +220,45 @@ class LabelPrintManagerWindow(QDialog):
                 return
 
             list_widget = parent.list_widget
+            selected_orders = []
+            if hasattr(list_widget, "get_selected_orders"):
+                selected_orders = list_widget.get_selected_orders() or []
+
+            if not selected_orders:
+                MessageHandler.show(
+                    self,
+                    Result.fail("En az bir sipariş seçmelisiniz.", close_dialog=False),
+                    only_errors=True
+                )
+                self.export_button.reset()
+                return
+
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            suggested_name = f"labels_{model}_{ts}.docx"
+
+            base_dir = Path.cwd()
+            default_dir = base_dir / "outputs" / "labels"
+            default_dir.mkdir(parents=True, exist_ok=True)
+
+            file_path, _ = QFileDialog.getSaveFileName(
+                self,
+                "Word etiket dosyasını kaydet",
+                str(default_dir / suggested_name),
+                "Word Dosyası (*.docx)"
+            )
+
+            if not file_path:
+                self.export_button.reset()
+                return
+
+            sort_mode = self.get_sort_mode()
 
             # 🌕 Butonu başlat
             self.export_button.start()
             self.progress_changed.emit(0)
             QApplication.processEvents()
 
-            # 1) LABEL PAYLOAD → MAIN THREAD (list_widget'e dokunuyoruz)
+            # 1) LABEL PAYLOAD → MAIN THREAD
             res = create_order_label_from_orders(
                 list_widget,
                 brand_code=brand,
@@ -334,11 +307,9 @@ class LabelPrintManagerWindow(QDialog):
                     ),
                     only_errors=True
                 )
-                # sıralama patlasa bile eski payload ile devam
             self.progress_changed.emit(15)
             QApplication.processEvents()
 
-            # Şablon kontrolü
             template_path = base_dir / "Labels" / "assets" / f"{model}.docx"
             if not template_path.exists():
                 MessageHandler.show(
@@ -354,18 +325,14 @@ class LabelPrintManagerWindow(QDialog):
 
             output_path = Path(file_path)
 
-            # Bu değerleri worker tamamlandığında kullanmak için saklıyoruz
             self._current_payload = payload
             self._current_sort_mode = sort_mode
             self._current_output_path = output_path
-            self.label_result = res  # payload sonucu, dialog dışına da taşımak istersen
+            self.label_result = res
 
-            # Progress callback: worker thread'den çağrılacak
             def progress_cb(pct: int):
-                # worker thread → sinyal → UI thread
                 self.progress_changed.emit(pct)
 
-            # 2) WORD EXPORT → WORKER THREAD
             self._worker = SyncWorker(
                 export_labels_to_word,
                 label_payload=payload,
@@ -394,13 +361,6 @@ class LabelPrintManagerWindow(QDialog):
     # Worker callback'leri
     # --------------------------------------------------------
     def _on_export_worker_result(self, result: Result):
-        """
-        SyncWorker içindeki export_labels_to_word bittikten sonra gelen Result.
-        Burada:
-          - Sonucu kontrol ediyoruz
-          - Başarılıysa OrderHeader üzerinde is_extracted / extracted_at güncelliyoruz
-          - Debug dump + bilgi mesajı gösteriyoruz
-        """
         try:
             if not result or not isinstance(result, Result):
                 MessageHandler.show(
@@ -417,62 +377,31 @@ class LabelPrintManagerWindow(QDialog):
                 self.export_button.fail()
                 return
 
-            # %100'e çek (export tarafı da 100 dese bile garanti olsun)
             self.progress_changed.emit(100)
 
-            # ⬇⬇⬇ OrderHeader.flag update (model_utils ile) ⬇⬇⬇
+            # ⬇ OrderHeader flag update
             try:
-                # create_order_label_from_orders içinde set ettiğimiz data
                 lr_data = (self.label_result.data or {}) if self.label_result else {}
                 order_numbers = lr_data.get("order_numbers", []) or []
 
                 if order_numbers:
-                    now_ts = int(time() * 1000)  # diğer timestamp alanlarınla aynı formata göre
-
+                    now_ts = int(time() * 1000)
                     for ord_no in order_numbers:
-                        # Her orderNumber için update_records çağırıyoruz
                         upd_res = update_records(
                             model=OrderHeader,
                             filters={"orderNumber": ord_no},
                             update_data={
                                 "is_extracted": True,
                                 "extracted_at": now_ts,
-                                # İleride direkt yazıcı kullanırsan:
-                                # "is_printed": True,
-                                # "printed_at": now_ts,
                             },
                         )
-                        # Hata olursa logla ama export'u bozmuyoruz
                         if not upd_res.success:
                             print(f"[OrderHeader update error] {ord_no} → {upd_res.message}")
             except Exception as e:
-                # Flag güncellemesi patlasa bile export başarısını bozmuyoruz,
-                # sadece log / print yeterli.
                 print("OrderHeader flag update error:", e)
 
-            # ⬆⬆⬆ YENİ KISIM BİTTİ ⬆⬆⬆
+            # ✅ Preview popup kaldırıldı
 
-            # Debug için payload özetini göstermek istersen:
-            payload = self._current_payload or {}
-            pages = payload.get("pages", [])
-            first_page = pages[0] if pages else []
-
-            preview_dict = {
-                "brand_code": payload.get("brand_code"),
-                "model_code": payload.get("model_code"),
-                "max_items_per_label": payload.get("max_items_per_label"),
-                "labels_per_page": payload.get("labels_per_page"),
-                "total_labels": payload.get("total_labels"),
-                "total_pages": payload.get("total_pages"),
-                "first_page": first_page,
-                "output_path": str(self._current_output_path) if self._current_output_path else "",
-                "sort_mode": self._current_sort_mode,
-            }
-
-            txt = json.dumps(preview_dict, ensure_ascii=False, indent=2)
-            self._show_text_dump("Label Payload + Word Çıktısı (TEST)", txt)
-
-            # Bilgi mesajı
             MessageHandler.show(
                 self,
                 Result.ok(
@@ -482,7 +411,6 @@ class LabelPrintManagerWindow(QDialog):
                 only_errors=False
             )
 
-            # İşlem başarılı → dialog'u kapat
             order_signals.orders_changed.emit()
             self.accept()
 
@@ -495,7 +423,4 @@ class LabelPrintManagerWindow(QDialog):
             self.export_button.fail()
 
     def _on_export_worker_finished(self):
-        """Worker bittiğinde referansı bırak."""
         self._worker = None
-        # CircularProgressButton 100'e geldiğinde zaten reset logic'i var;
-        # fail durumunda da fail() çağrılıyor.

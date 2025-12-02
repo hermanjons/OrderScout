@@ -55,11 +55,11 @@ LABEL_MODELS_BY_BRAND = {
                 },
                 "name": {
                     "font_name": "Segoe UI",
-                    "font_size": 14,
+                    "font_size": 9,
                 },
                 "surname": {
                     "font_name": "Segoe UI",
-                    "font_size": 14,
+                    "font_size": 9,
                 },
                 "address": {
                     "font_name": "Arial",
@@ -107,7 +107,7 @@ LABEL_MODELS_BY_BRAND = {
                 "attention_image_width_mm": 36.5,
                 # "attention_image_height_mm": 15,
 
-                "module_width": 0.20,
+                "module_width": 0.30,
                 "module_height": 8.0,
                 "font_size": 10,
                 "text_distance": 1.0,

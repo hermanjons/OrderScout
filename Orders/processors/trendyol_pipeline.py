@@ -133,34 +133,58 @@ async def fetch_orders_all(
         return Result.fail(map_error_to_message(e), error=e)
 
 
-def update_last_used_at_for_accounts(comp_api_account_list: list[list]):
+# Orders/processors/trendyol_pipeline.py
+
+from datetime import datetime, timezone, timedelta
+from Core.utils.model_utils import update_records
+from Account.models import ApiAccount  # senin model yoluna göre
+
+TZ_GMT3 = timezone(timedelta(hours=3))
+
+
+def update_last_used_at_for_accounts(comp_api_account_list: list, db_name: str = "orders.db"):
     """
-    ApiAccount.last_used_at alanını datetime olarak günceller.
+    API'den sipariş çektikten sonra ilgili ApiAccount kayıtlarının last_used_at alanını günceller.
+    ZAMAN DAMGASI: GMT+3 (Trendyol'un beklediği timezone ile uyumlu).
     """
-    from datetime import datetime, timezone
-    from Core.utils.model_utils import update_records
-    from Account.models import ApiAccount
+    try:
+        # comp_api_account_list: [ [pk, api_key, api_secret, account_id, last_used_at?], ... ]
+        account_pks: list[int] = []
+        for acc in comp_api_account_list:
+            if isinstance(acc, (list, tuple)) and len(acc) >= 1:
+                pk = acc[0]
+                if isinstance(pk, int):
+                    account_pks.append(pk)
 
-    now_dt = datetime.now(timezone.utc)
+        if not account_pks:
+            return
 
-    for acc in comp_api_account_list:
-        if not isinstance(acc, (list, tuple)) or not acc:
-            continue
+        # Şu anki zamanı GMT+3 olarak al
+        now_local = datetime.now(TZ_GMT3)
 
-        api_pk = acc[0]  # ApiAccount.pk
+        # Basit ve sağlam: tek tek güncelle (hesap sayısı çok büyük değil zaten)
+        for pk in account_pks:
+            update_records(
+                model=ApiAccount,
+                filters={"pk": pk},
+                update_data={"last_used_at": now_local},
+                db_name=db_name,
+            )
 
-        update_records(
-            model=ApiAccount,
-            filters={"pk": api_pk},
-            update_data={"last_used_at": now_dt},
-            db_name="orders.db",
-        )
+    except Exception as e:
+        print(f"[last_used_at] update exception: {e}")
 
 
 
 def save_orders_to_db(result: Result, db_name: str = DB_NAME) -> Result:
     """
     worker.result_ready -> Result.success + Result.data = {"order_data_list": [...], "order_item_list": [...]}
+
+    Dönüş:
+      Result.data = {
+         "changed": bool,   # ✅ DB'de gerçekten değişiklik oldu mu?
+         "counts": { ... }  # (opsiyonel) debug amaçlı sayılar
+      }
     """
     try:
         if not result or not isinstance(result, Result):
@@ -169,40 +193,78 @@ def save_orders_to_db(result: Result, db_name: str = DB_NAME) -> Result:
         if not result.success:
             return result
 
-        order_data_list = result.data.get("order_data_list", [])
-        order_item_list = result.data.get("order_item_list", [])
+        order_data_list = result.data.get("order_data_list", []) or []
+        order_item_list = result.data.get("order_item_list", []) or []
 
-        # 1️⃣ Önce OrderHeader upsert
-        header_map = {
-            (od["orderNumber"], od["api_account_id"])
+        # Değişiklik oldu mu?
+        changed = False
+        counts = {
+            "headers_inserted": 0,
+            "data_inserted": 0,
+            "items_inserted": 0,
+        }
+
+        # 1️⃣ Önce OrderHeader upsert için ihtiyaç duyulan (orderNumber, api_account_id) set'i
+        header_keys: set[tuple] = {
+            (od.get("orderNumber"), od.get("api_account_id"))
             for od in order_data_list
             if od.get("orderNumber") and od.get("api_account_id") is not None
         }
 
-        if header_map:
+        # Hiç sipariş yoksa erken çık
+        if not header_keys and not order_item_list:
+            return Result.ok(
+                "Kaydedilecek sipariş yok.",
+                close_dialog=False,
+                data={
+                    "changed": False,
+                    "counts": counts,
+                }
+            )
+
+        # 1️⃣.1 Header kayıtlarını upsert et (sadece gerekli kombinasyonlar)
+        if header_keys:
             res_headers = create_records(
                 model=OrderHeader,
                 data_list=[
                     {"orderNumber": order_number, "api_account_id": api_account_id}
-                    for order_number, api_account_id in header_map
+                    for order_number, api_account_id in header_keys
                 ],
-                db_name=DB_NAME,
+                db_name=db_name,
                 conflict_keys=["orderNumber", "api_account_id"],
                 mode="ignore",
             )
             if not res_headers.success:
                 return res_headers
 
-        # 2️⃣ Header PK map’i çıkar (get_records ile → Result pipeline içinde)
-        res_header_rows = get_records(model=OrderHeader, db_name=DB_NAME)
-        if not res_header_rows.success:
-            return res_header_rows
+            inserted = res_headers.data.get("inserted", 0) if res_headers.data else 0
+            counts["headers_inserted"] = inserted
+            if inserted > 0:
+                changed = True
 
-        header_rows = res_header_rows.data.get("records", [])
-        header_pk_map = {
-            (h.orderNumber, h.api_account_id): h.pk
-            for h in header_rows
-        }
+        # 2️⃣ Sadece ilgili header'ları çek (tüm tabloyu değil)
+        header_pk_map: dict[tuple, int] = {}
+
+        if header_keys:
+            order_numbers = {k[0] for k in header_keys}
+            api_account_ids = {k[1] for k in header_keys}
+
+            res_header_rows = get_records(
+                model=OrderHeader,
+                db_name=db_name,
+                filters={
+                    "orderNumber": list(order_numbers),
+                    "api_account_id": list(api_account_ids),
+                }
+            )
+            if not res_header_rows.success:
+                return res_header_rows
+
+            header_rows = res_header_rows.data.get("records", []) or []
+            header_pk_map = {
+                (h.orderNumber, h.api_account_id): h.pk
+                for h in header_rows
+            }
 
         # 3️⃣ OrderData’ya order_header_id ekle
         for od in order_data_list:
@@ -213,16 +275,21 @@ def save_orders_to_db(result: Result, db_name: str = DB_NAME) -> Result:
             res_data = create_records(
                 model=OrderData,
                 data_list=order_data_list,
-                db_name=DB_NAME,
+                db_name=db_name,
                 conflict_keys=ORDERDATA_UNIQ,
                 mode="ignore",
                 normalizer=ORDERDATA_NORMALIZER,
-                chunk_size=30,
+                chunk_size=1000,
                 drop_unknown=True,
                 rename_map={},
             )
             if not res_data.success:
                 return res_data
+
+            inserted = res_data.data.get("inserted", 0) if res_data.data else 0
+            counts["data_inserted"] = inserted
+            if inserted > 0:
+                changed = True
 
         # 4️⃣ OrderItem’a order_header_id ekle
         for oi in order_item_list:
@@ -233,21 +300,40 @@ def save_orders_to_db(result: Result, db_name: str = DB_NAME) -> Result:
             res_items = create_records(
                 model=OrderItem,
                 data_list=order_item_list,
-                db_name=DB_NAME,
+                db_name=db_name,
                 conflict_keys=ORDERITEM_UNIQ,
                 mode="ignore",
                 normalizer=ORDERITEM_NORMALIZER,
-                chunk_size=30,
+                chunk_size=1000,
                 drop_unknown=True,
                 rename_map={"3pByTrendyol": "byTrendyol3"},
             )
             if not res_items.success:
                 return res_items
-        order_signals.orders_changed.emit()
-        return Result.ok("Siparişler başarıyla veritabanına kaydedildi.")
+
+            inserted = res_items.data.get("inserted", 0) if res_items.data else 0
+            counts["items_inserted"] = inserted
+            if inserted > 0:
+                changed = True
+
+        print("KAYIT TAMAMLANDI. changed =", changed, "counts =", counts)
+
+        # ⚠️ DİKKAT: Artık burada orders_changed.emit() YOK.
+        # Bu sinyal sadece ana process’te, pipeline sonunda atılacak.
+
+        return Result.ok(
+            "Siparişler başarıyla veritabanına kaydedildi.",
+            close_dialog=False,
+            data={
+                "changed": changed,
+                "counts": counts,
+            }
+        )
 
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e)
+
+
 
 
 import copy
