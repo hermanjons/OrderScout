@@ -25,7 +25,6 @@ def get_engine(db_name: str):
         return _ENGINE_CACHE[db_name]
 
     db_path = os.path.join(DEFAULT_DATABASE_DIR, db_name)
-
     engine = create_engine(
         f"sqlite:///{db_path}",
         echo=False,

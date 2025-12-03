@@ -333,16 +333,6 @@ def get_orders_from_companies(parent_widget, company_list_widget, progress_targe
     """
     🧩 Bağlantılı: OrdersTab.get_orders()
     Seçilen şirketlerden API bilgilerini alır ve worker zincirini başlatır.
-
-    Akış:
-      1) Ana tarama (fetch_orders_all)  → DBSaveProcess (save_orders_to_db)
-      2) Non-final siparişler varsa     → _refresh_nonfinal_orders_async → DBSaveProcess
-      3) Her iki aşama da TEK progress bar üzerinden gösterilir:
-         - Ana tarama:      0–69 arası
-         - Non-final tarama:70–99 arası
-      4) En sonda 100/100 ve last_used_at epoch olarak güncellenir.
-      5) Tüm pipeline sonunda SADECE 1 kere orders_changed sinyali ANA process’te emit edilir
-         ve sadece gerçekten DB’de değişiklik olduysa (changed=True).
     """
     try:
         # 1️⃣ Seçilen şirketleri topla
@@ -367,31 +357,16 @@ def get_orders_from_companies(parent_widget, company_list_widget, progress_targe
         state = {"changed": False}
 
         # 3️⃣ Tarih aralığı belirle (Trendyol → startDate / endDate)
-        #
-        # NOT: api.find_orders çağrısı şöyle:
-        #   api.find_orders(status, final_ep_time, start_ep_time, page)
-        # Burada:
-        #   final_ep_time  → startDate (ms, GMT+3)
-        #   start_ep_time  → endDate   (ms, GMT+3)
-        #
-        # last_used_at varsa:
-        #   final_ep_time  = min(last_used_at'lar) (startDate)
-        #   start_ep_time  = now (endDate)
-        # yoksa (ilk kullanım):
-        #   start_ep_time  = now
-        #   final_ep_time  = now - 200 saat
         from datetime import datetime, timezone, timedelta
 
         TZ_GMT3 = timezone(timedelta(hours=3))
 
-        # Şu anki zamanı GMT+3 olarak al
         now_dt = datetime.now(TZ_GMT3)
         now_ms = int(now_dt.timestamp() * 1000)  # ms
 
         last_used_ms_list: list[int] = []
 
         for acc in comp_api_account_list:
-            # acc = [pk, api_key, api_secret, account_id, last_used_at]
             last_used = acc[4] if isinstance(acc, (list, tuple)) and len(acc) >= 5 else None
             if not last_used:
                 continue
@@ -399,35 +374,30 @@ def get_orders_from_companies(parent_widget, company_list_widget, progress_targe
             try:
                 ms_val = None
 
-                # 1) datetime objesi ise
                 if isinstance(last_used, datetime):
                     if last_used.tzinfo is None:
                         last_used = last_used.replace(tzinfo=TZ_GMT3)
                     ms_val = int(last_used.timestamp() * 1000)
 
-                # 2) int/float ise (saniye mi, ms mi tahmin et)
                 elif isinstance(last_used, (int, float)):
                     v = float(last_used)
-                    if v > 10 ** 12:  # 13 haneli → zaten ms
+                    if v > 10 ** 12:  # ms
                         ms_val = int(v)
-                    else:  # saniye → ms
+                    else:
                         ms_val = int(v * 1000)
 
-                # 3) string ise
                 elif isinstance(last_used, str):
                     try:
-                        # Önce ISO datetime dene
                         dt = datetime.fromisoformat(last_used)
                         if dt.tzinfo is None:
                             dt = dt.replace(tzinfo=TZ_GMT3)
                         ms_val = int(dt.timestamp() * 1000)
                     except ValueError:
-                        # ISO değilse → epoch string (saniye/ms)
                         v = float(int(last_used))
                         if v > 10 ** 12:
-                            ms_val = int(v)  # ms
+                            ms_val = int(v)
                         else:
-                            ms_val = int(v * 1000)  # saniye → ms
+                            ms_val = int(v * 1000)
 
                 if ms_val is not None:
                     last_used_ms_list.append(ms_val)
@@ -436,26 +406,19 @@ def get_orders_from_companies(parent_widget, company_list_widget, progress_targe
                 continue
 
         if last_used_ms_list:
-            # ✅ Incremental sync:
-            #   startDate = en eski last_used_at
-            #   endDate   = now
-            final_ep_time = min(last_used_ms_list)  # startDate (ms)
-            start_ep_time = now_ms                  # endDate   (ms)
-
-            # Güvenlik: startDate, endDate'den büyük olmasın
+            final_ep_time = min(last_used_ms_list)
+            start_ep_time = now_ms
             if final_ep_time > start_ep_time:
                 final_ep_time = start_ep_time
         else:
-            # ✅ İlk kullanım: son 200 saati tara
             HOURS_BACK = 200
-            start_ep_time = now_ms  # endDate
-            final_ep_time = now_ms - HOURS_BACK * 60 * 60 * 1000  # startDate
+            start_ep_time = now_ms
+            final_ep_time = now_ms - HOURS_BACK * 60 * 60 * 1000
 
         # ─────────────────────────────
         # Progress helper’lar
         # ─────────────────────────────
         def main_progress(c: int, t: int):
-            # Ana tarama: 0–69 arası
             try:
                 t = max(t, 1)
                 percent = int(c * 69 / t)
@@ -468,7 +431,6 @@ def get_orders_from_companies(parent_widget, company_list_widget, progress_targe
             update_progress(progress_target, percent, 100)
 
         def nonfinal_progress(c: int, t: int):
-            # Non-final tarama: 70–99 arası
             try:
                 t = max(t, 1)
                 percent = 70 + int(c * 29 / t)
@@ -492,16 +454,15 @@ def get_orders_from_companies(parent_widget, company_list_widget, progress_targe
             parent=parent_widget
         )
 
-        # Ana tarama progress → 0–69
         parent_widget.api_worker.progress_changed.connect(
             lambda c, t: main_progress(c, t)
         )
 
-        # Ana API sonucu
         def handle_api_result(main_res: Result):
             if not main_res.success:
                 parent_widget.on_orders_failed(main_res, progress_target)
                 update_progress(progress_target, 0, 100)
+                # hata → buton OrdersTab.on_orders_failed içinde açılıyor
                 return
 
             # 5️⃣ Ana sonucu DB'ye yaz (DBSaveProcess ile ayrı process)
@@ -522,7 +483,6 @@ def get_orders_from_companies(parent_widget, company_list_widget, progress_targe
                     update_progress(progress_target, 0, 100)
                     return
 
-                # DB tarafı başarılı → changed bilgisini çek
                 data_dict = db_payload.get("data") or {}
                 main_changed = bool(data_dict.get("changed"))
                 if main_changed:
@@ -534,27 +494,36 @@ def get_orders_from_companies(parent_widget, company_list_widget, progress_targe
                     data=data_dict,
                 )
 
-                # UI'nın kendi local state'ini güncelle (OrdersTab info vs.)
                 parent_widget.on_orders_fetched(db_res)
 
                 # 6️⃣ Non-final sipariş numaralarını DB'den çek
                 try:
                     res_nonfinal = get_nonfinal_order_numbers()
                     if not res_nonfinal.success:
-                        # Non-final çekilemezse → burada bırak, last_used + TEK emit + %100
                         update_last_used_at_for_accounts(comp_api_account_list)
                         if state["changed"]:
-                            order_signals.orders_changed.emit()   # 🔔 SADECE 1 kere
+                            order_signals.orders_changed.emit()
                         update_progress(progress_target, 100, 100)
+                        # ✅ pipeline burada bitti → butonu aç
+                        try:
+                            progress_target.reset()
+                            progress_target.setEnabled(True)
+                        except Exception:
+                            pass
                         return
 
                     order_numbers = res_nonfinal.data.get("order_numbers", []) or []
                     if not order_numbers:
-                        # Non-final sipariş yok → işlem tamam
                         update_last_used_at_for_accounts(comp_api_account_list)
                         if state["changed"]:
-                            order_signals.orders_changed.emit()   # 🔔 SADECE 1 kere
+                            order_signals.orders_changed.emit()
                         update_progress(progress_target, 100, 100)
+                        # ✅ pipeline burada bitti → butonu aç
+                        try:
+                            progress_target.reset()
+                            progress_target.setEnabled(True)
+                        except Exception:
+                            pass
                         return
 
                     # 7️⃣ Non-final ASYNC Worker (API)
@@ -565,19 +534,22 @@ def get_orders_from_companies(parent_widget, company_list_widget, progress_targe
                         parent=parent_widget
                     )
 
-                    # Non-final progress → 70–99
                     parent_widget.bg_api_worker.progress_changed.connect(
                         lambda c, t: nonfinal_progress(c, t)
                     )
 
                     def handle_bg_api(bg_res: Result):
                         if not bg_res or not isinstance(bg_res, Result) or not bg_res.success:
-                            # Non-final başarısız → ana zaten kaydedildi,
-                            # last_used + TEK emit + %100
                             update_last_used_at_for_accounts(comp_api_account_list)
                             if state["changed"]:
-                                order_signals.orders_changed.emit()   # 🔔 SADECE 1 kere
+                                order_signals.orders_changed.emit()
                             update_progress(progress_target, 100, 100)
+                            # ✅ ana kısım başarılı, non-final patlasa da pipeline bitti → butonu aç
+                            try:
+                                progress_target.reset()
+                                progress_target.setEnabled(True)
+                            except Exception:
+                                pass
                             return
 
                         # 8️⃣ Non-final sonucu DB'ye yaz (yine DBSaveProcess)
@@ -589,27 +561,34 @@ def get_orders_from_companies(parent_widget, company_list_widget, progress_targe
                         parent_widget.bg_db_process = DBSaveProcess(payload_bg, parent=parent_widget)
 
                         def handle_bg_db(bg_db_payload: dict):
-                            # Non-final DB kaydı da bitti
                             if not bg_db_payload.get("success"):
-                                # DB non-final hata verse bile ana kayıt yapılmış durumda
                                 update_last_used_at_for_accounts(comp_api_account_list)
                                 if state["changed"]:
-                                    order_signals.orders_changed.emit()   # 🔔 SADECE 1 kere
+                                    order_signals.orders_changed.emit()
                                 update_progress(progress_target, 100, 100)
+                                # ✅ pipeline bitti → buton aç
+                                try:
+                                    progress_target.reset()
+                                    progress_target.setEnabled(True)
+                                except Exception:
+                                    pass
                                 return
 
-                            # Non-final DB sonucundan changed'i çek
                             bg_data_dict = bg_db_payload.get("data") or {}
                             bg_changed = bool(bg_data_dict.get("changed"))
                             if bg_changed:
                                 state["changed"] = True
 
-                            # Her şey yolunda:
-                            # Artık tüm süreç bitti → last_used_at + TEK emit + %100
                             update_last_used_at_for_accounts(comp_api_account_list)
                             if state["changed"]:
-                                order_signals.orders_changed.emit()       # 🔔 SADECE 1 kere
+                                order_signals.orders_changed.emit()
                             update_progress(progress_target, 100, 100)
+                            # ✅ TÜM SÜREÇ BAŞARIYLA BİTTİ → butonu aç
+                            try:
+                                progress_target.reset()
+                                progress_target.setEnabled(True)
+                            except Exception:
+                                pass
 
                         parent_widget.bg_db_process.finished.connect(handle_bg_db)
                         parent_widget.bg_db_process.start()
@@ -619,11 +598,16 @@ def get_orders_from_companies(parent_widget, company_list_widget, progress_targe
 
                 except Exception as e:
                     print(f"Non-final pipeline exception: {e}")
-                    # Non-final kısmı patlasa bile ana kısım başarılı → last_used + TEK emit + %100
                     update_last_used_at_for_accounts(comp_api_account_list)
                     if state["changed"]:
-                        order_signals.orders_changed.emit()   # 🔔 SADECE 1 kere
+                        order_signals.orders_changed.emit()
                     update_progress(progress_target, 100, 100)
+                    # ✅ non-final patladı ama ana iş tamam → buton aç
+                    try:
+                        progress_target.reset()
+                        progress_target.setEnabled(True)
+                    except Exception:
+                        pass
                     return
 
             parent_widget.db_process.finished.connect(handle_db_result_main)
@@ -636,7 +620,10 @@ def get_orders_from_companies(parent_widget, company_list_widget, progress_targe
 
     except Exception as e:
         msg = map_error_to_message(e)
+        # Global hata → OrdersTab tarafındaki error handler'a taşı
+        parent_widget.on_orders_failed(Result.fail(msg, error=e), progress_target)
         return Result.fail(msg, error=e, close_dialog=False)
+
 
 
 
