@@ -101,17 +101,17 @@ LABEL_MODELS_BY_BRAND = {
             # 🔴 Barkod / uyarı görseli ayarları
             "barcode": {
                 # Normal barkod genişliği
-                "image_width_mm": 46,
+                "image_width_mm": 38,
 
                 # Uyarı görseli için ayrı genişlik / yükseklik
                 "attention_image_width_mm": 36.5,
                 # "attention_image_height_mm": 15,
 
-                "module_width": 0.30,
+                "module_width": 0.18,
                 "module_height": 8.0,
                 "font_size": 10,
                 "text_distance": 1.0,
-                "quiet_zone": 2.0,
+                "quiet_zone": 0.2,
             },
 
             # SLA (kalan süre) görseli için genişlik
