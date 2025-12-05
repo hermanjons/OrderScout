@@ -314,9 +314,9 @@ def create_order_label_from_orders(
 
             # 3️⃣ max_items_per_label'lik item chunk'ları
             chunks = [
-                         normalized[i:i + max_items_per_label]
-                         for i in range(0, len(normalized), max_items_per_label)
-                     ] or [[]]
+                normalized[i:i + max_items_per_label]
+                for i in range(0, len(normalized), max_items_per_label)
+            ] or [[]]
 
             for chunk_idx, chunk in enumerate(chunks):
                 label_index += 1
@@ -378,8 +378,6 @@ def create_order_label_from_orders(
 
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
-
-
 
 
 # ─────────────────────────────────────────
@@ -673,21 +671,20 @@ def export_labels_to_word(
                 is_primary = lbl.get("is_primary_for_order", True)
 
                 # --------------------
-                # İsim-parçalama
+                # İSİM (TEK STRING OLARAK)
                 # --------------------
-                parts = fullname.split()
-                name_part = fullname
-                surname_part = ""
-                if len(parts) > 1:
-                    surname_part = parts[-1]
-                    name_part = " ".join(parts[:-1])
+                # Eskiden fullname'i name + surname diye bölerdik.
+                # Artık etikette tam ad tek parça gözükecek.
+                full_name_display = fullname.strip()
 
                 # --------------------
                 # METİN ALANLARI
                 # --------------------
                 ctx[f"ordernumber_{n}"] = style_text(order_no, style_order)
-                ctx[f"name_{n}"] = style_text(name_part, style_name)
-                ctx[f"surname_{n}"] = style_text(surname_part, style_surname)
+                ctx[f"name_{n}"] = style_text(full_name_display, style_name)
+                # surname placeholder'ı şablonda kalsa bile boş gönderiyoruz.
+                ctx[f"surname_{n}"] = ""
+
                 ctx[f"address_{n}"] = style_text(address_val, style_address)
                 ctx[f"cargotrackingnumber_{n}"] = style_text(barcode_val, style_cargo_tr)
 
@@ -767,6 +764,7 @@ def export_labels_to_word(
                         ctx[f"barcode_{n}"] = InlineImage(
                             doc,
                             BytesIO(res_bar.data["png_bytes"]),
+
                             width=Mm(barcode_width),
                         )
 
@@ -873,6 +871,3 @@ def export_labels_to_word(
 
     except Exception as e:
         return Result.fail("Beklenmeyen hata.", error=e)
-
-
-
