@@ -11,37 +11,59 @@ import pandas as pd
 from Feedback.processors.pipeline import Result, map_error_to_message
 from sqlalchemy.sql.elements import BindParameter, ClauseElement
 
-# ---------- Engine ----------
-_ENGINE_CACHE: dict[str, Engine] = {}
+# { db_name: (pid, engine) }
+_ENGINE_CACHE: dict[str, tuple[int, Engine]] = {}
 
 
-def get_engine(db_name: str):
+def get_engine(db_name: str) -> Engine:
     """
-    PyQt6 + multi-thread + SQLite kullanımına uygun, tam optimize engine.
-    WAL + busy_timeout + thread-safe bağlantı.
+    PyQt6 + multi-thread + multi-process + SQLite için güvenli engine.
+
+    - Her process kendi engine'ini kullanır.
+    - Aynı process içinde aynı db için cache var.
     """
-    # Cache varsa direkt onu döndür
-    if db_name in _ENGINE_CACHE:
-        return _ENGINE_CACHE[db_name]
+
+    pid = os.getpid()
+
+    cached = _ENGINE_CACHE.get(db_name)
+    if cached is not None:
+        cached_pid, cached_engine = cached
+        # Aynı process ise direkt kullan
+        if cached_pid == pid:
+            return cached_engine
+        else:
+            # Farklı process'ten kalmışsa dispose et, yeniden oluştur
+            try:
+                cached_engine.dispose()
+            except Exception:
+                pass
+            _ENGINE_CACHE.pop(db_name, None)
 
     db_path = os.path.join(DEFAULT_DATABASE_DIR, db_name)
+
     engine = create_engine(
         f"sqlite:///{db_path}",
         echo=False,
         connect_args={
-            "check_same_thread": False,  # ❗ Thread güvenliği için şart
-        }
+            "check_same_thread": False,
+            # timeout eklemek istersen:
+            "timeout": 30,
+        },
+        # Multi-process’te en sorunsuz havuz:
+        pool_pre_ping=True,
+        pool_recycle=3600,
+        # İstersen tamamen bağlantı paylaşımını kapatmak için:
+        # poolclass=NullPool,
     )
 
-    # PRAGMA ayarlarını sadece bir kere yapalım
+    # PRAGMA ayarları
     with engine.connect() as conn:
-        conn.execute(text("PRAGMA journal_mode=WAL;"))  # ❗ Aynı anda okuma/yazma
-        conn.execute(text("PRAGMA synchronous=NORMAL;"))  # daha performanslı
-        conn.execute(text("PRAGMA busy_timeout=5000;"))  # ❗ 5 saniye bekle, freeze yapma
+        conn.execute(text("PRAGMA journal_mode=WAL;"))
+        conn.execute(text("PRAGMA synchronous=NORMAL;"))
+        conn.execute(text("PRAGMA busy_timeout=5000;"))
 
-    _ENGINE_CACHE[db_name] = engine
+    _ENGINE_CACHE[db_name] = (pid, engine)
     return engine
-
 
 # ---------- Helper ----------
 def batch_iter(seq: Iterable[Any], size: int = 500) -> Iterable[list[Any]]:

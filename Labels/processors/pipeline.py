@@ -366,6 +366,10 @@ def create_order_label_from_orders(
             "total_pages": len(pages),
             "pages": pages,
         }
+        # create_order_label_from_orders sonunda, Result.ok'tan HEMEN ÖNCE:
+        import json
+        print("DEBUG LABEL PAYLOAD:")
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
 
         return Result.ok(
             f"{len(order_numbers)} sipariş için {len(final_labels)} label hazırlandı.",

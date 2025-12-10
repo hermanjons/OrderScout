@@ -6,7 +6,7 @@ from __future__ import annotations
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QGroupBox, QHBoxLayout,
     QListWidget, QPushButton, QLineEdit, QComboBox, QGridLayout,
-    QDateEdit, QCheckBox
+    QDateEdit, QCheckBox,QFrame
 )
 
 from PyQt6.QtCore import Qt, QDate, QTimer, QRegularExpression, pyqtSignal
@@ -416,6 +416,9 @@ class OrdersManagerWindow(QWidget):
 
         self.setGeometry(200, 200, 1000, 650)
 
+        # 🎨 Genel stil
+        self._setup_styles()
+
         # === ANA LAYOUT YATAY ===
         main_layout = QHBoxLayout(self)
 
@@ -428,6 +431,33 @@ class OrdersManagerWindow(QWidget):
         right_panel.setContentsMargins(10, 10, 10, 10)
         right_panel.setSpacing(20)
         main_layout.addLayout(right_panel, stretch=0)
+
+        # ------------------------------------------------------------
+        # 🧊 Üst Header Kartı
+        # ------------------------------------------------------------
+        header_card = QFrame()
+        header_card.setObjectName("HeaderCard")
+        header_layout = QHBoxLayout(header_card)
+        header_layout.setContentsMargins(16, 10, 16, 10)
+        header_layout.setSpacing(12)
+
+        header_text_layout = QVBoxLayout()
+        header_title = QLabel("Kargoya Hazır Siparişler")
+        header_title.setObjectName("HeaderTitle")
+
+        header_subtitle = QLabel(
+            "Filtreleri kullanarak siparişleri listele, seç ve toplu yazdırma işlemlerini başlat."
+        )
+        header_subtitle.setObjectName("HeaderSubtitle")
+        header_subtitle.setWordWrap(True)
+
+        header_text_layout.addWidget(header_title)
+        header_text_layout.addWidget(header_subtitle)
+
+        header_layout.addLayout(header_text_layout)
+        header_layout.addStretch()
+
+        left_panel.addWidget(header_card)
 
         # ============================================================
         # 📦 Liste Widget
@@ -442,6 +472,7 @@ class OrdersManagerWindow(QWidget):
         # 🔍 Filtre Paneli
         # ============================================================
         filter_box = QGroupBox("Filtreler")
+        filter_box.setObjectName("SectionCard")
         filter_layout = QGridLayout(filter_box)
 
         self.global_search = QLineEdit()
@@ -550,6 +581,7 @@ class OrdersManagerWindow(QWidget):
         # 📑 Sayfalama Paneli
         # ============================================================
         pagination_box = QGroupBox("Sayfalama")
+        pagination_box.setObjectName("SectionCard")
         pagination_layout = QHBoxLayout(pagination_box)
 
         self.prev_page_btn = QPushButton("◀")
@@ -588,6 +620,7 @@ class OrdersManagerWindow(QWidget):
         # 🧰 Toplu İşlemler
         # ============================================================
         control_box = QGroupBox("Toplu İşlemler")
+        control_box.setObjectName("SectionCard")
         control_layout = QHBoxLayout(control_box)
 
         select_all_btn = QPushButton("Tümünü Seç")
@@ -621,6 +654,59 @@ class OrdersManagerWindow(QWidget):
 
         # Pencere açılır açılmaz “bekleyenler” filtresini çalıştır
         QTimer.singleShot(0, self._trigger_debounce)
+
+    # ------------------------------------------------------------
+    # 🎨 Stil helper
+    # ------------------------------------------------------------
+    def _setup_styles(self):
+        self.setObjectName("OrdersManagerRoot")
+        self.setStyleSheet("""
+        QWidget#OrdersManagerRoot {
+            background-color: #F3F4F6;
+            color: #111827;
+        }
+
+        QFrame#HeaderCard {
+            border-radius: 12px;
+            border: none;
+            background: qlineargradient(
+                x1:0, y1:0, x2:1, y2:0,
+                stop:0 #111827,
+                stop:1 #020617
+            );
+        }
+        QLabel#HeaderTitle {
+            font-size: 15px;
+            font-weight: 600;
+            color: #F9FAFB;
+        }
+        QLabel#HeaderSubtitle {
+            font-size: 11px;
+            color: #E5E7EB;
+        }
+
+        QGroupBox#SectionCard {
+            background-color: #FFFFFF;
+            border-radius: 10px;
+            border: 1px solid #E5E7EB;
+            margin-top: 10px;
+        }
+        QGroupBox#SectionCard::title {
+            subcontrol-origin: margin;
+            left: 12px;
+            top: -4px;
+            padding: 0 4px;
+            background-color: transparent;
+            color: #111827;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        QLabel#InfoLabel {
+            font-size: 11px;
+            color: #4B5563;
+        }
+        """)
 
     # ============================================================
     # 🔁 Seçim değişince çağrılır
@@ -779,7 +865,7 @@ class OrdersManagerWindow(QWidget):
 
 
 # ============================================================
-# 🔹 3. OrdersTab — Ana Tab / Veri Çekme Arayüzü
+# 🔹 3. OrdersTab — Premium Dashboard Tasarımı
 # ============================================================
 
 class OrdersTab(QWidget):
@@ -789,78 +875,265 @@ class OrdersTab(QWidget):
 
     def __init__(self):
         super().__init__()
-        layout = QVBoxLayout(self)
 
-        # 🟡 Üst bilgilendirme yazısı
-        self.info_label = QLabel("Siparişleri buradan yönetebilirsin.")
+        # ─────────────────────────
+        # 🎨 Genel Stil
+        # ─────────────────────────
+        self.setObjectName("OrdersRoot")
+        self.setStyleSheet("""
+        QWidget#OrdersRoot {
+            background-color: #F3F4F6;
+            color: #111827;
+        }
 
-        # 🔵 Ana sipariş yönetim penceresi butonu
+        /* HEADER */
+        QFrame#HeaderCard {
+            border-radius: 12px;
+            border: none;
+            background: qlineargradient(
+                x1:0, y1:0, x2:1, y2:0,
+                stop:0 #111827,
+                stop:1 #020617
+            );
+        }
+        QLabel#HeaderTitle {
+            font-size: 16px;
+            font-weight: 600;
+            color: #F9FAFB;
+        }
+        QLabel#HeaderSubtitle {
+            font-size: 11px;
+            color: #E5E7EB;
+        }
+        QLabel#StatusPill {
+            padding: 3px 10px;
+            border-radius: 999px;
+            background-color: #16A34A;
+            color: #ECFDF3;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        /* BÖLÜM KARTLARI */
+        QFrame#SectionCard {
+            background-color: #FFFFFF;
+            border-radius: 12px;
+            border: 1px solid #E5E7EB;
+        }
+        QLabel#SectionTitle {
+            font-size: 12px;
+            font-weight: 600;
+            color: #111827;
+        }
+        QLabel#SectionSubtitle {
+            font-size: 11px;
+            color: #6B7280;
+        }
+
+        QLabel#InfoLabel {
+            font-size: 11px;
+            color: #4B5563;
+        }
+
+        /* İÇ KART (Mağaza listesi vs.) */
+        QFrame#InnerCard {
+            background-color: #F9FAFB;
+            border-radius: 10px;
+            border: 1px dashed #D1D5DB;
+        }
+        """)
+
+        # ─────────────────────────
+        # 📐 Ana Layout
+        # ─────────────────────────
+        root_layout = QVBoxLayout(self)
+        root_layout.setContentsMargins(10, 8, 10, 8)
+        root_layout.setSpacing(10)
+
+        # ─────────────────────────
+        # 🧊 HEADER
+        # ─────────────────────────
+        header_card = QFrame()
+        header_card.setObjectName("HeaderCard")
+        header_layout = QHBoxLayout(header_card)
+        header_layout.setContentsMargins(16, 10, 16, 10)
+        header_layout.setSpacing(12)
+
+        # Sol: başlık + alt metin
+        header_text_layout = QVBoxLayout()
+        lbl_title = QLabel("Sipariş Yönetimi")
+        lbl_title.setObjectName("HeaderTitle")
+
+        lbl_subtitle = QLabel(
+            "Mağazalarını bağla, sipariş verilerini içeri al ve gelişmiş filtrelerle yönet."
+        )
+        lbl_subtitle.setObjectName("HeaderSubtitle")
+        lbl_subtitle.setWordWrap(True)
+
+        header_text_layout.addWidget(lbl_title)
+        header_text_layout.addWidget(lbl_subtitle)
+
+        # Sağ: durum pill + ileride son senkron bilgisi
+        header_right_layout = QVBoxLayout()
+        header_right_layout.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+
+        self.lbl_status_pill = QLabel("Güncel")
+        self.lbl_status_pill.setObjectName("StatusPill")
+
+        self.lbl_status_hint = QLabel("Son durum: Hazır")
+        self.lbl_status_hint.setObjectName("HeaderSubtitle")
+        self.lbl_status_hint.setAlignment(Qt.AlignmentFlag.AlignRight)
+
+        header_right_layout.addWidget(self.lbl_status_pill, alignment=Qt.AlignmentFlag.AlignRight)
+        header_right_layout.addWidget(self.lbl_status_hint)
+
+        header_layout.addLayout(header_text_layout)
+        header_layout.addStretch()
+        header_layout.addLayout(header_right_layout)
+
+        root_layout.addWidget(header_card)
+
+        # ─────────────────────────
+        # 🧷 ORTA BÖLGE (Solda Quick Actions, Sağda Veri Çekme)
+        # ─────────────────────────
+        middle_layout = QHBoxLayout()
+        middle_layout.setSpacing(10)
+
+        # ── SOL KOLON: Sipariş Yönetimi Kartı
+        left_card = QFrame()
+        left_card.setObjectName("SectionCard")
+        left_layout = QVBoxLayout(left_card)
+        left_layout.setContentsMargins(14, 10, 14, 12)
+        left_layout.setSpacing(8)
+
+        lbl_left_title = QLabel("Sipariş Yönetim Penceresi")
+        lbl_left_title.setObjectName("SectionTitle")
+
+        lbl_left_sub = QLabel("Detaylı filtreleme, listeleme ve yazdırma işlemleri için ana pencereyi aç.")
+        lbl_left_sub.setObjectName("SectionSubtitle")
+        lbl_left_sub.setWordWrap(True)
+
+        # Büyük Siparişler butonu
         self.order_btn = PackageButton("Siparişler", icon_path="images/orders_img.png")
+        self.order_btn.setMinimumHeight(90)
         self.order_btn.clicked.connect(self.open_orders_window)
 
-        layout.addWidget(self.order_btn)
-        layout.addWidget(self.info_label)
+        # Bilgi / durum yazısı
+        self.info_label = QLabel("Henüz yeni bir işlem başlatılmadı.")
+        self.info_label.setObjectName("InfoLabel")
+        self.info_label.setWordWrap(True)
 
-        # 🟢 Başlatma butonu (API'den sipariş çekme)
+        left_layout.addWidget(lbl_left_title)
+        left_layout.addWidget(lbl_left_sub)
+        left_layout.addSpacing(4)
+        left_layout.addWidget(self.order_btn, alignment=Qt.AlignmentFlag.AlignLeft)
+        left_layout.addSpacing(6)
+        left_layout.addWidget(self.info_label)
+        left_layout.addStretch()
+
+        middle_layout.addWidget(left_card, stretch=3)
+
+        # ── SAĞ KOLON: Veri Çekme Kartı
+        right_card = QFrame()
+        right_card.setObjectName("SectionCard")
+        right_layout = QVBoxLayout(right_card)
+        right_layout.setContentsMargins(14, 10, 14, 12)
+        right_layout.setSpacing(10)
+
+        lbl_right_title = QLabel("Veri Çekme")
+        lbl_right_title.setObjectName("SectionTitle")
+
+        lbl_right_sub = QLabel("Seçili mağazalar için sipariş verilerini arka planda içeri al.")
+        lbl_right_sub.setObjectName("SectionSubtitle")
+        lbl_right_sub.setWordWrap(True)
+
+        # İçte 2 kolon: mağaza listesi + başlat butonu
+        fetch_inner_layout = QHBoxLayout()
+        fetch_inner_layout.setSpacing(10)
+
+        # Mağaza listesi kartı
+        store_card = QFrame()
+        store_card.setObjectName("InnerCard")
+        store_layout = QVBoxLayout(store_card)
+        store_layout.setContentsMargins(10, 8, 10, 8)
+        store_layout.setSpacing(6)
+
+        lbl_store_title = QLabel("Mağazalar")
+        lbl_store_title.setObjectName("SectionTitle")
+
+        self.company_list = CompanyListWidget()
+        self.company_list.setMinimumWidth(260)
+        self.company_list.setMaximumWidth(280)
+
+        store_layout.addWidget(lbl_store_title)
+        store_layout.addWidget(self.company_list)
+
+        fetch_inner_layout.addWidget(store_card, alignment=Qt.AlignmentFlag.AlignLeft)
+
+        # Başlat butonu kolonu
+        btn_col = QVBoxLayout()
+        btn_col.setContentsMargins(0, 0, 0, 0)
+        btn_col.setSpacing(6)
+
         self.fetch_button = CircularProgressButton("BAŞLAT")
         self.fetch_button.clicked.connect(self.get_orders)
 
-        # 🔴 Şirket listesi → CompanyListWidget
-        self.company_list = CompanyListWidget()
-        self.company_list.setFixedWidth(240)
+        lbl_fetch_hint = QLabel("Seçili mağazalar için sipariş verilerini al.")
+        lbl_fetch_hint.setObjectName("InfoLabel")
+        lbl_fetch_hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl_fetch_hint.setWordWrap(True)
 
-        # 🟤 Alt panel: Şirketler + Buton
-        self.bottom_panel = QGroupBox("Veri Çekme Paneli")
-        self.bottom_panel.setFixedHeight(200)
-        bottom_layout = QHBoxLayout(self.bottom_panel)
+        btn_col.addStretch()
+        btn_col.addWidget(self.fetch_button, alignment=Qt.AlignmentFlag.AlignCenter)
+        btn_col.addWidget(lbl_fetch_hint)
+        btn_col.addStretch()
 
-        company_box = QGroupBox("Şirketler")
-        company_layout = QVBoxLayout(company_box)
-        company_layout.setContentsMargins(5, 5, 5, 5)
-        company_layout.addWidget(self.company_list)
-        bottom_layout.addWidget(company_box)
+        fetch_inner_layout.addLayout(btn_col, stretch=1)
 
-        btn_container = QWidget()
-        btn_layout = QVBoxLayout(btn_container)
-        btn_layout.addStretch()
-        btn_layout.addWidget(self.fetch_button, alignment=Qt.AlignmentFlag.AlignCenter)
-        btn_layout.addStretch()
-        bottom_layout.addWidget(btn_container)
+        right_layout.addWidget(lbl_right_title)
+        right_layout.addWidget(lbl_right_sub)
+        right_layout.addLayout(fetch_inner_layout)
 
-        layout.addWidget(self.bottom_panel)
+        middle_layout.addWidget(right_card, stretch=2)
+
+        root_layout.addLayout(middle_layout)
 
         # referanslar
         self.orders_window = None
-
-        # ❌ DİKKAT: Artık orders_loaded / orders_changed'e bağlamıyoruz
-        # order_signals.orders_loaded.connect(...)
-        # order_signals.orders_changed.connect(...)
 
     # ============================================================
     # 📡 Siparişleri API'den Getir
     # ============================================================
     def get_orders(self):
         """
-        Seçili şirketlerden siparişleri çeker, progress'i başlatır.
+        Seçili mağazalardan siparişleri çeker, progress'i başlatır.
         İşlem bitene kadar tekrar basılamaz.
         """
-        # Zaten kilitliyse tekrar basılmasın
         if not self.fetch_button.isEnabled():
             return
 
-        # Kilitle
         self.fetch_button.setEnabled(False)
+
+        self.lbl_status_pill.setText("Çekiliyor")
+        self.lbl_status_pill.setStyleSheet(
+            "padding: 3px 10px; border-radius: 999px; "
+            "background-color: #0369A1; color: #E0F2FE; font-size: 11px; font-weight: 600;"
+        )
+        self.lbl_status_hint.setText("Son durum: Veri çekme işlemi sürüyor")
+        self.info_label.setText("⏳ Seçili mağazalar için sipariş verileri alınıyor...")
 
         result = get_orders_from_companies(self, self.company_list, self.fetch_button)
         if not result.success:
-            # Worker hiç başlamadan hata döndüyse → hemen butonu aç
             self.fetch_button.fail()
             self.fetch_button.setEnabled(True)
             MessageHandler.show(self, result, only_errors=True)
             self.info_label.setText("⚠️ Siparişler alınırken hata oluştu.")
-            return
-
-        self.info_label.setText("⏳ Veri çekiliyor...")
+            self.lbl_status_pill.setText("Hata")
+            self.lbl_status_pill.setStyleSheet(
+                "padding: 3px 10px; border-radius: 999px; "
+                "background-color: #B91C1C; color: #FEE2E2; font-size: 11px; font-weight: 600;"
+            )
+            self.lbl_status_hint.setText("Son durum: Hata alındı")
 
     # ============================================================
     # 🪟 Sipariş Penceresi Aç
@@ -876,6 +1149,13 @@ class OrdersTab(QWidget):
         except Exception as e:
             res = Result.fail(map_error_to_message(e), error=e, close_dialog=False)
             MessageHandler.show(self, res, only_errors=True)
+            self.info_label.setText("⚠️ Sipariş penceresi açılırken hata oluştu.")
+            self.lbl_status_pill.setText("Hata")
+            self.lbl_status_pill.setStyleSheet(
+                "padding: 3px 10px; border-radius: 999px; "
+                "background-color: #B91C1C; color: #FEE2E2; font-size: 11px; font-weight: 600;"
+            )
+            self.lbl_status_hint.setText("Son durum: Hata alındı")
 
     # ============================================================
     # ⚠️ Worker Callback — Hata Durumu
@@ -888,7 +1168,14 @@ class OrdersTab(QWidget):
         button.fail()
         button.setEnabled(True)
         MessageHandler.show(self, result, only_errors=True)
-        self.info_label.setText("⚠️ İşlem başarısız.")
+
+        self.info_label.setText("⚠️ İşlem başarısız. Ayrıntılar için hata mesajını kontrol et.")
+        self.lbl_status_pill.setText("Hata")
+        self.lbl_status_pill.setStyleSheet(
+            "padding: 3px 10px; border-radius: 999px; "
+            "background-color: #B91C1C; color: #FEE2E2; font-size: 11px; font-weight: 600;"
+        )
+        self.lbl_status_hint.setText("Son durum: Hata alındı")
 
     # ============================================================
     # ✅ Worker Callback — Başarı Durumu
@@ -898,4 +1185,13 @@ class OrdersTab(QWidget):
         API ve DB işlemleri başarılı olduğunda çalışır.
         DİKKAT: Burada butona dokunmuyoruz; buton %100 progress'te açılıyor.
         """
-        self.info_label.setText("✅ Siparişler başarıyla kaydedildi.")
+        self.info_label.setText("✅ Siparişler başarıyla kaydedildi. Yönetim penceresinden detayları inceleyebilirsin.")
+        self.lbl_status_pill.setText("Güncel")
+        self.lbl_status_pill.setStyleSheet(
+            "padding: 3px 10px; border-radius: 999px; "
+            "background-color: #16A34A; color: #ECFDF3; font-size: 11px; font-weight: 600;"
+        )
+        self.lbl_status_hint.setText("Son durum: Veri tabanı güncel")
+
+
+

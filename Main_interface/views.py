@@ -1,9 +1,11 @@
 from PyQt6.QtWidgets import QMainWindow, QTabWidget, QToolBar
 from PyQt6.QtGui import QIcon, QAction
-from Orders.views.views import OrdersTab
 import os
+
 from settings import MEDIA_ROOT
+from Orders.views.views import OrdersTab
 from Account.views.views import CompanyManagerButton
+from License.views import LicenseManagerButton  # ⬅️ yeni import
 
 
 class MainInterface(QMainWindow):
@@ -18,16 +20,20 @@ class MainInterface(QMainWindow):
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
 
-        self.init_toolbar()  # ✅ Yeni toolbar
+        self.init_toolbar()
         self.init_tabs()
 
     def init_toolbar(self):
         self.toolBar = QToolBar("Ana Toolbar")
         self.addToolBar(self.toolBar)
 
+        # Şirket Yönetimi butonu
         self.company_ui = CompanyManagerButton(self)
         self.toolBar.addAction(self.company_ui.create_action())
 
+        # Lisans Yönetimi butonu
+        self.license_ui = LicenseManagerButton(self)
+        self.toolBar.addAction(self.license_ui.create_action())
 
     def init_tabs(self):
         self.orders_tab = OrdersTab()
