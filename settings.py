@@ -1,10 +1,17 @@
-import os
+# settings.py
+from __future__ import annotations
 
-BASE_DIR = os.path.dirname(__file__)  # orderScout dizini
+from pathlib import Path
+
+# settings.py'nin bulunduğu klasör (orderScout/)
+BASE_DIR = Path(__file__).resolve().parent
 
 # DATABASE
 DB_NAME = "orders.db"
-DEFAULT_DATABASE_DIR = "databases"
 
-# MEDİA
-MEDIA_ROOT = os.path.join(BASE_DIR, "images")
+# ✅ PROJE İÇİ DB KLASÖRÜ (MUTLAK)
+DEFAULT_DATABASE_DIR = (BASE_DIR / "databases").resolve()
+DEFAULT_DATABASE_DIR.mkdir(parents=True, exist_ok=True)
+
+# MEDIA
+MEDIA_ROOT = str((BASE_DIR / "images").resolve())

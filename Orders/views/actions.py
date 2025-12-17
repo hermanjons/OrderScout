@@ -470,7 +470,7 @@ def get_orders_from_companies(parent_widget, company_list_widget, progress_targe
                 "order_data_list": main_res.data.get("order_data_list", []) or [],
                 "order_item_list": main_res.data.get("order_item_list", []) or [],
             }
-            print(payload_main)
+
 
             parent_widget.db_process = DBSaveProcess(payload_main, parent=parent_widget)
 

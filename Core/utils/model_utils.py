@@ -1,70 +1,93 @@
 # model_utils.py
 from sqlmodel import SQLModel, Session, select, text
-from typing import Type, Iterable, Callable, Optional, Any
+from typing import Type, Iterable, Callable, Optional, Any,Dict,Tuple
 from settings import DB_NAME, DEFAULT_DATABASE_DIR
 from sqlalchemy.engine import Engine
-from sqlalchemy import create_engine
+
+from sqlalchemy import create_engine,engine,event,text
 from sqlalchemy.exc import IntegrityError, CompileError
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 import os
+from pathlib import Path
+import sqlite3
 import pandas as pd
 from Feedback.processors.pipeline import Result, map_error_to_message
 from sqlalchemy.sql.elements import BindParameter, ClauseElement
 
-# { db_name: (pid, engine) }
-_ENGINE_CACHE: dict[str, tuple[int, Engine]] = {}
+import settings  # ✅ bunu bilerek import ediyoruz (settings.__file__ için)
+
+
+import os
+import sqlite3
+from pathlib import Path
+from typing import Dict, Tuple
+
+from sqlalchemy import Engine, event, text
+from sqlalchemy.pool import NullPool
+from sqlmodel import create_engine
+
+import settings
+
+_ENGINE_CACHE: Dict[str, Tuple[int, Engine]] = {}
 
 
 def get_engine(db_name: str) -> Engine:
-    """
-    PyQt6 + multi-thread + multi-process + SQLite için güvenli engine.
-
-    - Her process kendi engine'ini kullanır.
-    - Aynı process içinde aynı db için cache var.
-    """
-
     pid = os.getpid()
 
     cached = _ENGINE_CACHE.get(db_name)
-    if cached is not None:
-        cached_pid, cached_engine = cached
-        # Aynı process ise direkt kullan
-        if cached_pid == pid:
-            return cached_engine
-        else:
-            # Farklı process'ten kalmışsa dispose et, yeniden oluştur
-            try:
-                cached_engine.dispose()
-            except Exception:
-                pass
-            _ENGINE_CACHE.pop(db_name, None)
+    if cached is not None and cached[0] == pid:
+        return cached[1]
 
-    db_path = os.path.join(DEFAULT_DATABASE_DIR, db_name)
+    # ✅ MUTLAK DİZİN
+    db_dir = Path(settings.DEFAULT_DATABASE_DIR).resolve()
+    db_dir.mkdir(parents=True, exist_ok=True)
 
+    db_path = (db_dir / db_name).resolve()
+    db_url = f"sqlite:///{db_path.as_posix()}"
+
+    # ✅ SQLite temp’i proje içine sabitle (bazı Windows kurulumlarında şart)
+    tmp_dir = (db_dir / "_tmp").resolve()
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    os.environ["TMP"] = str(tmp_dir)
+    os.environ["TEMP"] = str(tmp_dir)
+
+    # ✅ Ham sqlite test
+    con = sqlite3.connect(str(db_path))
+    con.execute("SELECT 1;")
+    con.close()
+
+    # ✅ Multi-process'te EN stabil havuz: NullPool
     engine = create_engine(
-        f"sqlite:///{db_path}",
+        db_url,
         echo=False,
-        connect_args={
-            "check_same_thread": False,
-            # timeout eklemek istersen:
-            "timeout": 30,
-        },
-        # Multi-process’te en sorunsuz havuz:
+        connect_args={"check_same_thread": False, "timeout": 30},
+        poolclass=NullPool,
         pool_pre_ping=True,
-        pool_recycle=3600,
-        # İstersen tamamen bağlantı paylaşımını kapatmak için:
-        # poolclass=NullPool,
     )
 
-    # PRAGMA ayarları
+    @event.listens_for(engine, "connect")
+    def _set_sqlite_pragmas(dbapi_connection, connection_record):
+        cur = dbapi_connection.cursor()
+
+        # 🔥 WAL bazen -shm/-wal aşamasında "unable to open" çıkarabiliyor → şimdilik kapatıyoruz
+        cur.execute("PRAGMA journal_mode=DELETE;")
+
+        # ✅ Temp dosya ihtiyacını düşür
+        cur.execute("PRAGMA temp_store=MEMORY;")
+
+        # ✅ Genel stabilite
+        cur.execute("PRAGMA synchronous=NORMAL;")
+        cur.execute("PRAGMA foreign_keys=ON;")
+        cur.execute("PRAGMA busy_timeout=10000;")
+
+        cur.close()
+
+    # ✅ İlk bağlantı test
     with engine.connect() as conn:
-        conn.execute(text("PRAGMA journal_mode=WAL;"))
-        conn.execute(text("PRAGMA synchronous=NORMAL;"))
-        conn.execute(text("PRAGMA busy_timeout=5000;"))
+        conn.execute(text("SELECT 1"))
 
     _ENGINE_CACHE[db_name] = (pid, engine)
     return engine
-
 # ---------- Helper ----------
 def batch_iter(seq: Iterable[Any], size: int = 500) -> Iterable[list[Any]]:
     """
