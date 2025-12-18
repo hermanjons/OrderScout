@@ -1,4 +1,3 @@
-# License/views/views.py
 from __future__ import annotations
 
 import os
@@ -7,48 +6,62 @@ from typing import Optional, Dict, Any
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QFrame, QGroupBox, QGridLayout, QWidget,
-    QMessageBox, QSizePolicy, QSpacerItem
+    QMessageBox, QSizePolicy, QSpacerItem, QInputDialog
 )
-from PyQt6.QtGui import QIcon, QFont, QAction
+from PyQt6.QtGui import QIcon, QAction
 from PyQt6.QtCore import QSize, Qt
 
 from settings import MEDIA_ROOT
+from License.processors.pipeline import (
+    activate_and_validate_license,
+    validate_current_license,
+    deactivate_current_license,   # ✅ eklendi
+)
+
+# Eğer sende map_error_to_message varsa kullan, yoksa direkt res.message bas.
+try:
+    from Feedback.processors.pipeline import map_error_to_message
+except Exception:
+    map_error_to_message = None
+
+
+def _err_text(res) -> str:
+    # res.error bir Exception ise map_error_to_message Exception bekliyor
+    if map_error_to_message and getattr(res, "error", None):
+        try:
+            return map_error_to_message(res.error)
+        except Exception:
+            pass
+
+    return getattr(res, "message", None) or "Bilinmeyen hata"
 
 
 # ─────────────────────────────────────────
-# 🎨 Lisans Yönetimi Dialog'u (UI)
+# 🎨 Lisans Yönetimi Dialog'u (SADE)
 # ─────────────────────────────────────────
 class LicenseManagerDialog(QDialog):
     """
-    OrderScout lisans yönetim ekranı.
-    Sadece UI tasarım odaklı; veri doldurma için set_license_data() kullanılacak.
+    Minimal lisans ekranı:
+    - Lisans Gir & Doğrula
+    - Yeniden Doğrula
+    - Lisansı Kaldır (deactivate)
     """
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
-        self.setWindowTitle("Lisans Yönetimi - OrderScout")
-        self.resize(720, 460)
+        self.setWindowTitle("Lisans - OrderScout")
+        self.resize(560, 340)
 
         self._setup_styles()
         self._init_ui()
 
-        # Şimdilik örnek dummy data yüklüyoruz.
-        # Gerçek entegrasyonda bu satırı kaldırıp dışarıdan set_license_data() çağırırsın.
-        self._load_demo_data()
+        # Açılışta mevcut lisansı çekip bas (varsa)
+        self._refresh_ui_silent()
 
-    # ─────────────────────────
-    # Stil ayarları
-    # ─────────────────────────
     def _setup_styles(self):
-        # Basit, modern bir dark tema
         self.setStyleSheet("""
-        QDialog {
-            background-color: #101018;
-            color: #F5F5F5;
-        }
-        QLabel {
-            color: #F5F5F5;
-        }
+        QDialog { background-color: #101018; color: #F5F5F5; }
+        QLabel { color: #F5F5F5; }
         QGroupBox {
             border: 1px solid #26293A;
             border-radius: 10px;
@@ -57,33 +70,16 @@ class LicenseManagerDialog(QDialog):
             color: #C5C7D5;
             font-weight: bold;
         }
-        QGroupBox::title {
-            subcontrol-origin: margin;
-            left: 10px;
-            padding: 0 4px 0 4px;
-        }
+        QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 4px; }
         QPushButton {
-            border-radius: 8px;
-            padding: 8px 16px;
-            background-color: #2F80ED;
-            color: white;
-            border: none;
-            font-weight: 500;
+            border-radius: 8px; padding: 8px 14px;
+            background-color: #2F80ED; color: white; border: none; font-weight: 500;
         }
-        QPushButton:hover {
-            background-color: #337FE0;
-        }
-        QPushButton:disabled {
-            background-color: #3A3F55;
-            color: #888C99;
-        }
+        QPushButton:hover { background-color: #337FE0; }
         QPushButton#secondaryButton {
-            background-color: #1F2233;
-            border: 1px solid #34384C;
+            background-color: #1F2233; border: 1px solid #34384C;
         }
-        QPushButton#secondaryButton:hover {
-            background-color: #25293B;
-        }
+        QPushButton#secondaryButton:hover { background-color: #25293B; }
         QPushButton#dangerButton {
             background-color: #EB5757;
         }
@@ -95,409 +91,237 @@ class LicenseManagerDialog(QDialog):
             border-radius: 14px;
             border: 1px solid #26293A;
         }
-        QLabel#titleLabel {
-            font-size: 18px;
-            font-weight: 600;
-        }
-        QLabel#subtitleLabel {
-            font-size: 12px;
-            color: #A0A4B8;
-        }
-        QLabel#valueLabel {
-            font-weight: 500;
-            color: #E6E8F2;
-        }
-        QLabel#hintLabel {
-            font-size: 11px;
-            color: #9EA2B8;
-        }
+        QLabel#titleLabel { font-size: 16px; font-weight: 650; }
+        QLabel#subtitleLabel { font-size: 12px; color: #A0A4B8; }
+        QLabel#valueLabel { font-weight: 600; color: #E6E8F2; }
+        QLabel#hintLabel { font-size: 11px; color: #9EA2B8; }
         QLabel#statusBadge {
-            padding: 4px 10px;
-            border-radius: 10px;
-            font-size: 11px;
-            font-weight: 600;
-            color: #0E111A;
-            background-color: #27AE60; /* varsayılan: aktif */
+            padding: 4px 10px; border-radius: 10px;
+            font-size: 11px; font-weight: 700; color: #0E111A;
+            background-color: #4F4F4F;
         }
         """)
 
-    # ─────────────────────────
-    # Ana UI layout
-    # ─────────────────────────
     def _init_ui(self):
-        main_layout = QVBoxLayout()
-        main_layout.setContentsMargins(14, 12, 14, 12)
-        main_layout.setSpacing(10)
+        root = QVBoxLayout(self)
+        root.setContentsMargins(14, 12, 14, 12)
+        root.setSpacing(10)
 
-        # ── Header Card
-        header_card = QFrame()
-        header_card.setObjectName("card")
-        header_layout = QHBoxLayout()
-        header_layout.setContentsMargins(16, 14, 16, 14)
-        header_layout.setSpacing(10)
+        # Header
+        header = QFrame()
+        header.setObjectName("card")
+        hl = QHBoxLayout(header)
+        hl.setContentsMargins(14, 12, 14, 12)
 
-        # Sol taraf: Başlık + açıklama
-        header_text_layout = QVBoxLayout()
-        self.lbl_title = QLabel("OrderScout Lisans Yönetimi")
+        left = QVBoxLayout()
+        self.lbl_title = QLabel("Lisans Durumu")
         self.lbl_title.setObjectName("titleLabel")
-
-        self.lbl_subtitle = QLabel("Lisans anahtarını yönet, plan detaylarını görüntüle ve durumu kontrol et.")
+        self.lbl_subtitle = QLabel("Lisans anahtarını girip doğrulayabilirsin.")
         self.lbl_subtitle.setObjectName("subtitleLabel")
         self.lbl_subtitle.setWordWrap(True)
+        left.addWidget(self.lbl_title)
+        left.addWidget(self.lbl_subtitle)
 
-        header_text_layout.addWidget(self.lbl_title)
-        header_text_layout.addWidget(self.lbl_subtitle)
-
-        # Sağ taraf: Status badge
-        header_right_layout = QVBoxLayout()
-        header_right_layout.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-
-        self.lbl_status_badge = QLabel("AKTİF")
+        right = QVBoxLayout()
+        right.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.lbl_status_badge = QLabel("LİSANS YOK")
         self.lbl_status_badge.setObjectName("statusBadge")
         self.lbl_status_badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        right.addWidget(self.lbl_status_badge)
 
-        header_right_layout.addWidget(self.lbl_status_badge)
+        hl.addLayout(left)
+        hl.addStretch()
+        hl.addLayout(right)
+        root.addWidget(header)
 
-        header_layout.addLayout(header_text_layout)
-        header_layout.addStretch()
-        header_layout.addLayout(header_right_layout)
+        # Info group
+        box = QGroupBox("Bilgiler")
+        gl = QGridLayout(box)
+        gl.setHorizontalSpacing(12)
+        gl.setVerticalSpacing(6)
 
-        header_card.setLayout(header_layout)
-        main_layout.addWidget(header_card)
-
-        # ── Orta bölge: 2 sütun (Lisans Bilgisi & Plan Bilgisi)
-        center_layout = QHBoxLayout()
-        center_layout.setSpacing(12)
-
-        # Sol sütun: Lisans Bilgisi
-        license_group = QGroupBox("Lisans Bilgileri")
-        license_layout = QGridLayout()
-        license_layout.setVerticalSpacing(6)
-        license_layout.setHorizontalSpacing(12)
-
-        row = 0
-
-        license_layout.addWidget(QLabel("Lisans Anahtarı:"), row, 0, alignment=Qt.AlignmentFlag.AlignLeft)
-        self.lbl_license_key = QLabel("-")
-        self.lbl_license_key.setObjectName("valueLabel")
+        r = 0
+        gl.addWidget(QLabel("Lisans Anahtarı:"), r, 0)
+        self.lbl_license_key = QLabel("-"); self.lbl_license_key.setObjectName("valueLabel")
         self.lbl_license_key.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        license_layout.addWidget(self.lbl_license_key, row, 1)
-        row += 1
+        gl.addWidget(self.lbl_license_key, r, 1); r += 1
 
-        license_layout.addWidget(QLabel("Lisans E-posta:"), row, 0)
-        self.lbl_license_email = QLabel("-")
-        self.lbl_license_email.setObjectName("valueLabel")
-        self.lbl_license_email.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        license_layout.addWidget(self.lbl_license_email, row, 1)
-        row += 1
+        gl.addWidget(QLabel("Durum:"), r, 0)
+        self.lbl_status = QLabel("-"); self.lbl_status.setObjectName("valueLabel")
+        gl.addWidget(self.lbl_status, r, 1); r += 1
 
-        license_layout.addWidget(QLabel("Durum:"), row, 0)
-        self.lbl_license_status = QLabel("-")
-        self.lbl_license_status.setObjectName("valueLabel")
-        license_layout.addWidget(self.lbl_license_status, row, 1)
-        row += 1
+        gl.addWidget(QLabel("Son Doğrulama:"), r, 0)
+        self.lbl_last_verified = QLabel("-"); self.lbl_last_verified.setObjectName("valueLabel")
+        gl.addWidget(self.lbl_last_verified, r, 1); r += 1
 
-        license_layout.addWidget(QLabel("Başlangıç Tarihi:"), row, 0)
-        self.lbl_issued_at = QLabel("-")
-        self.lbl_issued_at.setObjectName("valueLabel")
-        license_layout.addWidget(self.lbl_issued_at, row, 1)
-        row += 1
-
-        license_layout.addWidget(QLabel("Bitiş Tarihi:"), row, 0)
-        self.lbl_expires_at = QLabel("-")
-        self.lbl_expires_at.setObjectName("valueLabel")
-        license_layout.addWidget(self.lbl_expires_at, row, 1)
-        row += 1
-
-        license_layout.addWidget(QLabel("Son Doğrulama:"), row, 0)
-        self.lbl_last_verified = QLabel("-")
-        self.lbl_last_verified.setObjectName("valueLabel")
-        license_layout.addWidget(self.lbl_last_verified, row, 1)
-        row += 1
-
-        self.lbl_license_hint = QLabel("Lisans anahtarın bu cihaza özeldir. Paylaşmaman önerilir.")
-        self.lbl_license_hint.setObjectName("hintLabel")
-        self.lbl_license_hint.setWordWrap(True)
-        license_layout.addItem(QSpacerItem(0, 4, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum), row, 0)
-        row += 1
-        license_layout.addWidget(self.lbl_license_hint, row, 0, 1, 2)
-
-        license_group.setLayout(license_layout)
-
-        # Sağ sütun: Plan Bilgisi
-        plan_group = QGroupBox("Plan ve Abonelik")
-        plan_layout = QGridLayout()
-        plan_layout.setVerticalSpacing(6)
-        plan_layout.setHorizontalSpacing(12)
-
-        row2 = 0
-
-        plan_layout.addWidget(QLabel("Plan Adı:"), row2, 0)
-        self.lbl_plan_name = QLabel("-")
-        self.lbl_plan_name.setObjectName("valueLabel")
-        plan_layout.addWidget(self.lbl_plan_name, row2, 1)
-        row2 += 1
-
-        plan_layout.addWidget(QLabel("Plan Kodu:"), row2, 0)
-        self.lbl_plan_code = QLabel("-")
-        self.lbl_plan_code.setObjectName("valueLabel")
-        plan_layout.addWidget(self.lbl_plan_code, row2, 1)
-        row2 += 1
-
-        plan_layout.addWidget(QLabel("Faturalama Döngüsü:"), row2, 0)
-        self.lbl_billing_cycle = QLabel("-")
-        self.lbl_billing_cycle.setObjectName("valueLabel")
-        plan_layout.addWidget(self.lbl_billing_cycle, row2, 1)
-        row2 += 1
-
-        plan_layout.addWidget(QLabel("Abonelik ID:"), row2, 0)
-        self.lbl_subscription_id = QLabel("-")
-        self.lbl_subscription_id.setObjectName("valueLabel")
-        self.lbl_subscription_id.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        plan_layout.addWidget(self.lbl_subscription_id, row2, 1)
-        row2 += 1
-
-        plan_layout.addWidget(QLabel("Sonraki Faturalama:"), row2, 0)
-        self.lbl_next_billing_at = QLabel("-")
-        self.lbl_next_billing_at.setObjectName("valueLabel")
-        plan_layout.addWidget(self.lbl_next_billing_at, row2, 1)
-        row2 += 1
-
-        plan_layout.addWidget(QLabel("Sağlayıcı:"), row2, 0)
-        self.lbl_provider = QLabel("-")
-        self.lbl_provider.setObjectName("valueLabel")
-        plan_layout.addWidget(self.lbl_provider, row2, 1)
-        row2 += 1
-
-        self.lbl_plan_hint = QLabel("Plan ve faturalama detayları ödeme sağlayıcın (Freemius vb.) üzerinden yönetilir.")
-        self.lbl_plan_hint.setObjectName("hintLabel")
-        self.lbl_plan_hint.setWordWrap(True)
-        plan_layout.addItem(QSpacerItem(0, 4, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum), row2, 0)
-        row2 += 1
-        plan_layout.addWidget(self.lbl_plan_hint, row2, 0, 1, 2)
-
-        plan_group.setLayout(plan_layout)
-
-        center_layout.addWidget(license_group)
-        center_layout.addWidget(plan_group)
-
-        main_layout.addLayout(center_layout)
-
-        # ── Alt kısım: Device info + butonlar
-        bottom_layout = QHBoxLayout()
-        bottom_layout.setSpacing(8)
-
-        # Sol: Device info
-        device_group = QGroupBox("Cihaz Bilgisi")
-        device_layout = QGridLayout()
-        device_layout.setVerticalSpacing(6)
-        device_layout.setHorizontalSpacing(12)
-
-        device_layout.addWidget(QLabel("Device ID:"), 0, 0)
-        self.lbl_device_id = QLabel("-")
-        self.lbl_device_id.setObjectName("valueLabel")
+        gl.addWidget(QLabel("Device ID:"), r, 0)
+        self.lbl_device_id = QLabel("-"); self.lbl_device_id.setObjectName("valueLabel")
         self.lbl_device_id.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        device_layout.addWidget(self.lbl_device_id, 0, 1)
+        gl.addWidget(self.lbl_device_id, r, 1); r += 1
 
-        device_layout.addWidget(QLabel("Son Hata:"), 1, 0)
-        self.lbl_last_error = QLabel("-")
-        self.lbl_last_error.setObjectName("hintLabel")
-        self.lbl_last_error.setWordWrap(True)
-        device_layout.addWidget(self.lbl_last_error, 1, 1)
+        self.lbl_hint = QLabel("Not: İnternet yoksa doğrulama başarısız olabilir.")
+        self.lbl_hint.setObjectName("hintLabel")
+        self.lbl_hint.setWordWrap(True)
+        gl.addItem(QSpacerItem(0, 6, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum), r, 0)
+        r += 1
+        gl.addWidget(self.lbl_hint, r, 0, 1, 2)
 
-        device_group.setLayout(device_layout)
+        root.addWidget(box)
 
-        bottom_layout.addWidget(device_group, stretch=2)
+        # Buttons
+        btn_row = QHBoxLayout()
+        btn_row.addStretch()
 
-        # Sağ: Action butonları
-        actions_layout = QVBoxLayout()
-        actions_layout.setSpacing(6)
-        actions_layout.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
+        self.btn_enter_key = QPushButton("Lisans Gir & Doğrula")
+        self.btn_refresh = QPushButton("Yeniden Doğrula")
+        self.btn_refresh.setObjectName("secondaryButton")
 
-        self.btn_refresh = QPushButton("Lisansı Şimdi Doğrula")
-        self.btn_change_key = QPushButton("Lisans Anahtarını Değiştir")
-        self.btn_change_key.setObjectName("secondaryButton")
-        self.btn_deactivate = QPushButton("Bu Cihazı Lisanssız Bırak")
+        self.btn_deactivate = QPushButton("Lisansı Kaldır")
         self.btn_deactivate.setObjectName("dangerButton")
+
         self.btn_close = QPushButton("Kapat")
         self.btn_close.setObjectName("secondaryButton")
 
-        self.btn_refresh.clicked.connect(self.on_refresh_clicked)
-        self.btn_change_key.clicked.connect(self.on_change_key_clicked)
-        self.btn_deactivate.clicked.connect(self.on_deactivate_clicked)
+        self.btn_enter_key.clicked.connect(self.on_enter_key)
+        self.btn_refresh.clicked.connect(self.on_refresh)
+        self.btn_deactivate.clicked.connect(self.on_deactivate)  # ✅ eklendi
         self.btn_close.clicked.connect(self.reject)
 
-        actions_layout.addWidget(self.btn_refresh)
-        actions_layout.addWidget(self.btn_change_key)
-        actions_layout.addWidget(self.btn_deactivate)
-        actions_layout.addSpacing(8)
-        actions_layout.addWidget(self.btn_close)
+        btn_row.addWidget(self.btn_enter_key)
+        btn_row.addWidget(self.btn_refresh)
+        btn_row.addWidget(self.btn_deactivate)
+        btn_row.addWidget(self.btn_close)
+        root.addLayout(btn_row)
 
-        bottom_layout.addLayout(actions_layout, stretch=1)
-
-        main_layout.addLayout(bottom_layout)
-
-        self.setLayout(main_layout)
-
-    # ─────────────────────────
-    # UI'ya veri basmak için API
-    # ─────────────────────────
+    # -------------------------
+    # UI helper
+    # -------------------------
     def set_license_data(self, data: Dict[str, Any]):
-        """
-        Dışarıdan lisans verisini doldurmak için.
-        data içinden bulduklarını alır, bulamadıklarını '-' olarak bırakır.
-        """
+        def get(k, d="-"):
+            v = data.get(k, d)
+            return d if v in (None, "") else v
 
-        def get(key, default="-"):
-            value = data.get(key, default)
-            return value if value not in (None, "") else default
+        self.lbl_license_key.setText(str(get("license_key")))
+        self.lbl_status.setText(str(get("status_label", get("status"))))
+        self.lbl_last_verified.setText(str(get("last_verified_at")))
+        self.lbl_device_id.setText(str(get("device_id")))
+        self._update_status_badge(str(get("status", "none")))
 
-        # Lisans bilgileri
-        self._set_label_text(self.lbl_license_key, get("license_key"))
-        self._set_label_text(self.lbl_license_email, get("license_email"))
-        self._set_label_text(self.lbl_license_status, get("status_label", get("status")))
+        # Lisans yokken deactivate butonu pasif
+        status = str(get("status", "none")).lower()
+        has_license = "none" not in status and get("license_key") != "-"
+        self.btn_deactivate.setEnabled(bool(has_license))
 
-        self._set_label_text(self.lbl_issued_at, get("license_issued_at"))
-        self._set_label_text(self.lbl_expires_at, get("license_expires_at"))
-        self._set_label_text(self.lbl_last_verified, get("last_verified_at"))
-
-        # Plan bilgileri
-        self._set_label_text(self.lbl_plan_name, get("plan_name"))
-        self._set_label_text(self.lbl_plan_code, get("plan_code"))
-        self._set_label_text(self.lbl_billing_cycle, get("billing_cycle"))
-        self._set_label_text(self.lbl_subscription_id, get("subscription_id"))
-        self._set_label_text(self.lbl_next_billing_at, get("next_billing_at"))
-        self._set_label_text(self.lbl_provider, get("provider", "freemius"))
-
-        # Cihaz ve hata
-        self._set_label_text(self.lbl_device_id, get("device_id"))
-        self._set_label_text(self.lbl_last_error, get("last_error_message", "-"))
-
-        # Status badge rengi
-        self._update_status_badge(get("status", "none"))
-
-    def _set_label_text(self, label: QLabel, text: str):
-        label.setText(str(text))
+    def _clear_license_ui(self):
+        self.lbl_license_key.setText("-")
+        self.lbl_status.setText("-")
+        self.lbl_last_verified.setText("-")
+        # device id yine gözükebilir, ama state silinince pipeline onu yine hesaplayıp döndürebilir.
+        # biz burada dokunmuyoruz.
+        self._update_status_badge("none")
+        self.btn_deactivate.setEnabled(False)
 
     def _update_status_badge(self, status: str):
-        status = (status or "").lower()
-
-        if "trial" in status:
-            text = "TRIAL"
-            color = "#F2C94C"
-        elif "active" in status or "valid" in status:
-            text = "AKTİF"
-            color = "#27AE60"
-        elif "expired" in status:
-            text = "SÜRESİ DOLMUŞ"
-            color = "#EB5757"
-        elif "blocked" in status or "revoked" in status:
-            text = "ENGELLİ"
-            color = "#9B51E0"
+        s = (status or "").lower()
+        if "trial" in s:
+            text, color = "TRIAL", "#F2C94C"
+        elif "active" in s or "valid" in s:
+            text, color = "AKTİF", "#27AE60"
+        elif "expired" in s:
+            text, color = "SÜRESİ DOLMUŞ", "#EB5757"
+        elif "blocked" in s or "revoked" in s:
+            text, color = "ENGELLİ", "#9B51E0"
+        elif "cancel" in s:
+            text, color = "İPTAL", "#EB5757"
         else:
-            text = "LİSANS YOK"
-            color = "#4F4F4F"
+            text, color = "LİSANS YOK", "#4F4F4F"
 
         self.lbl_status_badge.setText(text)
-        # Badge arka plan rengini inline style ile güncelle
         self.lbl_status_badge.setStyleSheet(
             f"padding: 4px 10px; border-radius: 10px; font-size: 11px; "
-            f"font-weight: 600; color: #0E111A; background-color: {color};"
+            f"font-weight: 700; color: #0E111A; background-color: {color};"
         )
 
-    # ─────────────────────────
-    # Demo veri (geçici)
-    # ─────────────────────────
-    def _load_demo_data(self):
-        """
-        Sadece tasarımı görmek için demo veri.
-        Gerçek kullanımda bu fonksiyonu kaldırıp
-        dışarıdan set_license_data() çağırırsın.
-        """
-        demo = {
-            "license_key": "OS-1234-5678-ABCD",
-            "license_email": "kullanici@domain.com",
-            "status": "active",
-            "license_issued_at": "01.01.2025",
-            "license_expires_at": "01.01.2026",
-            "last_verified_at": "10.12.2025 03:12",
-            "plan_name": "OrderScout PRO",
-            "plan_code": "pro",
-            "billing_cycle": "Yıllık",
-            "subscription_id": "sub_9f23jk2",
-            "next_billing_at": "01.01.2026",
-            "provider": "Freemius",
-            "device_id": "DEVICE-ABC-123",
-            "last_error_message": "-",
-        }
-        self.set_license_data(demo)
+    def _refresh_ui_silent(self):
+        # Açılışta “mevcut lisans var mı?” diye validate dener.
+        # Eğer lisans yoksa fail döner; sessizce geçiyoruz.
+        res = validate_current_license()
+        if getattr(res, "success", False):
+            self.set_license_data(res.data)
+        else:
+            # validate fail olursa (no_license) UI boş kalsın, ama device id'yi en azından gösterelim
+            # validate_current_license fail durumunda data dönmüyor olabilir; o yüzden dokunmuyoruz.
+            self.btn_deactivate.setEnabled(False)
 
-    # ─────────────────────────
-    # Buton eventleri (şimdilik stub)
-    # ─────────────────────────
-    def on_refresh_clicked(self):
-        QMessageBox.information(
-            self,
-            "Lisans Doğrulama",
-            "Bu buton, lisansını sunucu ile yeniden doğrulamak için kullanılacak.\n"
-            "Backend entegrasyonunda buraya async doğrulama eklenecek."
-        )
+    # -------------------------
+    # Actions
+    # -------------------------
+    def on_enter_key(self):
+        key, ok = QInputDialog.getText(self, "Lisans Anahtarı", "Lisans anahtarını gir:")
+        if not ok:
+            return
+        key = (key or "").strip()
+        if not key:
+            QMessageBox.warning(self, "Hata", "Lisans anahtarı boş olamaz.")
+            return
 
-    def on_change_key_clicked(self):
-        QMessageBox.information(
-            self,
-            "Lisans Anahtarını Değiştir",
-            "Burada yeni lisans anahtarı girebileceğin bir pencere açacağız.\n"
-            "Şimdilik sadece tasarım odaklı bir ekran."
-        )
+        res = activate_and_validate_license(license_key=key)
+        if not getattr(res, "success", False):
+            QMessageBox.critical(self, "Lisans Hatası", _err_text(res))
+            return
 
-    def on_deactivate_clicked(self):
+        self.set_license_data(res.data)
+        QMessageBox.information(self, "Başarılı", "Lisans doğrulandı ve kaydedildi.")
+
+    def on_refresh(self):
+        res = validate_current_license()
+        if not getattr(res, "success", False):
+            QMessageBox.warning(self, "Doğrulama", _err_text(res))
+            return
+        self.set_license_data(res.data)
+        QMessageBox.information(self, "Doğrulama", "Lisans güncellendi.")
+
+    def on_deactivate(self):
         reply = QMessageBox.question(
             self,
-            "Bu Cihazı Lisanssız Bırak",
-            "Bu cihazdaki lisans bağlantısını kaldırmak istediğinden emin misin?\n"
-            "Bu işlemden sonra OrderScout'u kullanmak için tekrar lisans girmen gerekecek.",
+            "Lisansı Kaldır",
+            "Bu cihazın lisansını kaldırmak istiyor musun?\n\n"
+            "Bu işlem Freemius tarafında cihaz kotasını boşaltır.\n"
+            "Sonrasında tekrar lisans girmen gerekir.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No
         )
-        if reply == QMessageBox.StandardButton.Yes:
-            QMessageBox.information(
-                self,
-                "Lisans Kaldırma",
-                "Gerçek kullanımda burada DB'den lisans bilgileri silinecek.\n"
-                "Şimdilik sadece tasarım amaçlı bir aksiyon."
-            )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        res = deactivate_current_license()
+        if not getattr(res, "success", False):
+            QMessageBox.critical(self, "Kaldırma Hatası", _err_text(res))
+            return
+
+        self._clear_license_ui()
+        QMessageBox.information(self, "Başarılı", "Lisans kaldırıldı. Bu cihaz artık lisanssız.")
 
 
 # ─────────────────────────────────────────
 # 🔘 Toolbar Butonu
 # ─────────────────────────────────────────
 class LicenseManagerButton:
-    """
-    Toolbar üzerinde 'Lisans Yönetimi' butonunu temsil eder.
-    CompanyManagerButton ile aynı mantıkta.
-    """
-
     def __init__(self, parent=None):
         self.parent = parent
 
     def create_action(self):
         icon_path = os.path.join(MEDIA_ROOT, "license_manager.png")
-
-        action = QAction(QIcon(icon_path), "Lisans Yönetimi", self.parent)
-        action.setToolTip("OrderScout lisansını görüntüle ve yönet")
-        action.setIconText("Lisans")
-        action.setIconVisibleInMenu(True)
+        action = QAction(QIcon(icon_path), "Lisans", self.parent)
+        action.setToolTip("Lisansı yönet")
         action.setData("license_manager")
-        action.setEnabled(True)
-        action.setCheckable(False)
 
         if self.parent and hasattr(self.parent, "toolBar"):
             self.parent.toolBar.setIconSize(QSize(32, 32))
 
-        action.triggered.connect(self.open_license_manage_dialog)
+        action.triggered.connect(self.open_dialog)
         return action
 
-    def open_license_manage_dialog(self):
+    def open_dialog(self):
         dlg = LicenseManagerDialog(self.parent)
         dlg.exec()

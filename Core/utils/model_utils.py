@@ -1,32 +1,29 @@
 # model_utils.py
-from sqlmodel import SQLModel, Session, select, text
-from typing import Type, Iterable, Callable, Optional, Any,Dict,Tuple
-from settings import DB_NAME, DEFAULT_DATABASE_DIR
-from sqlalchemy.engine import Engine
+from __future__ import annotations
 
-from sqlalchemy import create_engine,engine,event,text
-from sqlalchemy.exc import IntegrityError, CompileError
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 import os
 from pathlib import Path
-import sqlite3
+from typing import (
+    Type, Iterable, Callable, Optional, Any, Dict, Tuple
+)
+
 import pandas as pd
-from Feedback.processors.pipeline import Result, map_error_to_message
-from sqlalchemy.sql.elements import BindParameter, ClauseElement
-
-import settings  # ✅ bunu bilerek import ediyoruz (settings.__file__ için)
-
-
-import os
-import sqlite3
-from pathlib import Path
-from typing import Dict, Tuple
-
-from sqlalchemy import Engine, event, text
-from sqlalchemy.pool import NullPool
+from sqlmodel import SQLModel, Session, select
 from sqlmodel import create_engine
 
-import settings
+from sqlalchemy import Engine, event, text
+from sqlalchemy.exc import IntegrityError, CompileError
+from sqlalchemy.pool import NullPool
+from sqlalchemy.sql.elements import BindParameter, ClauseElement
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+
+from settings import DB_NAME, DEFAULT_DATABASE_DIR
+from Feedback.processors.pipeline import Result, map_error_to_message
+
+
+# ============================================================
+# 🔌 ENGINE (STABLE / MULTI-PROCESS SAFE)
+# ============================================================
 
 _ENGINE_CACHE: Dict[str, Tuple[int, Engine]] = {}
 
@@ -38,61 +35,52 @@ def get_engine(db_name: str) -> Engine:
     if cached is not None and cached[0] == pid:
         return cached[1]
 
-    # ✅ MUTLAK DİZİN
-    db_dir = Path(settings.DEFAULT_DATABASE_DIR).resolve()
+    db_dir = Path(DEFAULT_DATABASE_DIR).resolve()
     db_dir.mkdir(parents=True, exist_ok=True)
 
     db_path = (db_dir / db_name).resolve()
     db_url = f"sqlite:///{db_path.as_posix()}"
 
-    # ✅ SQLite temp’i proje içine sabitle (bazı Windows kurulumlarında şart)
-    tmp_dir = (db_dir / "_tmp").resolve()
+    # SQLite temp dizinini sabitle (Windows + multi-process için kritik)
+    tmp_dir = db_dir / "_tmp"
     tmp_dir.mkdir(parents=True, exist_ok=True)
     os.environ["TMP"] = str(tmp_dir)
     os.environ["TEMP"] = str(tmp_dir)
 
-    # ✅ Ham sqlite test
-    con = sqlite3.connect(str(db_path))
-    con.execute("SELECT 1;")
-    con.close()
-
-    # ✅ Multi-process'te EN stabil havuz: NullPool
     engine = create_engine(
         db_url,
         echo=False,
-        connect_args={"check_same_thread": False, "timeout": 30},
+        connect_args={
+            "check_same_thread": False,
+            "timeout": 30,
+        },
         poolclass=NullPool,
         pool_pre_ping=True,
     )
 
     @event.listens_for(engine, "connect")
-    def _set_sqlite_pragmas(dbapi_connection, connection_record):
+    def _set_sqlite_pragmas(dbapi_connection, _):
         cur = dbapi_connection.cursor()
-
-        # 🔥 WAL bazen -shm/-wal aşamasında "unable to open" çıkarabiliyor → şimdilik kapatıyoruz
         cur.execute("PRAGMA journal_mode=DELETE;")
-
-        # ✅ Temp dosya ihtiyacını düşür
         cur.execute("PRAGMA temp_store=MEMORY;")
-
-        # ✅ Genel stabilite
         cur.execute("PRAGMA synchronous=NORMAL;")
         cur.execute("PRAGMA foreign_keys=ON;")
         cur.execute("PRAGMA busy_timeout=10000;")
-
         cur.close()
 
-    # ✅ İlk bağlantı test
+    # bağlantı testi
     with engine.connect() as conn:
         conn.execute(text("SELECT 1"))
 
     _ENGINE_CACHE[db_name] = (pid, engine)
     return engine
-# ---------- Helper ----------
+
+
+# ============================================================
+# 🧩 HELPERS
+# ============================================================
+
 def batch_iter(seq: Iterable[Any], size: int = 500) -> Iterable[list[Any]]:
-    """
-    Büyük listeleri güvenli/parçalı işlemek için generator.
-    """
     buf = []
     for item in seq:
         buf.append(item)
@@ -107,19 +95,19 @@ def get_model_columns(model: Type[SQLModel]) -> set[str]:
     return {c.name for c in model.__table__.c}
 
 
-# ---------- Normalizer ----------
+# ============================================================
+# 🧼 NORMALIZER
+# ============================================================
+
 def make_normalizer(
-        *,
-        defaults: Optional[dict[str, Any]] = None,
-        coalesce_none: Optional[dict[str, Any]] = None,
-        strip_strings: bool = True,
-        upper_keys: Optional[list[str]] = None,
-        lower_keys: Optional[list[str]] = None,
-        extra: Optional[Callable[[dict], dict]] = None,
+    *,
+    defaults: Optional[dict[str, Any]] = None,
+    coalesce_none: Optional[dict[str, Any]] = None,
+    strip_strings: bool = True,
+    upper_keys: Optional[list[str]] = None,
+    lower_keys: Optional[list[str]] = None,
+    extra: Optional[Callable[[dict], dict]] = None,
 ) -> Callable[[dict], dict]:
-    """
-    Normalize fonksiyonu üretir.
-    """
 
     def _norm(rec: dict) -> dict:
         r = dict(rec)
@@ -135,16 +123,17 @@ def make_normalizer(
 
         if coalesce_none:
             for k, v in coalesce_none.items():
-                if r.get(k) is None or (isinstance(r.get(k), str) and r.get(k) == ""):
+                if r.get(k) in (None, ""):
                     r[k] = v
 
         if upper_keys:
             for k in upper_keys:
-                if k in r and isinstance(r[k], str):
+                if isinstance(r.get(k), str):
                     r[k] = r[k].upper()
+
         if lower_keys:
             for k in lower_keys:
-                if k in r and isinstance(r[k], str):
+                if isinstance(r.get(k), str):
                     r[k] = r[k].lower()
 
         if extra:
@@ -155,14 +144,16 @@ def make_normalizer(
     return _norm
 
 
+# ============================================================
+# 🧽 SANITIZE (INSERT SAFETY)
+# ============================================================
+
 def _sanitize_row(row: dict) -> dict:
-    """ClauseElement / BindParameter değerlerini Python tarafında güvenli hale getirir."""
     safe = {}
     for k, v in row.items():
         if isinstance(v, BindParameter):
-            safe[k] = getattr(v, "value", None)  # çoğu zaman None
+            safe[k] = getattr(v, "value", None)
         elif isinstance(v, ClauseElement):
-            # func.now() gibi bir ifade varsa çoklu insert'te patlar → None ata
             safe[k] = None
         else:
             safe[k] = v
@@ -174,7 +165,6 @@ def _sanitize_chunk(chunk: list[dict]) -> list[dict]:
 
 
 def _debug_find_problematic(rows: list[dict]) -> list[tuple]:
-    """Debug için: hangi alanlarda ClauseElement var göstersin."""
     bad = []
     for i, r in enumerate(rows):
         for k, v in r.items():
@@ -183,40 +173,40 @@ def _debug_find_problematic(rows: list[dict]) -> list[tuple]:
     return bad
 
 
-# ---------- Create ----------
+# ============================================================
+# ➕ CREATE / UPSERT
+# ============================================================
+
 def create_records(
-        model: Type[SQLModel],
-        data_list: list[dict],
-        db_name: str = DB_NAME,
-        *,
-        conflict_keys: Optional[list[str]] = None,
-        mode: str = "ignore",  # "ignore" | "update" | "plain"
-        normalizer: Optional[Callable[[dict], dict]] = None,
-        chunk_size: int = 500,
-        rename_map: Optional[dict[str, str]] = None,
-        drop_unknown: bool = True,
+    model: Type[SQLModel],
+    data_list: list[dict],
+    db_name: str = DB_NAME,
+    *,
+    conflict_keys: Optional[list[str]] = None,
+    mode: str = "ignore",  # ignore | update | plain
+    normalizer: Optional[Callable[[dict], dict]] = None,
+    chunk_size: int = 500,
+    rename_map: Optional[dict[str, str]] = None,
+    drop_unknown: bool = True,
 ) -> Result:
-    """
-    Toplu kayıt ekleme/upsert.
-    """
+
     try:
         engine = get_engine(db_name)
-
-        # Temizleme
         cols = get_model_columns(model) if drop_unknown else None
+
         cleaned = []
-        for d in (data_list or []):
+        for d in data_list or []:
             r = dict(d)
 
             if rename_map:
-                for old, new in list(rename_map.items()):
+                for old, new in rename_map.items():
                     if old in r:
                         r[new] = r.pop(old)
 
             if normalizer:
                 r = normalizer(r)
 
-            if drop_unknown and cols is not None:
+            if cols:
                 r = {k: v for k, v in r.items() if k in cols}
 
             if r:
@@ -227,60 +217,50 @@ def create_records(
             return Result.ok(
                 f"{model.__name__}: işlenecek kayıt yok.",
                 close_dialog=False,
-                data={"model": model.__name__, "attempted": 0}
+                data={"attempted": 0},
             )
 
         with Session(engine) as session:
-            # plain
+
             if mode == "plain" or not conflict_keys:
-                try:
-                    with session.begin():
-                        for r in cleaned:
-                            session.add(model(**r))
-                    return Result.ok(
-                        f"{model.__name__}: {attempted} kayıt eklendi (plain).",
-                        close_dialog=False,
-                        data={"model": model.__name__, "attempted": attempted, "inserted": attempted}
-                    )
-                except IntegrityError as e:
-                    session.rollback()
-                    return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
-                except Exception as e:
-                    session.rollback()
-                    return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
+                with session.begin():
+                    for r in cleaned:
+                        session.add(model(**r))
+                return Result.ok(
+                    f"{model.__name__}: {attempted} kayıt eklendi.",
+                    close_dialog=False,
+                )
 
             tbl = model.__table__
 
             if mode == "ignore":
-                inserted_total = 0
+                inserted = 0
                 for chunk in batch_iter(cleaned, chunk_size):
-                    safe_chunk = _sanitize_chunk(chunk)
+                    safe = _sanitize_chunk(chunk)
                     try:
-                        stmt = sqlite_insert(tbl).values(safe_chunk)
-                        stmt = stmt.on_conflict_do_nothing(index_elements=conflict_keys)
+                        stmt = (
+                            sqlite_insert(tbl)
+                            .values(safe)
+                            .on_conflict_do_nothing(index_elements=conflict_keys)
+                        )
                         res = session.exec(stmt)
-                        rc = getattr(res, "rowcount", 0) or 0
-                        inserted_total += rc
-                    except CompileError as ce:
-                        # Debug log: hangi satır problemliydi?
-                        bad = _debug_find_problematic(chunk)
-                        print("⚠️ CompileError - problematic rows:", bad)
-
-                        # Fallback: tek tek ekle
-                        for r in safe_chunk:
-                            stmt = sqlite_insert(tbl).values(r)
-                            stmt = stmt.on_conflict_do_nothing(index_elements=conflict_keys)
+                        inserted += res.rowcount or 0
+                    except CompileError:
+                        for r in safe:
+                            stmt = (
+                                sqlite_insert(tbl)
+                                .values(r)
+                                .on_conflict_do_nothing(index_elements=conflict_keys)
+                            )
                             session.exec(stmt)
                 session.commit()
                 return Result.ok(
-                    f"{model.__name__}: {attempted} kaydın {inserted_total} adedi eklendi (ignore).",
+                    f"{model.__name__}: {inserted}/{attempted} kayıt eklendi.",
                     close_dialog=False,
-                    data={"model": model.__name__, "attempted": attempted, "inserted": inserted_total}
                 )
 
-
-            elif mode == "update":
-                affected_total = 0
+            if mode == "update":
+                affected = 0
                 for chunk in batch_iter(cleaned, chunk_size):
                     stmt = sqlite_insert(tbl).values(chunk)
                     update_cols = {
@@ -290,184 +270,153 @@ def create_records(
                     }
                     stmt = stmt.on_conflict_do_update(
                         index_elements=conflict_keys,
-                        set_=update_cols
+                        set_=update_cols,
                     )
                     res = session.exec(stmt)
-                    rc = getattr(res, "rowcount", 0) or 0
-                    affected_total += rc
+                    affected += res.rowcount or 0
                 session.commit()
                 return Result.ok(
-                    f"{model.__name__}: {attempted} kaydın {affected_total} adedi etkilendi (update).",
+                    f"{model.__name__}: {affected} kayıt güncellendi.",
                     close_dialog=False,
-                    data={"model": model.__name__, "attempted": attempted, "affected": affected_total}
                 )
 
-            return Result.fail(f"Geçersiz mode='{mode}'.", close_dialog=False)
+            return Result.fail(f"Geçersiz mode='{mode}'", close_dialog=False)
 
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
 
 
-# ---------- Read ----------
+# ============================================================
+# 📥 READ
+# ============================================================
+
 def get_records(
-        model: Type[SQLModel] = None,
-        db_engine: Engine = None,
-        db_name: str = DB_NAME,
-        filters: Optional[dict] = None,
-        custom_sql: Optional[str] = None,
-        custom_stmt: Optional[Any] = None,  # ✅ ORM query desteği
-        to_dataframe: bool = False
+    model: Type[SQLModel] = None,
+    db_engine: Engine = None,
+    db_name: str = DB_NAME,
+    filters: Optional[dict] = None,
+    custom_sql: Optional[str] = None,
+    custom_stmt: Optional[Any] = None,
+    to_dataframe: bool = False,
 ) -> Result:
-    """
-    Genel amaçlı veri çekme fonksiyonu.
-    - filters: dict → {"name": "Ali"} veya {"pk": [1,2,3]}
-    - custom_sql: ham SQL string
-    - custom_stmt: ORM query (örn: select(...).join(...))
-    - to_dataframe: True ise DataFrame döner
-    """
+
     try:
+        engine = db_engine or get_engine(db_name)
 
-        if db_engine is None:
-            db_engine = get_engine(db_name)
-
-        # 🔹 Ham SQL modu
         if custom_sql:
-            with db_engine.connect() as conn:
-                if to_dataframe:
-                    df = pd.read_sql_query(custom_sql, conn)
-                    return Result.ok(
-                        f"{len(df)} kayıt çekildi (custom SQL, DataFrame).",
-                        close_dialog=False,
-                        data={"records": df, "count": len(df)}
-                    )
-                else:
-                    result = conn.execute(custom_sql).fetchall()
-                    return Result.ok(
-                        f"{len(result)} kayıt çekildi (custom SQL).",
-                        close_dialog=False,
-                        data={"records": result, "count": len(result)}
-                    )
-
-        # 🔹 ORM Query modu
-        if custom_stmt is not None:
-            with Session(db_engine) as session:
-                result = session.exec(custom_stmt).all()
-                if to_dataframe:
-                    df = pd.DataFrame([r.dict() for r in result])
-                    return Result.ok(
-                        f"{len(df)} kayıt çekildi (custom_stmt, DataFrame).",
-                        close_dialog=False,
-                        data={"records": df, "count": len(df)}
-                    )
+            with engine.connect() as conn:
+                df = pd.read_sql_query(custom_sql, conn)
                 return Result.ok(
-                    f"{len(result)} kayıt çekildi (custom_stmt).",
+                    f"{len(df)} kayıt çekildi.",
                     close_dialog=False,
-                    data={"records": result, "count": len(result)}
+                    data={"records": df if to_dataframe else df.values.tolist()},
                 )
 
-        # 🔹 Normal SQLModel select (filters ile)
+        if custom_stmt is not None:
+            with Session(engine) as session:
+                res = session.exec(custom_stmt).all()
+                if to_dataframe:
+                    return Result.ok(
+                        f"{len(res)} kayıt çekildi.",
+                        close_dialog=False,
+                        data={"records": pd.DataFrame([r.dict() for r in res])},
+                    )
+                return Result.ok(
+                    f"{len(res)} kayıt çekildi.",
+                    close_dialog=False,
+                    data={"records": res},
+                )
+
         if model is None:
             return Result.fail("Model belirtilmedi.", close_dialog=False)
 
-        with Session(db_engine) as session:
+        with Session(engine) as session:
             stmt = select(model)
-
             if filters:
-                for attr, value in filters.items():
-                    if isinstance(value, (list, tuple, set)):
-                        stmt = stmt.where(getattr(model, attr).in_(value))
-                    else:
-                        stmt = stmt.where(getattr(model, attr) == value)
+                for k, v in filters.items():
+                    stmt = stmt.where(
+                        getattr(model, k).in_(v) if isinstance(v, (list, tuple, set))
+                        else getattr(model, k) == v
+                    )
+            res = session.exec(stmt).all()
 
-            result = session.exec(stmt).all()
-
-            if to_dataframe:
-                df = pd.DataFrame([r.dict() for r in result])
-                return Result.ok(
-                    f"{len(df)} kayıt çekildi (DataFrame).",
-                    close_dialog=False,
-                    data={"records": df, "count": len(df)}
-                )
-
+        if to_dataframe:
             return Result.ok(
-                f"{len(result)} kayıt çekildi.",
+                f"{len(res)} kayıt çekildi.",
                 close_dialog=False,
-                data={"records": result, "count": len(result)}
+                data={"records": pd.DataFrame([r.dict() for r in res])},
             )
 
-    except Exception as e:
-        return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
-
-
-# ---------- Update ----------
-def update_records(
-        model: Type[SQLModel],
-        filters: dict,
-        update_data: dict,
-        db_name: str = DB_NAME,
-        db_engine: Engine = None,
-
-) -> Result:
-    """
-    Genel amaçlı update fonksiyonu.
-    """
-    try:
-        if db_engine is None:
-            db_engine = get_engine(db_name)
-
-        with Session(db_engine) as session:
-            stmt = select(model)
-            for attr, value in filters.items():
-                stmt = stmt.where(getattr(model, attr) == value)
-
-            results = session.exec(stmt).all()
-            for item in results:
-                for attr, value in update_data.items():
-                    setattr(item, attr, value)
-
-            session.commit()
-
         return Result.ok(
-            f"{len(results)} kayıt güncellendi.",
+            f"{len(res)} kayıt çekildi.",
             close_dialog=False,
-            data={"count": len(results)}
+            data={"records": res},
         )
 
     except Exception as e:
         return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
 
 
-# ---------- Delete ----------
-def delete_records(
-        model: Type[SQLModel],
-        filters: dict,
-        db_name: str = DB_NAME,
-        db_engine: Engine = None,
+# ============================================================
+# ✏️ UPDATE
+# ============================================================
+
+def update_records(
+    model: Type[SQLModel],
+    filters: dict,
+    update_data: dict,
+    db_name: str = DB_NAME,
+    db_engine: Engine = None,
 ) -> Result:
-    """
-    Genel amaçlı delete fonksiyonu.
-    """
+
     try:
-        if db_engine is None:
-            db_engine = get_engine(db_name)
+        engine = db_engine or get_engine(db_name)
 
-        with Session(db_engine) as session:
+        with Session(engine) as session:
             stmt = select(model)
-            for attr, value in filters.items():
-                stmt = stmt.where(getattr(model, attr) == value)
-
-            results = session.exec(stmt).all()
-            deleted = len(results)
-
-            for item in results:
-                session.delete(item)
-
+            for k, v in filters.items():
+                stmt = stmt.where(getattr(model, k) == v)
+            rows = session.exec(stmt).all()
+            for row in rows:
+                for k, v in update_data.items():
+                    setattr(row, k, v)
             session.commit()
 
         return Result.ok(
-            f"{deleted} kayıt silindi.",
+            f"{len(rows)} kayıt güncellendi.",
             close_dialog=False,
-            data={"count": deleted}
+        )
+
+    except Exception as e:
+        return Result.fail(map_error_to_message(e), error=e, close_dialog=False)
+
+
+# ============================================================
+# 🗑 DELETE
+# ============================================================
+
+def delete_records(
+    model: Type[SQLModel],
+    filters: dict,
+    db_name: str = DB_NAME,
+    db_engine: Engine = None,
+) -> Result:
+
+    try:
+        engine = db_engine or get_engine(db_name)
+
+        with Session(engine) as session:
+            stmt = select(model)
+            for k, v in filters.items():
+                stmt = stmt.where(getattr(model, k) == v)
+            rows = session.exec(stmt).all()
+            for row in rows:
+                session.delete(row)
+            session.commit()
+
+        return Result.ok(
+            f"{len(rows)} kayıt silindi.",
+            close_dialog=False,
         )
 
     except Exception as e:

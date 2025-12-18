@@ -146,7 +146,3 @@ class OrderItem(SQLModel, table=True):
         Index("ix_orderitem_orderno_productcode", "orderNumber", "productCode"),
     )
 
-
-# ---- Dış Veri: Kırpılmış veriler (opsiyonel) ----
-class ScrapData(SQLModel, table=True):
-    scrap_date: int = Field(primary_key=True)
