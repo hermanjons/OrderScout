@@ -20,22 +20,9 @@ from License.models import (
     LicenseActionLog,
 )
 
-import json
-import urllib.request
-import urllib.error
-
-from License.constants import LICENSE_BACKEND_BASE_URL
-
-
-# ======================================================
-# CONFIG
-# ======================================================
 VERIFY_TTL_MINUTES = 30
 
 
-# ======================================================
-# DEVICE / UID (STABLE)
-# ======================================================
 def get_device_id() -> str:
     raw = f"{uuid.getnode()}|{os.getlogin()}"
     return hashlib.sha256(raw.encode()).hexdigest()[:32]
@@ -43,12 +30,9 @@ def get_device_id() -> str:
 
 def get_uid32(device_id: str) -> str:
     salt = getattr(settings, "LICENSE_UID_SALT", "orderscout")
-    return hashlib.md5(f"{device_id}|{salt}".encode()).hexdigest()  # 32 char
+    return hashlib.md5(f"{device_id}|{salt}".encode()).hexdigest()
 
 
-# ======================================================
-# HELPERS
-# ======================================================
 def _find_state(session: Session, device_id: str) -> Optional[LocalLicenseState]:
     return session.exec(
         select(LocalLicenseState).where(
@@ -103,9 +87,6 @@ def _ui_dict(state: LocalLicenseState) -> Dict[str, Any]:
     }
 
 
-# ======================================================
-# CORE: ENSURE (decorator için)
-# ======================================================
 def ensure_license_valid(force: bool = False) -> Result:
     engine = get_engine("orders.db")
 
@@ -123,9 +104,6 @@ def ensure_license_valid(force: bool = False) -> Result:
         return validate_current_license()
 
 
-# ======================================================
-# ACTIVATE + VALIDATE (TEK GİRİŞ NOKTASI)
-# ======================================================
 def activate_and_validate_license(*, license_key: str, license_email: Optional[str] = None) -> Result:
     license_key = (license_key or "").strip()
     if not license_key:
@@ -143,18 +121,15 @@ def activate_and_validate_license(*, license_key: str, license_email: Optional[s
     with Session(engine) as session:
         state = _find_state(session, device_id)
 
-        # ✅ Aynı cihaz + aynı lisans → ACTIVATE YOK, SADECE VALIDATE
         if state and state.license_key == license_key and state.install_id and state.install_uuid:
             return validate_current_license()
 
-        # ❌ Aynı cihazda başka lisans varken yeni key
         if state and state.license_key != license_key:
             return Result.fail(
                 "Bu cihazda başka bir lisans aktif.\n"
                 "Yeni lisans girmeden önce mevcut lisansı kaldırmalısın."
             )
 
-        # ---------- ACTIVATE ----------
         log = LicenseActionLog(
             action="activate",
             provider=Provider.freemius,
@@ -183,7 +158,6 @@ def activate_and_validate_license(*, license_key: str, license_email: Optional[s
                 "Freemius panelinden bu cihazı kaldırıp tekrar deneyin."
             )
 
-        # ---------- VALIDATE ----------
         val_res = api.validate(
             uid=uid32,
             license_key=license_key,
@@ -195,7 +169,6 @@ def activate_and_validate_license(*, license_key: str, license_email: Optional[s
         val_json = (val_res.data or {}).get("json") or {}
         status, status_label = _status_from_validate(val_json)
 
-        # ---------- DB STATE (FULL) ----------
         state = LocalLicenseState(
             provider=Provider.freemius,
             device_id=device_id,
@@ -228,64 +201,6 @@ def activate_and_validate_license(*, license_key: str, license_email: Optional[s
             close_dialog=False,
             data=_ui_dict(state),
         )
-
-
-# ======================================================
-# VALIDATE ONLY
-# ======================================================
-
-
-def exchange_activation_code(*, code: str) -> Result:
-    """
-    Cloudflare Worker: /exchange endpointine code gönderir,
-    license_key dönerse Result.ok(data={"license_key": ...})
-    """
-    code = (code or "").strip().upper()
-    if not code:
-        return Result.fail("Kod boş olamaz.")
-
-    base = (LICENSE_BACKEND_BASE_URL or "").strip().rstrip("/")
-    if not base:
-        return Result.fail("LICENSE_BACKEND_BASE_URL tanımlı değil.")
-
-    url = f"{base}/exchange"
-    payload = json.dumps({"code": code}).encode("utf-8")
-
-    req = urllib.request.Request(
-        url=url,
-        data=payload,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-
-    try:
-        with urllib.request.urlopen(req, timeout=20) as resp:
-            raw = resp.read().decode("utf-8", errors="ignore")
-    except urllib.error.HTTPError as e:
-        # Worker JSON döner ama bazen text de olabilir
-        try:
-            err_raw = e.read().decode("utf-8", errors="ignore")
-        except Exception:
-            err_raw = str(e)
-        return Result.fail(f"Exchange hatası ({e.code}): {err_raw[:250]}")
-    except Exception as e:
-        return Result.fail("Lisans sunucusuna bağlanılamadı.", error=e)
-
-    try:
-        j = json.loads(raw or "{}")
-    except Exception:
-        return Result.fail(f"Exchange yanıtı okunamadı: {raw[:250]}")
-
-    if not j.get("ok"):
-        return Result.fail(j.get("message") or "Exchange başarısız.")
-
-    license_key = (j.get("license_key") or "").strip()
-    if not license_key:
-        return Result.fail("Sunucu lisans anahtarını döndürmedi.")
-
-    return Result.ok("Kod çözüldü.", data={"license_key": license_key, "email": j.get("email")})
-
-
 
 
 def validate_current_license() -> Result:
@@ -335,9 +250,6 @@ def validate_current_license() -> Result:
         return Result.ok("Lisans geçerli.", data=_ui_dict(state))
 
 
-# ======================================================
-# DEACTIVATE
-# ======================================================
 def deactivate_current_license() -> Result:
     engine = get_engine("orders.db")
 
