@@ -26,6 +26,5 @@ FREEMIUS_BASE_URL = "https://api.freemius.com"
 # Freemius Dashboard → Product → Product ID
 FREEMIUS_PRODUCT_ID = 22119   # 🔴 BURAYA KENDİ PRODUCT ID’Nİ YAZ
 
-# Freemius Dashboard → Settings → Keys
-# ⚠️ Şimdilik dev için, prod'da exe içine gömmek risklidir
-FREEMIUS_SECRET_KEY = "sk_m6Ey2v}XP*HOc@HK)S=J5q};P2?VW"
+
+LICENSE_BACKEND_BASE_URL = "https://oscheckoutbcknd.hamzaisik023334.workers.dev"

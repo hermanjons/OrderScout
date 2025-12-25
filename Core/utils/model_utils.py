@@ -174,6 +174,43 @@ def _debug_find_problematic(rows: list[dict]) -> list[tuple]:
 
 
 # ============================================================
+# ✅ UNICODE / SURROGATE FIX (EXE SAFE)  <-- PATCH
+# ============================================================
+
+def _optimize_text(value: Any) -> Any:
+    """
+    EXE'de bazen gelen bozuk unicode (surrogate) karakterleri SQLite/SQLAlchemy
+    UTF-8 encode ederken patlatır. (ör: '\\udc9e')
+
+    Bu fonksiyon str değerleri DB'ye güvenli hale getirir.
+    """
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        return value
+
+    try:
+        # Surrogate'leri taşı, sonra güvenli şekilde replace et
+        return value.encode("utf-8", "surrogatepass").decode("utf-8", "replace")
+    except Exception:
+        # En sert fallback
+        return value.encode("utf-8", "ignore").decode("utf-8", "ignore")
+
+
+def _optimize_obj(obj: Any) -> Any:
+    """
+    dict/list/tuple içinde recursive str optimize eder.
+    """
+    if isinstance(obj, dict):
+        return {_optimize_text(k): _optimize_obj(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_optimize_obj(x) for x in obj]
+    if isinstance(obj, tuple):
+        return tuple(_optimize_obj(x) for x in obj)
+    return _optimize_text(obj)
+
+
+# ============================================================
 # ➕ CREATE / UPSERT
 # ============================================================
 
@@ -211,6 +248,9 @@ def create_records(
 
             if r:
                 cleaned.append(r)
+
+        # ✅ PATCH: Unicode / surrogate temizliği (EXE hatasını keser)
+        cleaned = _optimize_obj(cleaned)
 
         attempted = len(cleaned)
         if attempted == 0:
@@ -253,6 +293,7 @@ def create_records(
                                 .on_conflict_do_nothing(index_elements=conflict_keys)
                             )
                             session.exec(stmt)
+
                 session.commit()
                 return Result.ok(
                     f"{model.__name__}: {inserted}/{attempted} kayıt eklendi.",
@@ -274,6 +315,7 @@ def create_records(
                     )
                     res = session.exec(stmt)
                     affected += res.rowcount or 0
+
                 session.commit()
                 return Result.ok(
                     f"{model.__name__}: {affected} kayıt güncellendi.",

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Callable
 
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel,
@@ -12,6 +12,10 @@ from PyQt6.QtGui import QIcon, QAction, QDesktopServices
 from PyQt6.QtCore import QSize, Qt, QUrl
 
 from settings import MEDIA_ROOT
+
+from Core.threads.sync_worker import SyncWorker
+from Core.network.check_network import network_checker
+
 from License.processors.pipeline import (
     activate_and_validate_license,
     validate_current_license,
@@ -37,15 +41,10 @@ def _err_text(res) -> str:
 
 class LicenseManagerDialog(QDialog):
     """
-    - Lisans YOK:
-        ✅ Lisans Gir & Doğrula
-        ✅ Satın Al
-        ❌ Lisansı Kaldır
-
-    - Lisans VAR:
-        ✅ Lisansı Kaldır
-        ❌ Lisans Gir & Doğrula
-        ❌ Satın Al
+    İnternet yokken:
+      - Lisans yok gibi davranma ❌
+      - "İNTERNETE BAĞLAN" göster ✅
+      - Aktivasyon/checkout/online doğrulama butonlarını gizle ✅
     """
 
     def __init__(self, parent: Optional[QWidget] = None):
@@ -53,9 +52,17 @@ class LicenseManagerDialog(QDialog):
         self.setWindowTitle("Lisans - OrderScout")
         self.resize(560, 340)
 
+        self._worker: Optional[SyncWorker] = None
+        self._busy: bool = False
+
+        # son bilinen lisans var mı UI state’i
+        self._has_license_cached: bool = False
+
         self._setup_styles()
         self._init_ui()
-        self._refresh_ui_silent()
+
+        # İlk açılışta: internet varsa validate, yoksa internet badge
+        self._refresh_ui_async(silent=True)
 
     def _setup_styles(self):
         self.setStyleSheet("""
@@ -159,7 +166,7 @@ class LicenseManagerDialog(QDialog):
         self.lbl_device_id.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         gl.addWidget(self.lbl_device_id, r, 1); r += 1
 
-        self.lbl_hint = QLabel("Not: İnternet yoksa doğrulama başarısız olabilir.")
+        self.lbl_hint = QLabel("Not: İnternet yoksa doğrulama yapılamaz.")
         self.lbl_hint.setObjectName("hintLabel")
         self.lbl_hint.setWordWrap(True)
         gl.addItem(QSpacerItem(0, 6, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum), r, 0); r += 1
@@ -192,16 +199,81 @@ class LicenseManagerDialog(QDialog):
         btn_row.addWidget(self.btn_close)
         root.addLayout(btn_row)
 
-        self._apply_license_presence_ui(has_license=False)
+        # ilk durum
+        self._apply_license_presence_ui(has_license=False, internet_ok=True)
 
-    def _apply_license_presence_ui(self, *, has_license: bool):
+    # -----------------------------
+    # Busy / Worker helpers
+    # -----------------------------
+    def _set_busy(self, busy: bool, message: str = ""):
+        self._busy = busy
+
+        self.btn_enter_key.setEnabled(not busy and self.btn_enter_key.isVisible())
+        self.btn_buy.setEnabled(not busy and self.btn_buy.isVisible())
+        self.btn_deactivate.setEnabled(not busy and self.btn_deactivate.isVisible())
+
+        if busy:
+            if message:
+                self.lbl_subtitle.setText(message)
+            self._update_status_badge("validating")
+
+    def _run_worker(
+        self,
+        func: Callable,
+        *,
+        on_success: Callable[[Any], None],
+        on_fail: Callable[[Any], None],
+        busy_text: str,
+        **kwargs
+    ):
+        if self._busy:
+            return
+
+        self._set_busy(True, busy_text)
+
+        self._worker = SyncWorker(func, **kwargs, parent=self)
+
+        def _handle_result(res):
+            if getattr(res, "success", False):
+                on_success(res)
+            else:
+                on_fail(res)
+
+        def _handle_finished():
+            self._set_busy(False)
+            self._worker = None
+
+        self._worker.result_ready.connect(_handle_result)
+        self._worker.finished.connect(_handle_finished)
+        self._worker.start()
+
+    # -----------------------------
+    # UI state helpers
+    # -----------------------------
+    def _apply_license_presence_ui(self, *, has_license: bool, internet_ok: bool):
+        """
+        internet_ok=False ise: aktivasyon/checkout gizle, sadece bilgi ver.
+        """
+        self._has_license_cached = bool(has_license)
+
+        if not internet_ok:
+            # internet yok -> online aksiyonları gizle
+            self.btn_enter_key.setVisible(False)
+            self.btn_buy.setVisible(False)
+            # lisans varsa kaldır görünsün (offline kaldırma isterse DB’den siler; ama sen deactivation API çağırıyorsun)
+            # Deactivation API online gerektiriyor -> internet yoksa bunu da gizlemek daha doğru:
+            self.btn_deactivate.setVisible(False)
+            return
+
+        # internet var -> normal akış
         self.btn_enter_key.setVisible(not has_license)
         self.btn_buy.setVisible(not has_license)
         self.btn_deactivate.setVisible(has_license)
 
-        self.btn_enter_key.setEnabled(not has_license)
-        self.btn_buy.setEnabled(not has_license)
-        self.btn_deactivate.setEnabled(has_license)
+        if not self._busy:
+            self.btn_enter_key.setEnabled(not has_license)
+            self.btn_buy.setEnabled(not has_license)
+            self.btn_deactivate.setEnabled(has_license)
 
         if has_license:
             self.lbl_subtitle.setText("Bu cihazda lisans aktif. İstersen lisansı kaldırabilirsin.")
@@ -221,14 +293,29 @@ class LicenseManagerDialog(QDialog):
 
         status = str(get("status", "none")).lower()
         has_license = ("none" not in status) and (get("license_key") != "-")
-        self._apply_license_presence_ui(has_license=bool(has_license))
+        self._apply_license_presence_ui(has_license=bool(has_license), internet_ok=True)
 
     def _clear_license_ui(self):
         self.lbl_license_key.setText("-")
         self.lbl_status.setText("-")
         self.lbl_last_verified.setText("-")
+        self.lbl_device_id.setText("-")
         self._update_status_badge("none")
-        self._apply_license_presence_ui(has_license=False)
+        self._apply_license_presence_ui(has_license=False, internet_ok=True)
+
+    def _set_offline_ui(self, reason: str = ""):
+        """
+        İnternet yokken: mevcut UI’yı bozma, sadece uyarı görünümü.
+        """
+        self._update_status_badge("offline")
+        self.lbl_subtitle.setText("İnternete bağlan. Lisans doğrulanamadı (internet yok).")
+        if reason:
+            self.lbl_hint.setText(f"Not: {reason}")
+        else:
+            self.lbl_hint.setText("Not: İnternet yoksa doğrulama yapılamaz.")
+
+        # butonları internet yok moduna al
+        self._apply_license_presence_ui(has_license=self._has_license_cached, internet_ok=False)
 
     def _update_status_badge(self, status: str):
         s = (status or "").lower()
@@ -242,6 +329,10 @@ class LicenseManagerDialog(QDialog):
             text, color = "ENGELLİ", "#9B51E0"
         elif "cancel" in s:
             text, color = "İPTAL", "#EB5757"
+        elif "validating" in s:
+            text, color = "KONTROL EDİLİYOR", "#56CCF2"
+        elif "offline" in s:
+            text, color = "İNTERNETE BAĞLAN", "#F2994A"
         else:
             text, color = "LİSANS YOK", "#4F4F4F"
 
@@ -251,14 +342,45 @@ class LicenseManagerDialog(QDialog):
             f"font-weight: 700; color: #0E111A; background-color: {color};"
         )
 
-    def _refresh_ui_silent(self):
-        res = validate_current_license()
-        if getattr(res, "success", False):
-            self.set_license_data(res.data)
-        else:
-            self._clear_license_ui()
+    # -----------------------------
+    # Async refresh (validate) + INTERNET CHECK
+    # -----------------------------
+    def _refresh_ui_async(self, silent: bool = True):
+        ok_net, reason = network_checker()
+        if not ok_net:
+            # internet yok: lisansı "yok" yapma, offline göster
+            self._set_offline_ui(reason=reason or "")
+            if not silent:
+                QMessageBox.warning(self, "İnternet Yok", "Lisans doğrulanamadı çünkü internet yok.")
+            return
 
+        def ok(res):
+            self.lbl_hint.setText("Not: İnternet yoksa doğrulama yapılamaz.")
+            self.set_license_data(res.data or {})
+
+        def fail(res):
+            # internet var ama validate fail -> bu gerçek fail (key yok/expired vs)
+            self._clear_license_ui()
+            if not silent:
+                QMessageBox.warning(self, "Lisans", _err_text(res))
+
+        self._run_worker(
+            validate_current_license,
+            on_success=ok,
+            on_fail=fail,
+            busy_text="Lisans kontrol ediliyor...",
+        )
+
+    # -----------------------------
+    # Button handlers
+    # -----------------------------
     def on_enter_key(self):
+        ok_net, _ = network_checker()
+        if not ok_net:
+            QMessageBox.warning(self, "İnternet Yok", "Lisans doğrulanamadı çünkü internet yok.\n\nİnternete bağlan.")
+            self._set_offline_ui()
+            return
+
         key, ok = QInputDialog.getText(self, "Lisans Anahtarı", "E-postana gelen lisans anahtarını gir:")
         if not ok:
             return
@@ -267,15 +389,29 @@ class LicenseManagerDialog(QDialog):
             QMessageBox.warning(self, "Hata", "Lisans anahtarı boş olamaz.")
             return
 
-        res = activate_and_validate_license(license_key=key)
-        if not getattr(res, "success", False):
-            QMessageBox.critical(self, "Lisans Hatası", _err_text(res))
-            return
+        def ok_res(res):
+            self.set_license_data(res.data or {})
+            QMessageBox.information(self, "Başarılı", "Lisans doğrulandı ve kaydedildi.")
 
-        self.set_license_data(res.data)
-        QMessageBox.information(self, "Başarılı", "Lisans doğrulandı ve kaydedildi.")
+        def fail_res(res):
+            QMessageBox.critical(self, "Lisans Hatası", _err_text(res))
+            self._refresh_ui_async(silent=True)
+
+        self._run_worker(
+            activate_and_validate_license,
+            on_success=ok_res,
+            on_fail=fail_res,
+            busy_text="Aktivasyon yapılıyor ve doğrulanıyor...",
+            license_key=key,
+        )
 
     def on_buy(self):
+        ok_net, _ = network_checker()
+        if not ok_net:
+            QMessageBox.warning(self, "İnternet Yok", "Satın alma sayfası açılamadı çünkü internet yok.\n\nİnternete bağlan.")
+            self._set_offline_ui()
+            return
+
         link = (CHECKOUT_LINK or "").strip()
         if not link:
             QMessageBox.warning(self, "Satın Al", "Checkout link tanımlı değil (CHECKOUT_LINK boş).")
@@ -286,6 +422,12 @@ class LicenseManagerDialog(QDialog):
             QMessageBox.warning(self, "Satın Al", "Link açılamadı. Tarayıcı engelliyor olabilir.")
 
     def on_deactivate(self):
+        ok_net, _ = network_checker()
+        if not ok_net:
+            QMessageBox.warning(self, "İnternet Yok", "Lisans kaldırılamadı çünkü internet yok.\n\nİnternete bağlan.")
+            self._set_offline_ui()
+            return
+
         reply = QMessageBox.question(
             self,
             "Lisansı Kaldır",
@@ -298,13 +440,19 @@ class LicenseManagerDialog(QDialog):
         if reply != QMessageBox.StandardButton.Yes:
             return
 
-        res = deactivate_current_license()
-        if not getattr(res, "success", False):
-            QMessageBox.critical(self, "Kaldırma Hatası", _err_text(res))
-            return
+        def ok_res(res):
+            self._clear_license_ui()
+            QMessageBox.information(self, "Başarılı", "Lisans kaldırıldı. Bu cihaz artık lisanssız.")
 
-        self._clear_license_ui()
-        QMessageBox.information(self, "Başarılı", "Lisans kaldırıldı. Bu cihaz artık lisanssız.")
+        def fail_res(res):
+            QMessageBox.critical(self, "Kaldırma Hatası", _err_text(res))
+
+        self._run_worker(
+            deactivate_current_license,
+            on_success=ok_res,
+            on_fail=fail_res,
+            busy_text="Lisans kaldırılıyor...",
+        )
 
 
 class LicenseManagerButton:

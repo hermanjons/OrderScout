@@ -6,7 +6,7 @@ from __future__ import annotations
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QLabel, QGroupBox, QHBoxLayout,
     QListWidget, QPushButton, QLineEdit, QComboBox, QGridLayout,
-    QDateEdit, QCheckBox,QFrame
+    QDateEdit, QCheckBox, QFrame
 )
 
 from PyQt6.QtCore import Qt, QDate, QTimer, QRegularExpression, pyqtSignal
@@ -19,7 +19,7 @@ from Core.views.views import (
     CircularProgressButton, PackageButton, SwitchButton, ListSmartItemWidget, ActionPulseButton
 )
 from Core.threads.sync_worker import SyncWorker
-
+from settings import MEDIA_ROOT
 # ============================================================
 # 🧩 DOMAIN IMPORTS
 # ============================================================
@@ -38,6 +38,8 @@ from Labels.views.views import LabelPrintManagerWindow
 
 from Account.views.views import CompanyListWidget
 from Feedback.processors.pipeline import MessageHandler, Result, map_error_to_message
+from settings import MEDIA_ROOT
+import os
 
 
 # ============================================================
@@ -61,15 +63,15 @@ class OrdersListWidget(QListWidget):
         super().__init__(parent)
         self.setSelectionMode(QListWidget.SelectionMode.NoSelection)
 
-        self.orders: list = []           # DB'den gelen RAW veri (tam liste)
+        self.orders: list = []  # DB'den gelen RAW veri (tam liste)
         self.filtered_orders: list = []  # aktif filtre ile gelen sonuçlar (tam liste)
 
         # ⚡ Dahili durum filtresi:
         self.status_filter: str = "all"  # all | unprocessed | extracted | printed | both
 
         # 🧾 Sayfalama
-        self.page_size: int = 20         # varsayılan: 20 kayıt/sayfa
-        self.current_page: int = 1       # 1-based
+        self.page_size: int = 20  # varsayılan: 20 kayıt/sayfa
+        self.current_page: int = 1  # 1-based
 
         # 🔧 Reload sonrası otomatik build yapalım mı?
         # OrdersManagerWindow bu flag'i False yapıyor; böylece ilk açılışta çift repaint olmaz.
@@ -155,13 +157,13 @@ class OrdersListWidget(QListWidget):
                     continue
 
                 # epoch saniye: ~1.7e9 civarı, ms: 1.7e12 civarı
-                if ts < 10**9:
+                if ts < 10 ** 9:
                     continue
 
                 try:
-                    if ts > 10**11:  # büyük olasılıkla ms
+                    if ts > 10 ** 11:  # büyük olasılıkla ms
                         dt = datetime.fromtimestamp(ts / 1000)
-                    else:            # saniye
+                    else:  # saniye
                         dt = datetime.fromtimestamp(ts)
                     setattr(o, attr, dt)
                 except Exception:
@@ -412,7 +414,9 @@ class OrdersManagerWindow(QWidget):
         super().__init__()
         self.setWindowTitle("Kargoya Hazır Siparişler")
         # 🧿 Siparişler butonundaki icon ile aynı
-        self.setWindowIcon(QIcon("images/orders_img.png"))
+        self.setWindowIcon(
+            QIcon(os.path.join(MEDIA_ROOT, "orders_img.png"))
+        )
 
         self.setGeometry(200, 200, 1000, 650)
 
@@ -1014,7 +1018,10 @@ class OrdersTab(QWidget):
         lbl_left_sub.setWordWrap(True)
 
         # Büyük Siparişler butonu
-        self.order_btn = PackageButton("Siparişler", icon_path="images/orders_img.png")
+        self.order_btn = PackageButton(
+            "Siparişler",
+            icon_path=os.path.join(MEDIA_ROOT, "orders_img.png")
+        )
         self.order_btn.setMinimumHeight(90)
         self.order_btn.clicked.connect(self.open_orders_window)
 
@@ -1192,6 +1199,3 @@ class OrdersTab(QWidget):
             "background-color: #16A34A; color: #ECFDF3; font-size: 11px; font-weight: 600;"
         )
         self.lbl_status_hint.setText("Son durum: Veri tabanı güncel")
-
-
-
