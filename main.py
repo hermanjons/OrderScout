@@ -8,6 +8,9 @@ from Core.utils.model_utils import get_engine
 
 # License modelleri metadata'ya dahil olsun diye import (kullanmıyoruz ama create_all için şart)
 from License.models import LicenseActionLog, LocalLicenseState, FreemiusEventLog  # noqa: F401
+from Account.models import *
+from Orders.models.trendyol.trendyol_models import *
+
 
 
 def _run_db_save_worker_mode() -> None:

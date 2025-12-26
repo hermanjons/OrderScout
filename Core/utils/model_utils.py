@@ -1,4 +1,4 @@
-# model_utils.py
+# Core/utils/model_utils.py
 from __future__ import annotations
 
 import os
@@ -81,7 +81,7 @@ def get_engine(db_name: str) -> Engine:
 # ============================================================
 
 def batch_iter(seq: Iterable[Any], size: int = 500) -> Iterable[list[Any]]:
-    buf = []
+    buf: list[Any] = []
     for item in seq:
         buf.append(item)
         if len(buf) == size:
@@ -174,43 +174,6 @@ def _debug_find_problematic(rows: list[dict]) -> list[tuple]:
 
 
 # ============================================================
-# ✅ UNICODE / SURROGATE FIX (EXE SAFE)  <-- PATCH
-# ============================================================
-
-def _optimize_text(value: Any) -> Any:
-    """
-    EXE'de bazen gelen bozuk unicode (surrogate) karakterleri SQLite/SQLAlchemy
-    UTF-8 encode ederken patlatır. (ör: '\\udc9e')
-
-    Bu fonksiyon str değerleri DB'ye güvenli hale getirir.
-    """
-    if value is None:
-        return None
-    if not isinstance(value, str):
-        return value
-
-    try:
-        # Surrogate'leri taşı, sonra güvenli şekilde replace et
-        return value.encode("utf-8", "surrogatepass").decode("utf-8", "replace")
-    except Exception:
-        # En sert fallback
-        return value.encode("utf-8", "ignore").decode("utf-8", "ignore")
-
-
-def _optimize_obj(obj: Any) -> Any:
-    """
-    dict/list/tuple içinde recursive str optimize eder.
-    """
-    if isinstance(obj, dict):
-        return {_optimize_text(k): _optimize_obj(v) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [_optimize_obj(x) for x in obj]
-    if isinstance(obj, tuple):
-        return tuple(_optimize_obj(x) for x in obj)
-    return _optimize_text(obj)
-
-
-# ============================================================
 # ➕ CREATE / UPSERT
 # ============================================================
 
@@ -231,7 +194,7 @@ def create_records(
         engine = get_engine(db_name)
         cols = get_model_columns(model) if drop_unknown else None
 
-        cleaned = []
+        cleaned: list[dict] = []
         for d in data_list or []:
             r = dict(d)
 
@@ -249,30 +212,35 @@ def create_records(
             if r:
                 cleaned.append(r)
 
-        # ✅ PATCH: Unicode / surrogate temizliği (EXE hatasını keser)
-        cleaned = _optimize_obj(cleaned)
-
         attempted = len(cleaned)
         if attempted == 0:
             return Result.ok(
                 f"{model.__name__}: işlenecek kayıt yok.",
                 close_dialog=False,
-                data={"attempted": 0},
+                data={"attempted": 0, "inserted": 0, "affected": 0},
             )
 
         with Session(engine) as session:
 
+            # ----------------------------------------------------
+            # PLAIN INSERT
+            # ----------------------------------------------------
             if mode == "plain" or not conflict_keys:
                 with session.begin():
                     for r in cleaned:
                         session.add(model(**r))
+                # ✅ IMPORTANT: inserted bilgisi geri döndürüldü
                 return Result.ok(
                     f"{model.__name__}: {attempted} kayıt eklendi.",
                     close_dialog=False,
+                    data={"attempted": attempted, "inserted": attempted},
                 )
 
             tbl = model.__table__
 
+            # ----------------------------------------------------
+            # IGNORE ON CONFLICT
+            # ----------------------------------------------------
             if mode == "ignore":
                 inserted = 0
                 for chunk in batch_iter(cleaned, chunk_size):
@@ -286,20 +254,28 @@ def create_records(
                         res = session.exec(stmt)
                         inserted += res.rowcount or 0
                     except CompileError:
+                        # bazı sqlite/driver kombinasyonlarında toplu values compile patlayabilir
                         for r in safe:
                             stmt = (
                                 sqlite_insert(tbl)
                                 .values(r)
                                 .on_conflict_do_nothing(index_elements=conflict_keys)
                             )
-                            session.exec(stmt)
+                            res = session.exec(stmt)
+                            inserted += res.rowcount or 0
 
                 session.commit()
+
+                # ✅ IMPORTANT: inserted bilgisi geri döndürüldü
                 return Result.ok(
                     f"{model.__name__}: {inserted}/{attempted} kayıt eklendi.",
                     close_dialog=False,
+                    data={"attempted": attempted, "inserted": inserted},
                 )
 
+            # ----------------------------------------------------
+            # UPDATE ON CONFLICT
+            # ----------------------------------------------------
             if mode == "update":
                 affected = 0
                 for chunk in batch_iter(cleaned, chunk_size):
@@ -317,9 +293,12 @@ def create_records(
                     affected += res.rowcount or 0
 
                 session.commit()
+
+                # ✅ IMPORTANT: affected bilgisi geri döndürüldü
                 return Result.ok(
                     f"{model.__name__}: {affected} kayıt güncellendi.",
                     close_dialog=False,
+                    data={"attempted": attempted, "affected": affected},
                 )
 
             return Result.fail(f"Geçersiz mode='{mode}'", close_dialog=False)
@@ -418,15 +397,18 @@ def update_records(
             stmt = select(model)
             for k, v in filters.items():
                 stmt = stmt.where(getattr(model, k) == v)
+
             rows = session.exec(stmt).all()
             for row in rows:
                 for k, v in update_data.items():
                     setattr(row, k, v)
+
             session.commit()
 
         return Result.ok(
             f"{len(rows)} kayıt güncellendi.",
             close_dialog=False,
+            data={"affected": len(rows)},
         )
 
     except Exception as e:
@@ -451,14 +433,17 @@ def delete_records(
             stmt = select(model)
             for k, v in filters.items():
                 stmt = stmt.where(getattr(model, k) == v)
+
             rows = session.exec(stmt).all()
             for row in rows:
                 session.delete(row)
+
             session.commit()
 
         return Result.ok(
             f"{len(rows)} kayıt silindi.",
             close_dialog=False,
+            data={"deleted": len(rows)},
         )
 
     except Exception as e:

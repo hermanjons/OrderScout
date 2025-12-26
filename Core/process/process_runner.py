@@ -7,13 +7,13 @@ import json
 from typing import Dict, Any, Optional
 
 from PyQt6.QtCore import QProcess, QObject, pyqtSignal, QProcessEnvironment
-
+from Orders.signals.signals import order_signals
 
 def _is_frozen() -> bool:
     return bool(getattr(sys, "frozen", False))
 
 
-# Projenin kök dizini (dev mod için)
+# Projenin kök dizini (Core/utils/ içinden 3 geri çıkıyoruz)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
 
@@ -22,15 +22,15 @@ class DBSaveProcess(QObject):
     DB save işini ayrı process'te çalıştırır.
 
     DEV:
-      python db_save_worker.py (venv python) ile çalıştırır.
+      python Orders/processors/db_save_worker.py
 
     EXE (frozen):
-      Aynı EXE'yi "--db-save-worker" argümanı ile çalıştırır.
-      (GUI açmadan worker mode çalışacak şekilde main.py router şart!)
+      aynı exe'yi "--db-save-worker" argümanı ile çalıştırır.
+      (GUI açmadan worker mode çalışacak şekilde main router şart!)
     """
 
     finished = pyqtSignal(dict)   # {"success": bool, "message": str, "data": {...}}
-    error = pyqtSignal(str)       # STDERR logları / başlanamama vs.
+    error = pyqtSignal(str)       # STDERR logları
 
     def __init__(self, payload: Dict[str, Any], parent: Optional[QObject] = None) -> None:
         super().__init__(parent)
@@ -40,32 +40,23 @@ class DBSaveProcess(QObject):
         self._stdout_buf: bytes = b""
         self._stderr_buf: bytes = b""
 
-        # Sinyaller
         self.process.readyReadStandardOutput.connect(self._on_stdout)
         self.process.readyReadStandardError.connect(self._on_stderr)
         self.process.finished.connect(self._on_finished)
-
-        # (İsteğe bağlı) Daha stabil: process crash ederse de yakala
         self.process.errorOccurred.connect(self._on_process_error)
 
     # -------------------------------------------------
 
     def _python_executable_dev(self) -> str:
-        """
-        DEV ortamda mümkünse venv python bulur.
-        """
         exe = sys.executable
 
-        # 1) sys.executable venv ise
         if "venv" in exe.replace("\\", "/"):
             return exe
 
-        # 2) BASE_DIR/venv/Scripts/python.exe
         venv_win = os.path.join(BASE_DIR, "venv", "Scripts", "python.exe")
         if os.path.exists(venv_win):
             return venv_win
 
-        # 3) BASE_DIR/venv/bin/python
         venv_nix = os.path.join(BASE_DIR, "venv", "bin", "python")
         if os.path.exists(venv_nix):
             return venv_nix
@@ -78,12 +69,11 @@ class DBSaveProcess(QObject):
         """
         Process'i başlatır ve payload'ı JSON olarak STDIN'den gönderir.
         """
-        # Ortam değişkenleri
         env = QProcessEnvironment.systemEnvironment()
         env.insert("PYTHONIOENCODING", "utf-8")
         env.insert("PYTHONUTF8", "1")
 
-        # DEV modda importlar için PYTHONPATH ekleyelim
+        # DEV modda importlar için PYTHONPATH ekle
         if not _is_frozen():
             existing_pp = env.value("PYTHONPATH", "")
             if existing_pp:
@@ -95,11 +85,9 @@ class DBSaveProcess(QObject):
 
         # --- Komut seçimi ---
         if _is_frozen():
-            # ✅ EXE: aynı exe'yi worker modda çalıştır
             program = sys.executable  # OrderScout.exe
             args = ["--db-save-worker"]
         else:
-            # ✅ DEV: python ile script çalıştır
             worker_path = os.path.join(BASE_DIR, "Orders", "processors", "db_save_worker.py")
             if not os.path.exists(worker_path):
                 msg = f"db_save_worker bulunamadı: {worker_path}"
@@ -110,11 +98,10 @@ class DBSaveProcess(QObject):
             program = self._python_executable_dev()
             args = [worker_path]
 
-        # Process'i başlat
         self.process.start(program, args)
 
         if not self.process.waitForStarted(4000):
-            msg = f"db_save_worker process'i başlatılamadı (timeout). program={program} args={args}"
+            msg = f"db_save_worker process'i başlatılamadı. program={program} args={args}"
             self.error.emit(msg)
             self.finished.emit({"success": False, "message": msg, "data": None})
             return
@@ -148,7 +135,6 @@ class DBSaveProcess(QObject):
             self.error.emit(text)
 
     def _on_process_error(self, _err) -> None:
-        # QProcess errorOccurred: daha anlamlı mesaj üret
         msg = "db_save_worker process error occurred."
         try:
             msg += f" (program={self.process.program()} args={self.process.arguments()})"
@@ -156,10 +142,36 @@ class DBSaveProcess(QObject):
             pass
         self.error.emit(msg)
 
+    # -------------------------------------------------
+
+    @staticmethod
+    def _should_emit_orders_changed(result: dict) -> bool:
+        """
+        save_orders_to_db dönüşüne göre sadece DB gerçekten değiştiyse True.
+        Beklenen format:
+          {"success": True, "data": {"changed": bool, "counts": {...}}}
+        """
+        if result.get("success") is not True:
+            return False
+        data = result.get("data")
+        if not isinstance(data, dict):
+            return False
+        return bool(data.get("changed", False))
+
+    def _emit_orders_changed(self) -> None:
+        """
+        UI process içinde orders_changed emit eder.
+        """
+        try:
+
+            order_signals.orders_changed.emit()
+        except Exception:
+            pass
+
     def _on_finished(self) -> None:
         """
         Process tamamen bittiğinde STDOUT JSON parse edilir.
-        Sadece son dolu satırı JSON kabul eder (debug print karışmasın diye).
+        Sadece son dolu satırı JSON kabul eder.
         """
         if not self._stdout_buf:
             msg = "db_save_worker çıktı üretmedi."
@@ -188,5 +200,9 @@ class DBSaveProcess(QObject):
             msg = f"db_save_worker output parse hatası: {e}"
             self.finished.emit({"success": False, "message": msg, "data": None})
             return
+
+        # ✅ SADECE DB değiştiyse tetikle (performans)
+        if self._should_emit_orders_changed(result):
+            self._emit_orders_changed()
 
         self.finished.emit(result)
