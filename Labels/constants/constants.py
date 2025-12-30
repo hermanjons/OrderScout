@@ -116,7 +116,7 @@ LABEL_MODELS_BY_BRAND = {
 
             # SLA (kalan süre) görseli için genişlik
             # export_labels_to_word içinde cfg.get("sla_image_width_mm", 10) ile okunuyor
-            "sla_image_width_mm": 18,
+            "sla_image_width_mm": 16.3,
             # istersen ileride yükseklik de kullanırsın:
             # "sla_image_height_mm": 6,
 
@@ -124,11 +124,11 @@ LABEL_MODELS_BY_BRAND = {
             "cargo_provider_logos": {
                 "Trendyol Express Marketplace": {
                     "filename": "express-logo.png",
-                    "width_mm": 18,
+                    "width_mm": 16.3,
                 },
                 "Aras Kargo Marketplace": {
                     "filename": "aras-logo.png",
-                    "width_mm": 18,
+                    "width_mm": 16.3,
                 },
                 "yurtiçi kargo": {
                     "filename": "logo_yurtici.png",
