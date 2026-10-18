@@ -1,0 +1,62 @@
+{
+  "source_artifact": "output/agentic-2026-10-11/schedule-glm-candidate-2.json",
+  "prompt": "Şu tekrar kullanılabilir iş yönergesini kaydetmek için tam paketi onayıma hazırla; işi şimdi çalıştırma. Adı: Pilot Stok İncelemesi. Talimat metnini aynen koru: «Tüm aktif stok kayıtlarını güncel kaynaktan oku. Ürün, miktar, birim ve stok değerini göster; her para birimini ayrı tut. Mağaza bağlantısı kanıtı yoksa çıkarma. Excel dosyası oluşturmadan önce o çalışmanın tam raporunu onaya sun.» Amaç şablonunu aynen koru: «Güncel stok için {{report_title}} başlıklı Excel raporunu hazırla ve kaydetmeden onayıma sun.» Tek parametre report_title olsun: zorunlu metin, en fazla 80 karakter. Başka parametre kabul etme. Kaynak politikası aynen: «Her çalıştırmada güncel stok kaynağını yeniden oku.» İşlem onayı politikası aynen: «Her dosya oluşturma için o çalışmanın tam rapor teklifini onaya sun.» Her çalıştırma güncel kaynak ve her dosya oluşturma güncel onay gerektirsin. Henüz kalıcı olarak kaydetme.",
+  "requested_model": "z-ai/glm-5.3-flash",
+  "actual_model": "z-ai/glm-5.3-flash",
+  "initial_interpretation": {
+    "mode": "act",
+    "domain": "general",
+    "objective": "Pilot Stok İncelemesi adlı, report_title (zorunlu metin, en fazla 80 karakter) tek parametreli tekrar kullanılabilir iş yönergesini verilen talimat, amaç şablonu, kaynak politikası ve işlem onayı politikası metinleri aynen korunarak onaya hazır paket olarak hazırla; işi şimdi çalıştırma ve kalıcı olarak kaydetme.",
+    "reason": "Kullanıcı yeni bir iş yürütmesi değil, onaya sunulacak tekrar kullanılabilir yönerge paketinin hazırlanmasını istiyor; talimat ve şablon metinleri birebir korunmalı, çalıştırma ve kalıcı kayıt yapılmamalı.",
+    "calculation_grouping": "none",
+    "comparison_policy": "not_requested",
+    "status_codes": [],
+    "requires_clarification": false,
+    "missing_input": "none",
+    "population_basis": "entity_records",
+    "entity": "none",
+    "metric": "action_result",
+    "intent_kind": "action",
+    "request_shape": "action",
+    "record_scope": "unspecified",
+    "period": "unspecified",
+    "freshness": "unspecified",
+    "information_source": "unspecified",
+    "operation_policy": "allow_new_operations",
+    "status_scope": "unspecified",
+    "identifier_display": "auto",
+    "explanation_topics": [],
+    "requested_fields": [
+      "action_result"
+    ],
+    "direct_output_fields": [],
+    "grouped_projection": null,
+    "metric_population": null,
+    "clarification": ""
+  },
+  "initial_plan": {
+    "steps": [
+      {
+        "id": "step_1",
+        "operation_id": "workflows.save.prepare",
+        "arguments_json": "{\"spec\":{\"schema_version\":1,\"name\":\"Pilot Stok İncelemesi\",\"instructions\":\"Tüm aktif stok kayıtlarını güncel kaynaktan oku. Ürün, miktar, birim ve stok değerini göster; her para birimini ayrı tut. Mağaza bağlantısı kanıtı yoksa çıkarma. Excel dosyası oluşturmadan önce o çalışmanın tam raporunu onaya sun.\",\"objective_template\":\"Güncel stok için {{report_title}} başlıklı Excel raporunu hazırla ve kaydetmeden onayıma sun.\",\"parameter_schema\":{\"type\":\"object\",\"properties\":{\"report_title\":{\"type\":\"string\",\"minLength\":1,\"maxLength\":80}},\"required\":[\"report_title\"],\"additionalProperties\":false},\"source_policy\":{\"description\":\"Her çalıştırmada güncel stok kaynağını yeniden oku.\",\"requires_current_sources\":true},\"effect_policy\":{\"description\":\"Her dosya oluşturma için o çalışmanın tam rapor teklifini onaya sun.\",\"requires_current_approval\":true}}}",
+        "depends_on": [],
+        "objective": "Pilot Stok İncelemesi adlı tekrar kullanılabilir işi talimat metni, amaç şablonu, tek report_title parametresi ve kaynak/onay politikalarıyla kaydetmeye hazırla; kalıcı kayıt yalnızca kullanıcının tam paketi onaylamasından sonra yapılır.",
+        "expected_evidence": [
+          "workflow_id",
+          "revision_id",
+          "spec_hash",
+          "review",
+          "action"
+        ]
+      }
+    ]
+  },
+  "initial_semantic_verdict": {
+    "verdict": "allow",
+    "objective_aligned": true,
+    "domain_aligned": true,
+    "unwanted_effect": false,
+    "reason": "Operation, işi çalıştırmadan yalnızca tam paketi onaya sunulmak üzere hazırlar; talimat metni, amaç şablonu, tek report_title parametresi ve kaynak/onay politikalarıyla birebir uyumlu. Kalıcı kayıt yalnızca kullanıcının onayı sonrası yapılır; istenmeyen ek etki yok ve domain (workflows) doğru."
+  }
+}

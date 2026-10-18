@@ -1,0 +1,658 @@
+{
+  "source_artifact": "output/agentic-2026-10-13/child-deepseek-candidate-4-low.json",
+  "source_artifact_sha256": "87255f3a0f780ddbe5d869fb50318e42e05eece39aa42afbdac90a90a8102894",
+  "source_fingerprint": "4cc71ee325d95b127d20c0eee348ef35dbbb6f8948922b67b9e8522f84ba9c0d",
+  "actual_child_checkpoint_sha256": "d7c2e4772ca099cd8f75b3967074f5bb4c295bcb6b9d0cfbe1f0aa8cc486e4c3",
+  "state_projection": {
+    "action_history": [],
+    "active_analysis_ids": {},
+    "active_domain": "general",
+    "active_entities": {
+      "turn_interpretation": {
+        "domain": "general",
+        "intent_kind": "data_read",
+        "mode": "inspect",
+        "objective": "Güncel stok kaynağını bağımsız olarak oku ve yalnız salt okuma stok gözlemi üret: ürün kodu/SKU, miktar, birim ve para birimine ayrılmış stok değerlerini içeren güncel stok verisini topla. Herhangi bir dosya, işlem, güncelleme veya yazma hazırlığı yapma; yalnız gerçek R0 okumaları kullan.",
+        "requested_fields": [],
+        "requires_clarification": false,
+        "valid": true
+      }
+    },
+    "active_goal_plan_id": "f3883a3c8fb84efc8f75f5ef27103757",
+    "active_pending_action_id": "",
+    "active_scopes": {},
+    "active_selection_ids": {},
+    "analysis_contexts": [],
+    "completed_steps": [
+      {
+        "arguments": {
+          "limit": 50
+        },
+        "attempt_count": 1,
+        "depends_on": [],
+        "expected_evidence": [
+          "total_items",
+          "active_items",
+          "zero_or_negative",
+          "total_balance",
+          "balance_by_unit",
+          "stock_value_by_currency",
+          "stock_valuation_complete",
+          "valuation_missing_items",
+          "top_balances",
+          "zero_or_negative_items",
+          "tool"
+        ],
+        "index": 1,
+        "objective": "Güncel stok kaynağını salt okuma olarak incele; SKU, miktar, birim ve para birimine ayrılmış stok değerlerini içeren güncel stok gözlemini topla.",
+        "observation_ids": [
+          "7fb3556c4cffa96bfdb3fc18ca844e9c"
+        ],
+        "operation_candidates": [
+          "stock.inventory_overview"
+        ],
+        "operation_domain": "stock",
+        "prompt": "Güncel stok kaynağını salt okuma olarak incele; SKU, miktar, birim ve para birimine ayrılmış stok değerlerini içeren güncel stok gözlemini topla.",
+        "result_data": {
+          "answer": "3 aktif stok karti ve toplam 7.00 adet bakiye var. Hareketli ortalama maliyetle stok degeri: 400.00 TRY, 30.00 USD.",
+          "attempt_count": 1,
+          "attempt_failures": [],
+          "conversation_context": {},
+          "dependency_bindings": {},
+          "mode": "tool",
+          "tool_names": [
+            "stock.inventory_overview"
+          ],
+          "tool_result": {
+            "active_items": 3,
+            "balance_by_unit": [
+              {
+                "balance": 7.0,
+                "unit": "adet"
+              }
+            ],
+            "stock_valuation_complete": true,
+            "stock_value_by_currency": [
+              {
+                "amount": 400.0,
+                "currency": "TRY"
+              },
+              {
+                "amount": 30.0,
+                "currency": "USD"
+              }
+            ],
+            "tool": "stock.inventory_overview",
+            "top_balances": [
+              {
+                "balance": 4.0,
+                "name": "Pilot Kupa",
+                "sku": "PILOT-KUPA",
+                "stock_value": 400.0,
+                "stock_value_by_currency": [
+                  {
+                    "amount": 400.0,
+                    "currency": "TRY"
+                  }
+                ],
+                "stock_value_currency": "TRY",
+                "unit": "adet",
+                "valuation_missing_quantity": 0.0
+              },
+              {
+                "balance": 3.0,
+                "name": "Pilot Filtre",
+                "sku": "PILOT-FILTRE",
+                "stock_value": 30.0,
+                "stock_value_by_currency": [
+                  {
+                    "amount": 30.0,
+                    "currency": "USD"
+                  }
+                ],
+                "stock_value_currency": "USD",
+                "unit": "adet",
+                "valuation_missing_quantity": 0.0
+              },
+              {
+                "balance": 0.0,
+                "name": "Pilot Boş Kart",
+                "sku": "PILOT-BOS",
+                "stock_value": null,
+                "stock_value_by_currency": [],
+                "stock_value_currency": "",
+                "unit": "adet",
+                "valuation_missing_quantity": 0.0
+              }
+            ],
+            "total_balance": 7.0,
+            "total_items": 3,
+            "valuation_missing_items": 0,
+            "zero_or_negative": 1,
+            "zero_or_negative_items": [
+              {
+                "balance": 0.0,
+                "name": "Pilot Boş Kart",
+                "sku": "PILOT-BOS",
+                "stock_value": null,
+                "stock_value_by_currency": [],
+                "stock_value_currency": "",
+                "unit": "adet",
+                "valuation_missing_quantity": 0.0
+              }
+            ]
+          }
+        },
+        "result_message": "3 aktif stok karti ve toplam 7.00 adet bakiye var. Hareketli ortalama maliyetle stok degeri: 400.00 TRY, 30.00 USD.",
+        "status": "completed",
+        "step_id": "step_1",
+        "tool_names": [
+          "stock.inventory_overview"
+        ],
+        "verification_status": "observed"
+      }
+    ],
+    "conversation_turns": [
+      {
+        "content": "Güncel stok kaynağını bağımsız olarak oku ve yalnız salt okuma stok gözlemi üret: ürün kodu/SKU, miktar, birim ve para birimine ayrılmış stok değerlerini içeren güncel stok verisini topla. Herhangi bir dosya, işlem, güncelleme veya yazma hazırlığı yapma; yalnız gerçek R0 okumaları kullan.",
+        "correction_of_turn_id": "",
+        "created_at": "2026-10-13T09:24:14.374517+00:00",
+        "intent_kind": "data_read",
+        "mode": "inspect",
+        "objective": "Güncel stok kaynağını bağımsız olarak oku ve yalnız salt okuma stok gözlemi üret: ürün kodu/SKU, miktar, birim ve para birimine ayrılmış stok değerlerini içeren güncel stok verisini topla. Herhangi bir dosya, işlem, güncelleme veya yazma hazırlığı yapma; yalnız gerçek R0 okumaları kullan.",
+        "requested_fields": [],
+        "role": "user",
+        "semantic_contract": {},
+        "tool_names": [],
+        "turn_id": "e8d9c2b0baa046b68dd360c218ab771f"
+      },
+      {
+        "content": "İstenen kapsam ve alanlarla yanıtı doğrulayamadım; sonuç tamamlanmadı.",
+        "correction_of_turn_id": "",
+        "created_at": "2026-10-13T09:24:19.177559+00:00",
+        "intent_kind": "",
+        "mode": "failed",
+        "objective": "Güncel stok kaynağını bağımsız olarak oku ve yalnız salt okuma stok gözlemi üret: ürün kodu/SKU, miktar, birim ve para birimine ayrılmış stok değerlerini içeren güncel stok verisini topla. Herhangi bir dosya, işlem, güncelleme veya yazma hazırlığı yapma; yalnız gerçek R0 okumaları kullan.",
+        "requested_fields": [],
+        "role": "assistant",
+        "semantic_contract": {},
+        "tool_names": [
+          "stock.inventory_overview"
+        ],
+        "turn_id": "24dcbf54d43c464db031d15d780700c5"
+      }
+    ],
+    "created_at": "2026-10-13T09:24:14.374517+00:00",
+    "goal": "Güncel stok kaynağını bağımsız olarak oku ve yalnız salt okuma stok gözlemi üret: ürün kodu/SKU, miktar, birim ve para birimine ayrılmış stok değerlerini içeren güncel stok verisini topla. Herhangi bir dosya, işlem, güncelleme veya yazma hazırlığı yapma; yalnız gerçek R0 okumaları kullan.",
+    "goal_plans": [
+      {
+        "created_at": "2026-10-13T09:24:15.436462+00:00",
+        "domain": "general",
+        "goal": "Güncel stok kaynağını bağımsız olarak oku ve yalnız salt okuma stok gözlemi üret: ürün kodu/SKU, miktar, birim ve para birimine ayrılmış stok değerlerini içeren güncel stok verisini topla. Herhangi bir dosya, işlem, güncelleme veya yazma hazırlığı yapma; yalnız gerçek R0 okumaları kullan.",
+        "metadata": {
+          "capability_profile": {
+            "chat": true,
+            "context_tokens": 1048576,
+            "degradation_mode": "native_tools",
+            "external_write_planning_allowed": true,
+            "model_id": "deepseek/deepseek-v4.1-flash",
+            "multimodal_inputs": [],
+            "native_tool_calling_available": true,
+            "native_tool_runtime_enabled": true,
+            "output_tokens": null,
+            "prepare_write_allowed": true,
+            "pricing": {
+              "completion": "0.00000063",
+              "input_cache_read": "0.0000000054",
+              "prompt": "0.0000000441"
+            },
+            "provider_code": "openrouter",
+            "quota_reporting": false,
+            "reasoning": {
+              "control": "reasoning_effort",
+              "default_effort": "high",
+              "efforts": [
+                "auto",
+                "off",
+                "low",
+                "high"
+              ],
+              "mandatory": false,
+              "off_supported": true,
+              "supported": true
+            },
+            "source": "provider_metadata",
+            "streaming": false,
+            "structured_output_available": true,
+            "structured_output_runtime_enabled": true,
+            "usage_reporting": true
+          },
+          "discovery_only_plan": false,
+          "fallback_step_ids": [],
+          "llm_step_ids": [
+            "step_1"
+          ],
+          "model_plan_authorization": {
+            "domain": "general",
+            "mode": "inspect",
+            "requested_fields": [],
+            "semantic_contract": {}
+          },
+          "operation_candidate_ids": [
+            "orders.item_sales_summary",
+            "listing.url_lookup",
+            "orders.item_sales_report",
+            "listing.price_lookup",
+            "listing.search",
+            "orders.summary",
+            "stock.low_stock",
+            "stock.inventory_overview",
+            "finance.profit_amount",
+            "finance.cashflow_summary",
+            "listing.stock_lookup",
+            "listing.title_lookup",
+            "orders.product_public_identities",
+            "stock.search",
+            "web.research_report",
+            "analysis.calculate",
+            "operations.discover",
+            "artifacts.read"
+          ],
+          "planning_objective": "Güncel stok kaynağını bağımsız olarak oku ve yalnız salt okuma stok gözlemi üret: ürün kodu/SKU, miktar, birim ve para birimine ayrılmış stok değerlerini içeren güncel stok verisini topla. Herhangi bir dosya, işlem, güncelleme veya yazma hazırlığı yapma; yalnız gerçek R0 okumaları kullan.",
+          "planning_objective_source": "user_message",
+          "rejected_step_ids": [],
+          "source": "llm_direct",
+          "step_ids": [
+            "step_1"
+          ],
+          "step_specs": [
+            {
+              "arguments": {
+                "limit": 50
+              },
+              "depends_on": [],
+              "expected_evidence": [
+                "total_items",
+                "active_items",
+                "zero_or_negative",
+                "total_balance",
+                "balance_by_unit",
+                "stock_value_by_currency",
+                "stock_valuation_complete",
+                "valuation_missing_items",
+                "top_balances",
+                "zero_or_negative_items",
+                "tool"
+              ],
+              "id": "step_1",
+              "objective": "Güncel stok kaynağını salt okuma olarak incele; SKU, miktar, birim ve para birimine ayrılmış stok değerlerini içeren güncel stok gözlemini topla.",
+              "operation_domain": "stock",
+              "operation_id": "stock.inventory_overview"
+            }
+          ]
+        },
+        "parent_plan_id": "",
+        "plan_id": "f3883a3c8fb84efc8f75f5ef27103757",
+        "revision": 1,
+        "source": "llm_direct",
+        "status": "complete",
+        "steps": [
+          {
+            "arguments": {
+              "limit": 50
+            },
+            "attempt_count": 1,
+            "depends_on": [],
+            "expected_evidence": [
+              "total_items",
+              "active_items",
+              "zero_or_negative",
+              "total_balance",
+              "balance_by_unit",
+              "stock_value_by_currency",
+              "stock_valuation_complete",
+              "valuation_missing_items",
+              "top_balances",
+              "zero_or_negative_items",
+              "tool"
+            ],
+            "index": 1,
+            "objective": "Güncel stok kaynağını salt okuma olarak incele; SKU, miktar, birim ve para birimine ayrılmış stok değerlerini içeren güncel stok gözlemini topla.",
+            "observation_ids": [
+              "7fb3556c4cffa96bfdb3fc18ca844e9c"
+            ],
+            "operation_candidates": [
+              "stock.inventory_overview"
+            ],
+            "operation_domain": "stock",
+            "prompt": "Güncel stok kaynağını salt okuma olarak incele; SKU, miktar, birim ve para birimine ayrılmış stok değerlerini içeren güncel stok gözlemini topla.",
+            "result_data": {
+              "answer": "3 aktif stok karti ve toplam 7.00 adet bakiye var. Hareketli ortalama maliyetle stok degeri: 400.00 TRY, 30.00 USD.",
+              "attempt_count": 1,
+              "attempt_failures": [],
+              "conversation_context": {},
+              "dependency_bindings": {},
+              "mode": "tool",
+              "tool_names": [
+                "stock.inventory_overview"
+              ],
+              "tool_result": {
+                "active_items": 3,
+                "balance_by_unit": [
+                  {
+                    "balance": 7.0,
+                    "unit": "adet"
+                  }
+                ],
+                "stock_valuation_complete": true,
+                "stock_value_by_currency": [
+                  {
+                    "amount": 400.0,
+                    "currency": "TRY"
+                  },
+                  {
+                    "amount": 30.0,
+                    "currency": "USD"
+                  }
+                ],
+                "tool": "stock.inventory_overview",
+                "top_balances": [
+                  {
+                    "balance": 4.0,
+                    "name": "Pilot Kupa",
+                    "sku": "PILOT-KUPA",
+                    "stock_value": 400.0,
+                    "stock_value_by_currency": [
+                      {
+                        "amount": 400.0,
+                        "currency": "TRY"
+                      }
+                    ],
+                    "stock_value_currency": "TRY",
+                    "unit": "adet",
+                    "valuation_missing_quantity": 0.0
+                  },
+                  {
+                    "balance": 3.0,
+                    "name": "Pilot Filtre",
+                    "sku": "PILOT-FILTRE",
+                    "stock_value": 30.0,
+                    "stock_value_by_currency": [
+                      {
+                        "amount": 30.0,
+                        "currency": "USD"
+                      }
+                    ],
+                    "stock_value_currency": "USD",
+                    "unit": "adet",
+                    "valuation_missing_quantity": 0.0
+                  },
+                  {
+                    "balance": 0.0,
+                    "name": "Pilot Boş Kart",
+                    "sku": "PILOT-BOS",
+                    "stock_value": null,
+                    "stock_value_by_currency": [],
+                    "stock_value_currency": "",
+                    "unit": "adet",
+                    "valuation_missing_quantity": 0.0
+                  }
+                ],
+                "total_balance": 7.0,
+                "total_items": 3,
+                "valuation_missing_items": 0,
+                "zero_or_negative": 1,
+                "zero_or_negative_items": [
+                  {
+                    "balance": 0.0,
+                    "name": "Pilot Boş Kart",
+                    "sku": "PILOT-BOS",
+                    "stock_value": null,
+                    "stock_value_by_currency": [],
+                    "stock_value_currency": "",
+                    "unit": "adet",
+                    "valuation_missing_quantity": 0.0
+                  }
+                ]
+              }
+            },
+            "result_message": "3 aktif stok karti ve toplam 7.00 adet bakiye var. Hareketli ortalama maliyetle stok degeri: 400.00 TRY, 30.00 USD.",
+            "status": "completed",
+            "step_id": "step_1",
+            "tool_names": [
+              "stock.inventory_overview"
+            ],
+            "verification_status": "observed"
+          }
+        ],
+        "updated_at": "2026-10-13T09:24:16.817298+00:00"
+      }
+    ],
+    "last_tool_results": [
+      {
+        "data": {
+          "active_items": 3,
+          "balance_by_unit": [
+            {
+              "balance": 7.0,
+              "unit": "adet"
+            }
+          ],
+          "stock_valuation_complete": true,
+          "stock_value_by_currency": [
+            {
+              "amount": 400.0,
+              "currency": "TRY"
+            },
+            {
+              "amount": 30.0,
+              "currency": "USD"
+            }
+          ],
+          "tool": "stock.inventory_overview",
+          "top_balances": [
+            {
+              "balance": 4.0,
+              "name": "Pilot Kupa",
+              "sku": "PILOT-KUPA",
+              "stock_value": 400.0,
+              "stock_value_by_currency": [
+                {
+                  "amount": 400.0,
+                  "currency": "TRY"
+                }
+              ],
+              "stock_value_currency": "TRY",
+              "unit": "adet",
+              "valuation_missing_quantity": 0.0
+            },
+            {
+              "balance": 3.0,
+              "name": "Pilot Filtre",
+              "sku": "PILOT-FILTRE",
+              "stock_value": 30.0,
+              "stock_value_by_currency": [
+                {
+                  "amount": 30.0,
+                  "currency": "USD"
+                }
+              ],
+              "stock_value_currency": "USD",
+              "unit": "adet",
+              "valuation_missing_quantity": 0.0
+            },
+            {
+              "balance": 0.0,
+              "name": "Pilot Boş Kart",
+              "sku": "PILOT-BOS",
+              "stock_value": null,
+              "stock_value_by_currency": [],
+              "stock_value_currency": "",
+              "unit": "adet",
+              "valuation_missing_quantity": 0.0
+            }
+          ],
+          "total_balance": 7.0,
+          "total_items": 3,
+          "valuation_missing_items": 0,
+          "zero_or_negative": 1,
+          "zero_or_negative_items": [
+            {
+              "balance": 0.0,
+              "name": "Pilot Boş Kart",
+              "sku": "PILOT-BOS",
+              "stock_value": null,
+              "stock_value_by_currency": [],
+              "stock_value_currency": "",
+              "unit": "adet",
+              "valuation_missing_quantity": 0.0
+            }
+          ]
+        },
+        "step": 1,
+        "tool_names": [
+          "stock.inventory_overview"
+        ]
+      }
+    ],
+    "memory_summary": "İstenen kapsam ve alanlarla yanıtı doğrulayamadım; sonuç tamamlanmadı.",
+    "observations": [
+      {
+        "aggregates": {},
+        "domain": "stock",
+        "facts": {
+          "context_kind": "",
+          "message": "3 aktif stok karti ve toplam 7.00 adet bakiye var. Hareketli ortalama maliyetle stok degeri: 400.00 TRY, 30.00 USD."
+        },
+        "observation_id": "7fb3556c4cffa96bfdb3fc18ca844e9c",
+        "observed_at": "2026-10-13T09:24:15.499378+00:00",
+        "operation_name": "stock.inventory_overview",
+        "record_refs": [],
+        "scope_id": "",
+        "selection_id": "",
+        "source": "stock.inventory_overview",
+        "success": true
+      }
+    ],
+    "pending_actions": [],
+    "progress_events": [
+      {
+        "created_at": "2026-10-13T09:24:15.436462+00:00",
+        "index": 1,
+        "message": "Gorevi 1 adima ayirdim; ilk adimi calistiriyorum.",
+        "percent": 10,
+        "phase": "planned",
+        "status": "running",
+        "step_count": 1
+      },
+      {
+        "created_at": "2026-10-13T09:24:15.443272+00:00",
+        "index": 2,
+        "message": "Adim 1/1: Güncel stok kaynağını salt okuma olarak incele; SKU, miktar, birim ve para birimine ayrılmış stok değerlerini içeren güncel stok gözlemini topla.",
+        "percent": 14,
+        "phase": "step_started",
+        "status": "running",
+        "step_count": 1,
+        "step_index": 1
+      },
+      {
+        "created_at": "2026-10-13T09:24:16.781151+00:00",
+        "index": 3,
+        "message": "Adim 1/1 tamamlandi.",
+        "percent": 76,
+        "phase": "step_completed",
+        "status": "completed",
+        "step_count": 1,
+        "step_index": 1
+      }
+    ],
+    "remaining_steps": [],
+    "selection_snapshots": [],
+    "session_id": "5dfe5e3dd320417c893809b2ff118920",
+    "state_events": [
+      {
+        "created_at": "2026-10-13T09:24:15.436462+00:00",
+        "entity_id": "f3883a3c8fb84efc8f75f5ef27103757",
+        "event_id": "db263b407c4b4fe5a93450ff02149f2f",
+        "event_type": "goal_plan",
+        "payload": {
+          "domain": "general",
+          "revision": 1,
+          "step_ids": [
+            "step_1"
+          ],
+          "superseded_plan_id": ""
+        },
+        "status": "activated"
+      },
+      {
+        "created_at": "2026-10-13T09:24:15.443272+00:00",
+        "entity_id": "f3883a3c8fb84efc8f75f5ef27103757",
+        "event_id": "963f0ca6210b423dacfe14f9ae44a3cb",
+        "event_type": "goal_plan",
+        "payload": {
+          "revision": 1
+        },
+        "status": "running"
+      },
+      {
+        "created_at": "2026-10-13T09:24:15.500381+00:00",
+        "entity_id": "7fb3556c4cffa96bfdb3fc18ca844e9c",
+        "event_id": "c718179219b241b0bafc6e6ac9105f84",
+        "event_type": "observation",
+        "payload": {
+          "domain": "stock",
+          "operation_name": "stock.inventory_overview",
+          "selection_id": ""
+        },
+        "status": "succeeded"
+      },
+      {
+        "created_at": "2026-10-13T09:24:16.817298+00:00",
+        "entity_id": "f3883a3c8fb84efc8f75f5ef27103757",
+        "event_id": "419322aa5a7a45bf8e691acefe547038",
+        "event_type": "goal_plan",
+        "payload": {
+          "revision": 1
+        },
+        "status": "complete"
+      },
+      {
+        "created_at": "2026-10-13T09:24:14.374517+00:00",
+        "entity_id": "e8d9c2b0baa046b68dd360c218ab771f",
+        "event_id": "32908b59f0c34e9eb8bf0ac543c2cef7",
+        "event_type": "conversation_turn",
+        "payload": {
+          "correction_of_turn_id": "",
+          "intent_kind": "data_read",
+          "mode": "inspect",
+          "objective": "Güncel stok kaynağını bağımsız olarak oku ve yalnız salt okuma stok gözlemi üret: ürün kodu/SKU, miktar, birim ve para birimine ayrılmış stok değerlerini içeren güncel stok verisini topla. Herhangi bir dosya, işlem, güncelleme veya yazma hazırlığı yapma; yalnız gerçek R0 okumaları kullan.",
+          "requested_fields": [],
+          "role": "user",
+          "semantic_contract": {}
+        },
+        "status": "recorded"
+      },
+      {
+        "created_at": "2026-10-13T09:24:19.177559+00:00",
+        "entity_id": "24dcbf54d43c464db031d15d780700c5",
+        "event_id": "912d7662c9cd4025b60112cedef74220",
+        "event_type": "conversation_turn",
+        "payload": {
+          "correction_of_turn_id": "",
+          "intent_kind": "",
+          "mode": "failed",
+          "objective": "Güncel stok kaynağını bağımsız olarak oku ve yalnız salt okuma stok gözlemi üret: ürün kodu/SKU, miktar, birim ve para birimine ayrılmış stok değerlerini içeren güncel stok verisini topla. Herhangi bir dosya, işlem, güncelleme veya yazma hazırlığı yapma; yalnız gerçek R0 okumaları kullan.",
+          "requested_fields": [],
+          "role": "assistant",
+          "semantic_contract": {}
+        },
+        "status": "recorded"
+      }
+    ],
+    "status": "failed",
+    "updated_at": "2026-10-13T09:24:19.177559+00:00"
+  },
+  "actual_repair_text": "Güncel stok kaynağı salt okuma ile incelendi; herhangi bir dosya, işlem, güncelleme veya yazma hazırlığı yapılmadı.\n\nSistemde 3 aktif stok kartı ve toplam 7.00 adet bakiye var. Hareketli ortalama maliyetle stok değeri 400.00 TRY ve 30.00 USD olarak görünüyor.",
+  "replay_limit": "Actual child source and final answer. Unrelated private controls omitted. This is a regression projection, not the original checkpoint."
+}

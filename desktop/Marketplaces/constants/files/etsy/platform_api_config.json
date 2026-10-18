@@ -1,0 +1,24 @@
+{
+  "account": {
+    "authStrategy": "api_key_secret_token",
+    "enabledFields": [
+      "seller_id",
+      "comp_name",
+      "api_key",
+      "api_secret",
+      "token",
+      "extra_config"
+    ],
+    "fieldLabels": {
+      "seller_id": "Satıcı ID",
+      "account_id": "Satıcı ID",
+      "comp_name": "Şirket Adı",
+      "api_key": "API Key",
+      "api_secret": "API Secret",
+      "integration_code": "Entegrasyon Kodu",
+      "token": "Token",
+      "extra_config": "Extra Config (JSON)"
+    }
+  },
+  "scopes": {}
+}

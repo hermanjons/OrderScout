@@ -1,0 +1,3630 @@
+{
+  "provenance": {
+    "source_artifact": "output/agentic-2026-10-11/business-glm-candidate-3.json",
+    "source_artifact_sha256": "d2dedf882dba8ac5d8d55e87d640415fd20c469477cdfb1eca381c02c617272a",
+    "requested_model": "z-ai/glm-5.3-flash",
+    "scenario_id": "business_research",
+    "original_task_status": "failed",
+    "original_final_texts_retained": false,
+    "scope": "Captured interpretation and actual canonical synthetic read/calculation evidence. Test answer candidates are separately constructed, never reconstructed original model outputs."
+  },
+  "raw_interpretation": {
+    "mode": "inspect",
+    "domain": "general",
+    "objective": "Pilot Ana mağazasında son 7 günün satışlarını önceki 7 günle karşılaştırmak; stokta bağlı para değerini ve kayıtlı finans hareketlerini incelemek; sonuçları dövizleri karıştırmadan açıklamak; kanıt eksikse (ortak işletme/ürün bağlantısı, gerçekleşmiş banka bakiyesi) uydurmadan eksikleri ve sonraki araştırma adımlarını belirtmek",
+    "reason": "Çok alanlı işletme değerlendirmesi (sipariş satış karşılaştırması + stok değeri + finans hareketleri); tek bir domain upfront seçilemez, general ile mağaza kapsamı marketplace_account üzerinden bağlanır; işletme verisi yerel DB'den okunur, sync uydurulmaz",
+    "calculation_grouping": "none",
+    "comparison_policy": "required",
+    "status_codes": [],
+    "requires_clarification": false,
+    "missing_input": "none",
+    "population_basis": "entity_records",
+    "entity": "marketplace_account",
+    "intent_kind": "data_read",
+    "request_shape": "broad_analysis",
+    "metric": "derived",
+    "period": "last_7_days",
+    "status_scope": "unspecified",
+    "record_scope": "all_matching",
+    "freshness": "current_local",
+    "information_source": "local_business_data",
+    "operation_policy": "allow_new_operations",
+    "explanation_topics": [],
+    "identifier_display": "auto",
+    "requested_fields": [
+      "item_sales_rows",
+      "item_sales_quantity",
+      "item_sales_order_count",
+      "item_sales_amount",
+      "currency",
+      "amount",
+      "count",
+      "calculation",
+      "scope"
+    ],
+    "direct_output_fields": [],
+    "grouped_projection": null,
+    "metric_population": null
+  },
+  "state_evidence": {
+    "session_id": "5dfd41a8e48b4ec19c7730a8b9f2f8b4",
+    "goal": "Pilot Ana mağazamda son 7 günün satışlarını önceki 7 günle karşılaştır; stokta bağlı parayı ve kayıtlı finans hareketlerini de araştır. Sonuçları dövizleri karıştırmadan açıkla. Ortak işletme/ürün bağlantısı veya gerçekleşmiş banka bakiyesi kanıtı yoksa uydurma; eksikleri ve sonraki araştırma adımlarını belirt.",
+    "status": "failed",
+    "active_domain": "general",
+    "active_scopes": {},
+    "selection_snapshots": [],
+    "active_selection_ids": {},
+    "completed_steps": [
+      {
+        "index": 1,
+        "prompt": "Pilot Ana magaza hesaplarinda son 7 gunun siparis adedi, durum dagilimi ve tahmini cirosini gercek start_ms/end_ms sinirlariyla oku.",
+        "step_id": "step_1",
+        "objective": "Pilot Ana magaza hesaplarinda son 7 gunun siparis adedi, durum dagilimi ve tahmini cirosini gercek start_ms/end_ms sinirlariyla oku.",
+        "depends_on": [],
+        "operation_candidates": [
+          "orders.summary"
+        ],
+        "operation_domain": "orders",
+        "arguments": {
+          "period": "last_7_days",
+          "api_account_ids": [
+            101
+          ]
+        },
+        "expected_evidence": [
+          "total_orders",
+          "estimated_revenue",
+          "start_ms",
+          "end_ms",
+          "currency",
+          "revenue_by_currency",
+          "source_revision",
+          "source_snapshot_hash"
+        ],
+        "status": "completed",
+        "tool_names": [
+          "orders.summary"
+        ],
+        "observation_ids": [
+          "8575f6977f43f8420913c07565cc914a"
+        ],
+        "verification_status": "observed",
+        "attempt_count": 1,
+        "result_message": "2026-10-05..2026-10-11 döneminde 3 sipariş var.",
+        "result_data": {
+          "mode": "tool",
+          "tool_names": [
+            "orders.summary"
+          ],
+          "answer": "2026-10-05..2026-10-11 döneminde 3 sipariş var.",
+          "tool_result": {
+            "period": "last_7_days",
+            "period_label": "2026-10-05..2026-10-11",
+            "start_ms": 1791147600000,
+            "end_ms": 1791752399999,
+            "source_revision": 1791622800000,
+            "source_snapshot_hash": "9b30e3c78c30008f38a1b036abbe8e53af03b70cc1fa2d579fc4d5c19de1c9e0",
+            "simulated_excluded": 0,
+            "account_scopes": [
+              {
+                "api_account_id": 101,
+                "account_id": "2738",
+                "store_name": "Pilot Ana",
+                "platform": "TRENDYOL",
+                "environment": "stage",
+                "environment_source": "account.extra_config"
+              }
+            ],
+            "environment_by_account": {
+              "101": "stage"
+            },
+            "requested_api_account_ids": [
+              101
+            ],
+            "total_orders": 3,
+            "cancelled_orders": 0,
+            "estimated_revenue": 3000.0,
+            "currency": "TRY",
+            "currencies": [
+              "TRY"
+            ],
+            "revenue_by_currency": {
+              "TRY": 3000.0
+            },
+            "status_counts": {
+              "ReadyToShip": 1,
+              "Picking": 1,
+              "Delivered": 1
+            },
+            "status_rates": {
+              "ReadyToShip": 33.33,
+              "Picking": 33.33,
+              "Delivered": 33.33
+            },
+            "dominant_status": "ReadyToShip",
+            "dominant_status_count": 1,
+            "dominant_status_rate": 33.33,
+            "cancellation_rate": 0.0,
+            "revenue_order_count": 3,
+            "average_revenue_per_order": 1000.0,
+            "sample_orders": [
+              {
+                "api_account_id": 101,
+                "order_number": "PILOT-A-NEW-1",
+                "status": "ReadyToShip",
+                "total_price": 1000.0
+              },
+              {
+                "api_account_id": 101,
+                "order_number": "PILOT-A-NEW-2",
+                "status": "Picking",
+                "total_price": 1000.0
+              },
+              {
+                "api_account_id": 101,
+                "order_number": "PILOT-A-NEW-3",
+                "status": "Delivered",
+                "total_price": 1000.0
+              }
+            ],
+            "tool": "orders.summary"
+          },
+          "conversation_context": {},
+          "dependency_bindings": {
+            "api_account_ids": "goal_account_scope:explicit"
+          },
+          "attempt_count": 1,
+          "attempt_failures": []
+        }
+      },
+      {
+        "index": 9,
+        "prompt": "Onceki 7 gun (2026-09-28..2026-10-04) siparis ozetini acik tarih araligiyla oku; karsilastirma tabani.",
+        "step_id": "step_2",
+        "objective": "Onceki 7 gun (2026-09-28..2026-10-04) siparis ozetini acik tarih araligiyla oku; karsilastirma tabani.",
+        "depends_on": [],
+        "operation_candidates": [
+          "orders.summary"
+        ],
+        "operation_domain": "orders",
+        "arguments": {
+          "period": "last_7_days",
+          "start_date": "2026-09-28",
+          "end_date": "2026-10-04",
+          "api_account_ids": [
+            101
+          ]
+        },
+        "expected_evidence": [
+          "total_orders",
+          "estimated_revenue",
+          "start_ms",
+          "end_ms",
+          "currency",
+          "revenue_by_currency",
+          "source_revision",
+          "source_snapshot_hash"
+        ],
+        "status": "completed",
+        "tool_names": [
+          "orders.summary"
+        ],
+        "observation_ids": [
+          "f20af289e319a003a85499762d7b3a50"
+        ],
+        "verification_status": "observed",
+        "attempt_count": 1,
+        "result_message": "2026-09-28..2026-10-04 döneminde 2 sipariş var.",
+        "result_data": {
+          "mode": "tool",
+          "tool_names": [
+            "orders.summary"
+          ],
+          "answer": "2026-09-28..2026-10-04 döneminde 2 sipariş var.",
+          "tool_result": {
+            "period": "last_7_days",
+            "period_label": "2026-09-28..2026-10-04",
+            "start_ms": 1790542800000,
+            "end_ms": 1791147599999,
+            "source_revision": 1790845200000,
+            "source_snapshot_hash": "d8c956b59ae44c414edcdbdba43a1d5cf4e026f770c772e32e245e8d12656b5a",
+            "simulated_excluded": 0,
+            "account_scopes": [
+              {
+                "api_account_id": 101,
+                "account_id": "2738",
+                "store_name": "Pilot Ana",
+                "platform": "TRENDYOL",
+                "environment": "stage",
+                "environment_source": "account.extra_config"
+              }
+            ],
+            "environment_by_account": {
+              "101": "stage"
+            },
+            "requested_api_account_ids": [
+              101
+            ],
+            "total_orders": 2,
+            "cancelled_orders": 0,
+            "estimated_revenue": 800.0,
+            "currency": "TRY",
+            "currencies": [
+              "TRY"
+            ],
+            "revenue_by_currency": {
+              "TRY": 800.0
+            },
+            "status_counts": {
+              "Delivered": 2
+            },
+            "status_rates": {
+              "Delivered": 100.0
+            },
+            "dominant_status": "Delivered",
+            "dominant_status_count": 2,
+            "dominant_status_rate": 100.0,
+            "cancellation_rate": 0.0,
+            "revenue_order_count": 2,
+            "average_revenue_per_order": 400.0,
+            "sample_orders": [
+              {
+                "api_account_id": 101,
+                "order_number": "PILOT-A-OLD-1",
+                "status": "Delivered",
+                "total_price": 400.0
+              },
+              {
+                "api_account_id": 101,
+                "order_number": "PILOT-A-OLD-2",
+                "status": "Delivered",
+                "total_price": 400.0
+              }
+            ],
+            "tool": "orders.summary"
+          },
+          "conversation_context": {},
+          "dependency_bindings": {
+            "api_account_ids": "goal_account_scope:explicit"
+          },
+          "attempt_count": 1,
+          "attempt_failures": []
+        }
+      },
+      {
+        "index": 10,
+        "prompt": "Son 7 gunun urun kalemlerini marketplace_item adedi ve brut tutarla urun bazinda topla.",
+        "step_id": "step_3",
+        "objective": "Son 7 gunun urun kalemlerini marketplace_item adedi ve brut tutarla urun bazinda topla.",
+        "depends_on": [],
+        "operation_candidates": [
+          "orders.item_sales_summary"
+        ],
+        "operation_domain": "orders",
+        "arguments": {
+          "period": "last_7_days",
+          "api_account_ids": [
+            101
+          ],
+          "group_by": "product",
+          "limit": 500
+        },
+        "expected_evidence": [
+          "total_quantity",
+          "total_gross_amount",
+          "currency",
+          "currency_applicable",
+          "order_count",
+          "product_count",
+          "quantity_unit",
+          "start_date_ms",
+          "end_date_ms",
+          "source_revision",
+          "source_snapshot_hash"
+        ],
+        "status": "completed",
+        "tool_names": [
+          "orders.item_sales_summary"
+        ],
+        "observation_ids": [
+          "3e5c6a5e6c414ded5a0ad6d94f9c29e8"
+        ],
+        "verification_status": "observed",
+        "attempt_count": 1,
+        "result_message": "2026-10-05..2026-10-11 kapsaminda siparis kalemi satis ozeti hazirlandi.",
+        "result_data": {
+          "mode": "tool",
+          "tool_names": [
+            "orders.item_sales_summary"
+          ],
+          "answer": "2026-10-05..2026-10-11 kapsaminda siparis kalemi satis ozeti hazirlandi.",
+          "tool_result": {
+            "rows": [
+              {
+                "identity": "PILOT-KUPA-BAR",
+                "product_name": "Pilot Kupa",
+                "sku": "PILOT-KUPA",
+                "barcode": "PILOT-KUPA-BAR",
+                "content_id": "",
+                "product_code": "",
+                "currency": "TRY",
+                "quantity": 4,
+                "quantity_unit": "marketplace_item",
+                "gross_amount": 2000.0,
+                "order_count": 2
+              },
+              {
+                "identity": "PILOT-FILTRE-BAR",
+                "product_name": "Pilot Filtre",
+                "sku": "PILOT-FILTRE",
+                "barcode": "PILOT-FILTRE-BAR",
+                "content_id": "",
+                "product_code": "",
+                "currency": "TRY",
+                "quantity": 2,
+                "quantity_unit": "marketplace_item",
+                "gross_amount": 1000.0,
+                "order_count": 1
+              }
+            ],
+            "group_by": "product",
+            "order_count": 3,
+            "matched_order_count": 3,
+            "population_order_count": 3,
+            "gross_amount_by_currency": {
+              "TRY": 3000.0
+            },
+            "total_gross_amount": 3000.0,
+            "currency": "TRY",
+            "product_count": 2,
+            "total_quantity": 6,
+            "quantity_unit": "marketplace_item",
+            "quantity_unit_description": "Ordered marketplace product units from OrderItem.quantity; not order-line count or Stock physical units.",
+            "empty_result": false,
+            "metrics_complete": true,
+            "currency_applicable": true,
+            "leading_five_quantity": 6,
+            "leading_five_quantity_share": 100.0,
+            "truncated": false,
+            "identity_filter_count": 0,
+            "excluded_statuses": [
+              "cancelled",
+              "returned",
+              "undeliveredandreturned",
+              "unsupplied"
+            ],
+            "start_date_ms": 1791147600000,
+            "end_date_ms": 1791752399999,
+            "source_revision": 1791622800000,
+            "source_snapshot_hash": "def511faae7627593a2e0c5ea6fef72e8d32ac07f2b1b6f9383e3fc0ac9801d6",
+            "period": "last_7_days",
+            "period_label": "2026-10-05..2026-10-11",
+            "account_scopes": [
+              {
+                "api_account_id": 101,
+                "account_id": "2738",
+                "store_name": "Pilot Ana",
+                "platform": "TRENDYOL",
+                "environment": "stage",
+                "environment_source": "account.extra_config"
+              }
+            ],
+            "environment_by_account": {
+              "101": "stage"
+            },
+            "requested_api_account_ids": [
+              101
+            ],
+            "tool": "orders.item_sales_summary"
+          },
+          "conversation_context": {},
+          "dependency_bindings": {
+            "api_account_ids": "goal_account_scope:explicit"
+          },
+          "attempt_count": 1,
+          "attempt_failures": []
+        }
+      },
+      {
+        "index": 11,
+        "prompt": "Onceki 7 gunun (2026-09-28..2026-10-04) urun satislarini acik tarih araligiyla oku.",
+        "step_id": "step_4",
+        "objective": "Onceki 7 gunun (2026-09-28..2026-10-04) urun satislarini acik tarih araligiyla oku.",
+        "depends_on": [],
+        "operation_candidates": [
+          "orders.item_sales_summary"
+        ],
+        "operation_domain": "orders",
+        "arguments": {
+          "period": "last_7_days",
+          "start_date": "2026-09-28",
+          "end_date": "2026-10-04",
+          "api_account_ids": [
+            101
+          ],
+          "group_by": "product",
+          "limit": 500
+        },
+        "expected_evidence": [
+          "total_quantity",
+          "total_gross_amount",
+          "currency",
+          "currency_applicable",
+          "order_count",
+          "product_count",
+          "quantity_unit",
+          "start_date_ms",
+          "end_date_ms",
+          "source_revision",
+          "source_snapshot_hash"
+        ],
+        "status": "completed",
+        "tool_names": [
+          "orders.item_sales_summary"
+        ],
+        "observation_ids": [
+          "545ca95a3865e731d7128843388c6451"
+        ],
+        "verification_status": "observed",
+        "attempt_count": 1,
+        "result_message": "2026-09-28..2026-10-04 kapsaminda siparis kalemi satis ozeti hazirlandi.",
+        "result_data": {
+          "mode": "tool",
+          "tool_names": [
+            "orders.item_sales_summary"
+          ],
+          "answer": "2026-09-28..2026-10-04 kapsaminda siparis kalemi satis ozeti hazirlandi.",
+          "tool_result": {
+            "rows": [
+              {
+                "identity": "PILOT-KUPA-BAR",
+                "product_name": "Pilot Kupa",
+                "sku": "PILOT-KUPA",
+                "barcode": "PILOT-KUPA-BAR",
+                "content_id": "",
+                "product_code": "",
+                "currency": "TRY",
+                "quantity": 4,
+                "quantity_unit": "marketplace_item",
+                "gross_amount": 800.0,
+                "order_count": 2
+              }
+            ],
+            "group_by": "product",
+            "order_count": 2,
+            "matched_order_count": 2,
+            "population_order_count": 2,
+            "gross_amount_by_currency": {
+              "TRY": 800.0
+            },
+            "total_gross_amount": 800.0,
+            "currency": "TRY",
+            "product_count": 1,
+            "total_quantity": 4,
+            "quantity_unit": "marketplace_item",
+            "quantity_unit_description": "Ordered marketplace product units from OrderItem.quantity; not order-line count or Stock physical units.",
+            "empty_result": false,
+            "metrics_complete": true,
+            "currency_applicable": true,
+            "leading_five_quantity": 4,
+            "leading_five_quantity_share": 100.0,
+            "truncated": false,
+            "identity_filter_count": 0,
+            "excluded_statuses": [
+              "cancelled",
+              "returned",
+              "undeliveredandreturned",
+              "unsupplied"
+            ],
+            "start_date_ms": 1790542800000,
+            "end_date_ms": 1791147599999,
+            "source_revision": 1790845200000,
+            "source_snapshot_hash": "fe9defc19503f1c95a220089d024285bf2c729c41773ded94b9231f606f1e5b3",
+            "period": "last_7_days",
+            "period_label": "2026-09-28..2026-10-04",
+            "account_scopes": [
+              {
+                "api_account_id": 101,
+                "account_id": "2738",
+                "store_name": "Pilot Ana",
+                "platform": "TRENDYOL",
+                "environment": "stage",
+                "environment_source": "account.extra_config"
+              }
+            ],
+            "environment_by_account": {
+              "101": "stage"
+            },
+            "requested_api_account_ids": [
+              101
+            ],
+            "tool": "orders.item_sales_summary"
+          },
+          "conversation_context": {},
+          "dependency_bindings": {
+            "api_account_ids": "goal_account_scope:explicit"
+          },
+          "attempt_count": 1,
+          "attempt_failures": []
+        }
+      },
+      {
+        "index": 12,
+        "prompt": "Kayitli pazaryeri ve manuel finans hareketlerini para birimi bazinda currency_totals satirlariyla oku; banka/kasa bakiyesi veya gerceklesen tahsilat olarak degerlendirme.",
+        "step_id": "step_5",
+        "objective": "Kayitli pazaryeri ve manuel finans hareketlerini para birimi bazinda currency_totals satirlariyla oku; banka/kasa bakiyesi veya gerceklesen tahsilat olarak degerlendirme.",
+        "depends_on": [],
+        "operation_candidates": [
+          "finance.cashflow_summary"
+        ],
+        "operation_domain": "finance",
+        "arguments": {
+          "period": "last_7_days"
+        },
+        "expected_evidence": [
+          "currency_totals",
+          "currency",
+          "combined_net",
+          "marketplace_net",
+          "manual_in",
+          "manual_out",
+          "start_ms",
+          "end_ms",
+          "transaction_type_counts"
+        ],
+        "status": "completed",
+        "tool_names": [
+          "finance.cashflow_summary"
+        ],
+        "observation_ids": [
+          "a15fe0a6aa56b67bae0a74a9c4360457"
+        ],
+        "verification_status": "observed",
+        "attempt_count": 1,
+        "result_message": "2026-10-05..2026-10-11 donemi finans hareketleri para birimine gore: 200.00 TRY, 20.00 USD. Birlesik tutar hesaplanmadi. Bu kayitli finans hareketidir; banka bakiyesi veya tahsilat gerceklesmesi kaniti degildir.",
+        "result_data": {
+          "mode": "tool",
+          "tool_names": [
+            "finance.cashflow_summary"
+          ],
+          "answer": "2026-10-05..2026-10-11 donemi finans hareketleri para birimine gore: 200.00 TRY, 20.00 USD. Birlesik tutar hesaplanmadi. Bu kayitli finans hareketidir; banka bakiyesi veya tahsilat gerceklesmesi kaniti degildir.",
+          "tool_result": {
+            "period": "last_7_days",
+            "period_label": "2026-10-05..2026-10-11",
+            "start_ms": 1791147600000,
+            "end_ms": 1791752399999,
+            "currency": null,
+            "currency_totals": [
+              {
+                "marketplace_credit": 3000.0,
+                "marketplace_debt": 300.0,
+                "marketplace_net": 2700.0,
+                "manual_in": 0.0,
+                "manual_out": 2500.0,
+                "currency": "TRY",
+                "combined_net": 200.0,
+                "manual_by_category": {
+                  "Kira": -2500.0
+                }
+              },
+              {
+                "marketplace_credit": 20.0,
+                "marketplace_debt": 0.0,
+                "marketplace_net": 20.0,
+                "manual_in": 0.0,
+                "manual_out": 0.0,
+                "currency": "USD",
+                "combined_net": 20.0,
+                "manual_by_category": {}
+              }
+            ],
+            "marketplace_credit": null,
+            "marketplace_debt": null,
+            "marketplace_net": null,
+            "manual_in": null,
+            "manual_out": null,
+            "combined_net": null,
+            "transaction_type_counts": {
+              "Sale": 2
+            },
+            "manual_by_category": {},
+            "tool": "finance.cashflow_summary"
+          },
+          "conversation_context": {},
+          "dependency_bindings": {},
+          "attempt_count": 1,
+          "attempt_failures": []
+        }
+      },
+      {
+        "index": 13,
+        "prompt": "Stokta bagli parayi stock_value_by_currency satirlarindan birim/doviz ayri oku; degerleme kapsamini stock_valuation_complete ile dogrula.",
+        "step_id": "step_6",
+        "objective": "Stokta bagli parayi stock_value_by_currency satirlarindan birim/doviz ayri oku; degerleme kapsamini stock_valuation_complete ile dogrula.",
+        "depends_on": [],
+        "operation_candidates": [
+          "stock.inventory_overview"
+        ],
+        "operation_domain": "stock",
+        "arguments": {
+          "limit": 50
+        },
+        "expected_evidence": [
+          "stock_value_by_currency",
+          "balance_by_unit",
+          "stock_valuation_complete",
+          "valuation_missing_items",
+          "total_items",
+          "active_items",
+          "zero_or_negative"
+        ],
+        "status": "completed",
+        "tool_names": [
+          "stock.inventory_overview"
+        ],
+        "observation_ids": [
+          "2ffd7ca0341e1bfcf26aa12453b82d5b"
+        ],
+        "verification_status": "observed",
+        "attempt_count": 1,
+        "result_message": "3 aktif stok karti ve toplam 7.00 adet bakiye var. Hareketli ortalama maliyetle stok degeri: 400.00 TRY, 30.00 USD.",
+        "result_data": {
+          "mode": "tool",
+          "tool_names": [
+            "stock.inventory_overview"
+          ],
+          "answer": "3 aktif stok karti ve toplam 7.00 adet bakiye var. Hareketli ortalama maliyetle stok degeri: 400.00 TRY, 30.00 USD.",
+          "tool_result": {
+            "total_items": 3,
+            "active_items": 3,
+            "zero_or_negative": 1,
+            "total_balance": 7.0,
+            "balance_by_unit": [
+              {
+                "unit": "adet",
+                "balance": 7.0
+              }
+            ],
+            "stock_value_by_currency": [
+              {
+                "currency": "TRY",
+                "amount": 400.0
+              },
+              {
+                "currency": "USD",
+                "amount": 30.0
+              }
+            ],
+            "stock_valuation_complete": true,
+            "valuation_missing_items": 0,
+            "top_balances": [
+              {
+                "sku": "PILOT-KUPA",
+                "name": "Pilot Kupa",
+                "balance": 4.0,
+                "unit": "adet",
+                "stock_value": 400.0,
+                "stock_value_currency": "TRY",
+                "stock_value_by_currency": [
+                  {
+                    "currency": "TRY",
+                    "amount": 400.0
+                  }
+                ],
+                "valuation_missing_quantity": 0.0
+              },
+              {
+                "sku": "PILOT-FILTRE",
+                "name": "Pilot Filtre",
+                "balance": 3.0,
+                "unit": "adet",
+                "stock_value": 30.0,
+                "stock_value_currency": "USD",
+                "stock_value_by_currency": [
+                  {
+                    "currency": "USD",
+                    "amount": 30.0
+                  }
+                ],
+                "valuation_missing_quantity": 0.0
+              },
+              {
+                "sku": "PILOT-BOS",
+                "name": "Pilot Boş Kart",
+                "balance": 0.0,
+                "unit": "adet",
+                "stock_value": null,
+                "stock_value_currency": "",
+                "stock_value_by_currency": [],
+                "valuation_missing_quantity": 0.0
+              }
+            ],
+            "zero_or_negative_items": [
+              {
+                "sku": "PILOT-BOS",
+                "name": "Pilot Boş Kart",
+                "balance": 0.0,
+                "unit": "adet",
+                "stock_value": null,
+                "stock_value_currency": "",
+                "stock_value_by_currency": [],
+                "valuation_missing_quantity": 0.0
+              }
+            ],
+            "tool": "stock.inventory_overview"
+          },
+          "conversation_context": {},
+          "dependency_bindings": {},
+          "attempt_count": 1,
+          "attempt_failures": []
+        }
+      },
+      {
+        "index": 14,
+        "prompt": "Son 7 gun ile onceki 7 gunun cirosunu ve siparis adedini dogrudan karsilastir; farki hesapla; doviz uyumsuzsa reddedilir.",
+        "step_id": "step_7",
+        "objective": "Son 7 gun ile onceki 7 gunun cirosunu ve siparis adedini dogrudan karsilastir; farki hesapla; doviz uyumsuzsa reddedilir.",
+        "depends_on": [
+          "step_1",
+          "step_2"
+        ],
+        "operation_candidates": [
+          "analysis.calculate"
+        ],
+        "operation_domain": "analysis",
+        "arguments": {
+          "sources": [
+            {
+              "source_id": "cur",
+              "source_step_id": "step_1",
+              "operation_id": "orders.summary",
+              "result": {
+                "$from_step": "step_1",
+                "path": "tool_result"
+              }
+            },
+            {
+              "source_id": "prior",
+              "source_step_id": "step_2",
+              "operation_id": "orders.summary",
+              "result": {
+                "$from_step": "step_2",
+                "path": "tool_result"
+              }
+            }
+          ],
+          "calculations": [
+            {
+              "calculation_id": "revenue_change_pct",
+              "operator": "subtract",
+              "operands": [
+                {
+                  "source_id": "cur",
+                  "path": "estimated_revenue"
+                },
+                {
+                  "source_id": "prior",
+                  "path": "estimated_revenue"
+                }
+              ]
+            },
+            {
+              "calculation_id": "orders_change",
+              "operator": "subtract",
+              "operands": [
+                {
+                  "source_id": "cur",
+                  "path": "total_orders"
+                },
+                {
+                  "source_id": "prior",
+                  "path": "total_orders"
+                }
+              ]
+            }
+          ],
+          "comparisons": [
+            {
+              "comparison_id": "revenue_direction",
+              "operator": "greater_than",
+              "left": {
+                "source_id": "cur",
+                "path": "estimated_revenue"
+              },
+              "right": {
+                "source_id": "prior",
+                "path": "estimated_revenue"
+              }
+            },
+            {
+              "comparison_id": "orders_direction",
+              "operator": "greater_than",
+              "left": {
+                "source_id": "cur",
+                "path": "total_orders"
+              },
+              "right": {
+                "source_id": "prior",
+                "path": "total_orders"
+              }
+            }
+          ]
+        },
+        "expected_evidence": [
+          "verified",
+          "verified_calculations",
+          "verified_comparisons",
+          "evidence_hash",
+          "source_receipts"
+        ],
+        "status": "completed",
+        "tool_names": [
+          "analysis.calculate"
+        ],
+        "observation_ids": [
+          "3f43982489ea60e79fbec9c3e757b9e2"
+        ],
+        "verification_status": "observed",
+        "attempt_count": 1,
+        "result_message": "Kaynaklara bağlı hesaplamalar doğrulandı.",
+        "result_data": {
+          "mode": "tool",
+          "tool_names": [
+            "analysis.calculate"
+          ],
+          "answer": "Kaynaklara bağlı hesaplamalar doğrulandı.",
+          "tool_result": {
+            "verified": true,
+            "arithmetic_only": true,
+            "business_relationship_verified": false,
+            "verified_calculations": [
+              {
+                "operator": "subtract",
+                "operands": [
+                  "3000",
+                  "800"
+                ],
+                "precision": 2,
+                "rounding": "ROUND_HALF_UP",
+                "result": "2200.00",
+                "expression": "3000 - 800 = 2200.00",
+                "result_value": 2200.0,
+                "verified": true,
+                "unit": "TRY",
+                "result_unit": "native",
+                "result_kind": "amount",
+                "operand_receipts": [
+                  {
+                    "source_id": "cur",
+                    "source_step_id": "step_1",
+                    "operation_id": "orders.summary",
+                    "path": "estimated_revenue",
+                    "value": 3000.0,
+                    "unit": "TRY",
+                    "source_result_hash": "5536ad4728e12d471efe93394ab32412971a3142c6f51068464845f5d6a1472c"
+                  },
+                  {
+                    "source_id": "prior",
+                    "source_step_id": "step_2",
+                    "operation_id": "orders.summary",
+                    "path": "estimated_revenue",
+                    "value": 800.0,
+                    "unit": "TRY",
+                    "source_result_hash": "ffb8741173e4777cd60696e86d5ea4b0a9936349f35d7681e7f517ebeb387a62"
+                  }
+                ],
+                "source_receipts": [
+                  {
+                    "source_id": "cur",
+                    "source_step_id": "step_1",
+                    "operation_id": "orders.summary",
+                    "source_result_hash": "5536ad4728e12d471efe93394ab32412971a3142c6f51068464845f5d6a1472c",
+                    "scope": {
+                      "account_scopes": [
+                        {
+                          "api_account_id": 101,
+                          "account_id": "2738",
+                          "store_name": "Pilot Ana",
+                          "platform": "TRENDYOL",
+                          "environment": "stage",
+                          "environment_source": "account.extra_config"
+                        }
+                      ],
+                      "environment_by_account": {
+                        "101": "stage"
+                      }
+                    },
+                    "period": {
+                      "period": "last_7_days",
+                      "start_ms": 1791147600000,
+                      "end_ms": 1791752399999
+                    },
+                    "coverage": null
+                  },
+                  {
+                    "source_id": "prior",
+                    "source_step_id": "step_2",
+                    "operation_id": "orders.summary",
+                    "source_result_hash": "ffb8741173e4777cd60696e86d5ea4b0a9936349f35d7681e7f517ebeb387a62",
+                    "scope": {
+                      "account_scopes": [
+                        {
+                          "api_account_id": 101,
+                          "account_id": "2738",
+                          "store_name": "Pilot Ana",
+                          "platform": "TRENDYOL",
+                          "environment": "stage",
+                          "environment_source": "account.extra_config"
+                        }
+                      ],
+                      "environment_by_account": {
+                        "101": "stage"
+                      }
+                    },
+                    "period": {
+                      "period": "last_7_days",
+                      "start_ms": 1790542800000,
+                      "end_ms": 1791147599999
+                    },
+                    "coverage": null
+                  }
+                ],
+                "arithmetic_only": true,
+                "business_relationship_verified": false,
+                "calculation_id": "revenue_change_pct",
+                "arithmetic_evidence_hash": "a7f37fda8fa15c728ca08a188d0c886b1a73f8a9bc1269fc276a280ed9844b7c",
+                "evidence_hash": "2701bf51cac1257f1f4c7b4097114b62fc7e99842f031102ea9babc83882cf0c"
+              },
+              {
+                "operator": "subtract",
+                "operands": [
+                  "3",
+                  "2"
+                ],
+                "precision": 2,
+                "rounding": "ROUND_HALF_UP",
+                "result": "1.00",
+                "expression": "3 - 2 = 1.00",
+                "result_value": 1.0,
+                "verified": true,
+                "unit": "order",
+                "result_unit": "native",
+                "result_kind": "count",
+                "operand_receipts": [
+                  {
+                    "source_id": "cur",
+                    "source_step_id": "step_1",
+                    "operation_id": "orders.summary",
+                    "path": "total_orders",
+                    "value": 3,
+                    "unit": "order",
+                    "source_result_hash": "5536ad4728e12d471efe93394ab32412971a3142c6f51068464845f5d6a1472c"
+                  },
+                  {
+                    "source_id": "prior",
+                    "source_step_id": "step_2",
+                    "operation_id": "orders.summary",
+                    "path": "total_orders",
+                    "value": 2,
+                    "unit": "order",
+                    "source_result_hash": "ffb8741173e4777cd60696e86d5ea4b0a9936349f35d7681e7f517ebeb387a62"
+                  }
+                ],
+                "source_receipts": [
+                  {
+                    "source_id": "cur",
+                    "source_step_id": "step_1",
+                    "operation_id": "orders.summary",
+                    "source_result_hash": "5536ad4728e12d471efe93394ab32412971a3142c6f51068464845f5d6a1472c",
+                    "scope": {
+                      "account_scopes": [
+                        {
+                          "api_account_id": 101,
+                          "account_id": "2738",
+                          "store_name": "Pilot Ana",
+                          "platform": "TRENDYOL",
+                          "environment": "stage",
+                          "environment_source": "account.extra_config"
+                        }
+                      ],
+                      "environment_by_account": {
+                        "101": "stage"
+                      }
+                    },
+                    "period": {
+                      "period": "last_7_days",
+                      "start_ms": 1791147600000,
+                      "end_ms": 1791752399999
+                    },
+                    "coverage": null
+                  },
+                  {
+                    "source_id": "prior",
+                    "source_step_id": "step_2",
+                    "operation_id": "orders.summary",
+                    "source_result_hash": "ffb8741173e4777cd60696e86d5ea4b0a9936349f35d7681e7f517ebeb387a62",
+                    "scope": {
+                      "account_scopes": [
+                        {
+                          "api_account_id": 101,
+                          "account_id": "2738",
+                          "store_name": "Pilot Ana",
+                          "platform": "TRENDYOL",
+                          "environment": "stage",
+                          "environment_source": "account.extra_config"
+                        }
+                      ],
+                      "environment_by_account": {
+                        "101": "stage"
+                      }
+                    },
+                    "period": {
+                      "period": "last_7_days",
+                      "start_ms": 1790542800000,
+                      "end_ms": 1791147599999
+                    },
+                    "coverage": null
+                  }
+                ],
+                "arithmetic_only": true,
+                "business_relationship_verified": false,
+                "calculation_id": "orders_change",
+                "arithmetic_evidence_hash": "c0b8ef68895d3105a6be654ad13333fd36dc13ebdbfd4265ff0e0cd8e6560918",
+                "evidence_hash": "7793f2747486f1149c7e33c24ab4c3fb7542605e2e2691e7b547e6b289b0e935"
+              }
+            ],
+            "verified_comparisons": [
+              {
+                "operator": "greater_than",
+                "left": "3000",
+                "right": "800",
+                "holds": true,
+                "difference": "2200",
+                "absolute_difference": "2200",
+                "expression": "3000 > 800",
+                "verified": true,
+                "unit": "TRY",
+                "result_unit": "native",
+                "result_kind": "boolean",
+                "operand_receipts": [
+                  {
+                    "source_id": "cur",
+                    "source_step_id": "step_1",
+                    "operation_id": "orders.summary",
+                    "path": "estimated_revenue",
+                    "value": 3000.0,
+                    "unit": "TRY",
+                    "source_result_hash": "5536ad4728e12d471efe93394ab32412971a3142c6f51068464845f5d6a1472c"
+                  },
+                  {
+                    "source_id": "prior",
+                    "source_step_id": "step_2",
+                    "operation_id": "orders.summary",
+                    "path": "estimated_revenue",
+                    "value": 800.0,
+                    "unit": "TRY",
+                    "source_result_hash": "ffb8741173e4777cd60696e86d5ea4b0a9936349f35d7681e7f517ebeb387a62"
+                  }
+                ],
+                "source_receipts": [
+                  {
+                    "source_id": "cur",
+                    "source_step_id": "step_1",
+                    "operation_id": "orders.summary",
+                    "source_result_hash": "5536ad4728e12d471efe93394ab32412971a3142c6f51068464845f5d6a1472c",
+                    "scope": {
+                      "account_scopes": [
+                        {
+                          "api_account_id": 101,
+                          "account_id": "2738",
+                          "store_name": "Pilot Ana",
+                          "platform": "TRENDYOL",
+                          "environment": "stage",
+                          "environment_source": "account.extra_config"
+                        }
+                      ],
+                      "environment_by_account": {
+                        "101": "stage"
+                      }
+                    },
+                    "period": {
+                      "period": "last_7_days",
+                      "start_ms": 1791147600000,
+                      "end_ms": 1791752399999
+                    },
+                    "coverage": null
+                  },
+                  {
+                    "source_id": "prior",
+                    "source_step_id": "step_2",
+                    "operation_id": "orders.summary",
+                    "source_result_hash": "ffb8741173e4777cd60696e86d5ea4b0a9936349f35d7681e7f517ebeb387a62",
+                    "scope": {
+                      "account_scopes": [
+                        {
+                          "api_account_id": 101,
+                          "account_id": "2738",
+                          "store_name": "Pilot Ana",
+                          "platform": "TRENDYOL",
+                          "environment": "stage",
+                          "environment_source": "account.extra_config"
+                        }
+                      ],
+                      "environment_by_account": {
+                        "101": "stage"
+                      }
+                    },
+                    "period": {
+                      "period": "last_7_days",
+                      "start_ms": 1790542800000,
+                      "end_ms": 1791147599999
+                    },
+                    "coverage": null
+                  }
+                ],
+                "arithmetic_only": true,
+                "business_relationship_verified": false,
+                "comparison_id": "revenue_direction",
+                "arithmetic_evidence_hash": "7db77df14b9d091b25bafb0348792a22b1df50ec39aadfd7b3c38fe4e7f870cf",
+                "evidence_hash": "45fc420089ece1a43f3dad7775f96a3292ad656eea11617aeda2d88032261c38"
+              },
+              {
+                "operator": "greater_than",
+                "left": "3",
+                "right": "2",
+                "holds": true,
+                "difference": "1",
+                "absolute_difference": "1",
+                "expression": "3 > 2",
+                "verified": true,
+                "unit": "order",
+                "result_unit": "native",
+                "result_kind": "boolean",
+                "operand_receipts": [
+                  {
+                    "source_id": "cur",
+                    "source_step_id": "step_1",
+                    "operation_id": "orders.summary",
+                    "path": "total_orders",
+                    "value": 3,
+                    "unit": "order",
+                    "source_result_hash": "5536ad4728e12d471efe93394ab32412971a3142c6f51068464845f5d6a1472c"
+                  },
+                  {
+                    "source_id": "prior",
+                    "source_step_id": "step_2",
+                    "operation_id": "orders.summary",
+                    "path": "total_orders",
+                    "value": 2,
+                    "unit": "order",
+                    "source_result_hash": "ffb8741173e4777cd60696e86d5ea4b0a9936349f35d7681e7f517ebeb387a62"
+                  }
+                ],
+                "source_receipts": [
+                  {
+                    "source_id": "cur",
+                    "source_step_id": "step_1",
+                    "operation_id": "orders.summary",
+                    "source_result_hash": "5536ad4728e12d471efe93394ab32412971a3142c6f51068464845f5d6a1472c",
+                    "scope": {
+                      "account_scopes": [
+                        {
+                          "api_account_id": 101,
+                          "account_id": "2738",
+                          "store_name": "Pilot Ana",
+                          "platform": "TRENDYOL",
+                          "environment": "stage",
+                          "environment_source": "account.extra_config"
+                        }
+                      ],
+                      "environment_by_account": {
+                        "101": "stage"
+                      }
+                    },
+                    "period": {
+                      "period": "last_7_days",
+                      "start_ms": 1791147600000,
+                      "end_ms": 1791752399999
+                    },
+                    "coverage": null
+                  },
+                  {
+                    "source_id": "prior",
+                    "source_step_id": "step_2",
+                    "operation_id": "orders.summary",
+                    "source_result_hash": "ffb8741173e4777cd60696e86d5ea4b0a9936349f35d7681e7f517ebeb387a62",
+                    "scope": {
+                      "account_scopes": [
+                        {
+                          "api_account_id": 101,
+                          "account_id": "2738",
+                          "store_name": "Pilot Ana",
+                          "platform": "TRENDYOL",
+                          "environment": "stage",
+                          "environment_source": "account.extra_config"
+                        }
+                      ],
+                      "environment_by_account": {
+                        "101": "stage"
+                      }
+                    },
+                    "period": {
+                      "period": "last_7_days",
+                      "start_ms": 1790542800000,
+                      "end_ms": 1791147599999
+                    },
+                    "coverage": null
+                  }
+                ],
+                "arithmetic_only": true,
+                "business_relationship_verified": false,
+                "comparison_id": "orders_direction",
+                "arithmetic_evidence_hash": "ad77ae2dc3da0f39216b8caf2038ac1cab06832a63c1fefe0f31dbe728b04b18",
+                "evidence_hash": "7ef95cdb0b90fab01ca1e877f0c8b2b55c217642deada8cce455c0515c656754"
+              }
+            ],
+            "source_receipts": [
+              {
+                "source_id": "cur",
+                "source_step_id": "step_1",
+                "operation_id": "orders.summary",
+                "source_result_hash": "5536ad4728e12d471efe93394ab32412971a3142c6f51068464845f5d6a1472c",
+                "scope": {
+                  "account_scopes": [
+                    {
+                      "api_account_id": 101,
+                      "account_id": "2738",
+                      "store_name": "Pilot Ana",
+                      "platform": "TRENDYOL",
+                      "environment": "stage",
+                      "environment_source": "account.extra_config"
+                    }
+                  ],
+                  "environment_by_account": {
+                    "101": "stage"
+                  }
+                },
+                "period": {
+                  "period": "last_7_days",
+                  "start_ms": 1791147600000,
+                  "end_ms": 1791752399999
+                },
+                "coverage": null
+              },
+              {
+                "source_id": "prior",
+                "source_step_id": "step_2",
+                "operation_id": "orders.summary",
+                "source_result_hash": "ffb8741173e4777cd60696e86d5ea4b0a9936349f35d7681e7f517ebeb387a62",
+                "scope": {
+                  "account_scopes": [
+                    {
+                      "api_account_id": 101,
+                      "account_id": "2738",
+                      "store_name": "Pilot Ana",
+                      "platform": "TRENDYOL",
+                      "environment": "stage",
+                      "environment_source": "account.extra_config"
+                    }
+                  ],
+                  "environment_by_account": {
+                    "101": "stage"
+                  }
+                },
+                "period": {
+                  "period": "last_7_days",
+                  "start_ms": 1790542800000,
+                  "end_ms": 1791147599999
+                },
+                "coverage": null
+              }
+            ],
+            "operand_receipts": [
+              {
+                "source_id": "cur",
+                "source_step_id": "step_1",
+                "operation_id": "orders.summary",
+                "path": "estimated_revenue",
+                "value": 3000.0,
+                "unit": "TRY",
+                "source_result_hash": "5536ad4728e12d471efe93394ab32412971a3142c6f51068464845f5d6a1472c"
+              },
+              {
+                "source_id": "prior",
+                "source_step_id": "step_2",
+                "operation_id": "orders.summary",
+                "path": "estimated_revenue",
+                "value": 800.0,
+                "unit": "TRY",
+                "source_result_hash": "ffb8741173e4777cd60696e86d5ea4b0a9936349f35d7681e7f517ebeb387a62"
+              },
+              {
+                "source_id": "cur",
+                "source_step_id": "step_1",
+                "operation_id": "orders.summary",
+                "path": "total_orders",
+                "value": 3,
+                "unit": "order",
+                "source_result_hash": "5536ad4728e12d471efe93394ab32412971a3142c6f51068464845f5d6a1472c"
+              },
+              {
+                "source_id": "prior",
+                "source_step_id": "step_2",
+                "operation_id": "orders.summary",
+                "path": "total_orders",
+                "value": 2,
+                "unit": "order",
+                "source_result_hash": "ffb8741173e4777cd60696e86d5ea4b0a9936349f35d7681e7f517ebeb387a62"
+              },
+              {
+                "source_id": "cur",
+                "source_step_id": "step_1",
+                "operation_id": "orders.summary",
+                "path": "estimated_revenue",
+                "value": 3000.0,
+                "unit": "TRY",
+                "source_result_hash": "5536ad4728e12d471efe93394ab32412971a3142c6f51068464845f5d6a1472c"
+              },
+              {
+                "source_id": "prior",
+                "source_step_id": "step_2",
+                "operation_id": "orders.summary",
+                "path": "estimated_revenue",
+                "value": 800.0,
+                "unit": "TRY",
+                "source_result_hash": "ffb8741173e4777cd60696e86d5ea4b0a9936349f35d7681e7f517ebeb387a62"
+              },
+              {
+                "source_id": "cur",
+                "source_step_id": "step_1",
+                "operation_id": "orders.summary",
+                "path": "total_orders",
+                "value": 3,
+                "unit": "order",
+                "source_result_hash": "5536ad4728e12d471efe93394ab32412971a3142c6f51068464845f5d6a1472c"
+              },
+              {
+                "source_id": "prior",
+                "source_step_id": "step_2",
+                "operation_id": "orders.summary",
+                "path": "total_orders",
+                "value": 2,
+                "unit": "order",
+                "source_result_hash": "ffb8741173e4777cd60696e86d5ea4b0a9936349f35d7681e7f517ebeb387a62"
+              }
+            ],
+            "evidence_hash": "9bb9a10f72d64150979c73c490a0cc3bfc149379565ed89e65864ac293e7621f"
+          },
+          "conversation_context": {},
+          "dependency_bindings": {
+            "sources[0].result": "step_1:tool_result",
+            "sources[1].result": "step_2:tool_result"
+          },
+          "attempt_count": 1,
+          "attempt_failures": []
+        }
+      },
+      {
+        "index": 15,
+        "prompt": "Onceki 7 gunun urun bazli brut tutar ve marketplace_item adedini son 7 gunle karsilastir; doviz/birim uyumsuzsa sonuc reddedilir.",
+        "step_id": "step_8",
+        "objective": "Onceki 7 gunun urun bazli brut tutar ve marketplace_item adedini son 7 gunle karsilastir; doviz/birim uyumsuzsa sonuc reddedilir.",
+        "depends_on": [
+          "step_3",
+          "step_4"
+        ],
+        "operation_candidates": [
+          "analysis.calculate"
+        ],
+        "operation_domain": "analysis",
+        "arguments": {
+          "sources": [
+            {
+              "source_id": "cur_items",
+              "source_step_id": "step_3",
+              "operation_id": "orders.item_sales_summary",
+              "result": {
+                "$from_step": "step_3",
+                "path": "tool_result"
+              }
+            },
+            {
+              "source_id": "prior_items",
+              "source_step_id": "step_4",
+              "operation_id": "orders.item_sales_summary",
+              "result": {
+                "$from_step": "step_4",
+                "path": "tool_result"
+              }
+            }
+          ],
+          "calculations": [
+            {
+              "calculation_id": "gross_change",
+              "operator": "subtract",
+              "operands": [
+                {
+                  "source_id": "cur_items",
+                  "path": "total_gross_amount"
+                },
+                {
+                  "source_id": "prior_items",
+                  "path": "total_gross_amount"
+                }
+              ]
+            },
+            {
+              "calculation_id": "quantity_change",
+              "operator": "subtract",
+              "operands": [
+                {
+                  "source_id": "cur_items",
+                  "path": "total_quantity"
+                },
+                {
+                  "source_id": "prior_items",
+                  "path": "total_quantity"
+                }
+              ]
+            }
+          ],
+          "comparisons": [
+            {
+              "comparison_id": "gross_direction",
+              "operator": "greater_than",
+              "left": {
+                "source_id": "cur_items",
+                "path": "total_gross_amount"
+              },
+              "right": {
+                "source_id": "prior_items",
+                "path": "total_gross_amount"
+              }
+            }
+          ]
+        },
+        "expected_evidence": [
+          "verified",
+          "verified_calculations",
+          "verified_comparisons",
+          "evidence_hash",
+          "source_receipts"
+        ],
+        "status": "completed",
+        "tool_names": [
+          "analysis.calculate"
+        ],
+        "observation_ids": [
+          "9befcd9b473327f67018e587c4f17f19"
+        ],
+        "verification_status": "observed",
+        "attempt_count": 1,
+        "result_message": "Kaynaklara bağlı hesaplamalar doğrulandı.",
+        "result_data": {
+          "mode": "tool",
+          "tool_names": [
+            "analysis.calculate"
+          ],
+          "answer": "Kaynaklara bağlı hesaplamalar doğrulandı.",
+          "tool_result": {
+            "verified": true,
+            "arithmetic_only": true,
+            "business_relationship_verified": false,
+            "verified_calculations": [
+              {
+                "operator": "subtract",
+                "operands": [
+                  "3000",
+                  "800"
+                ],
+                "precision": 2,
+                "rounding": "ROUND_HALF_UP",
+                "result": "2200.00",
+                "expression": "3000 - 800 = 2200.00",
+                "result_value": 2200.0,
+                "verified": true,
+                "unit": "TRY",
+                "result_unit": "native",
+                "result_kind": "amount",
+                "operand_receipts": [
+                  {
+                    "source_id": "cur_items",
+                    "source_step_id": "step_3",
+                    "operation_id": "orders.item_sales_summary",
+                    "path": "total_gross_amount",
+                    "value": 3000.0,
+                    "unit": "TRY",
+                    "source_result_hash": "9943f30fae4c20225bfb1be767b08c3a6405d80605d88d330a4c17f6921cf677"
+                  },
+                  {
+                    "source_id": "prior_items",
+                    "source_step_id": "step_4",
+                    "operation_id": "orders.item_sales_summary",
+                    "path": "total_gross_amount",
+                    "value": 800.0,
+                    "unit": "TRY",
+                    "source_result_hash": "6ed6b3c1155e7f60c76aac48118ca680ab6062dd8ca1efb203ac5f515da28acd"
+                  }
+                ],
+                "source_receipts": [
+                  {
+                    "source_id": "cur_items",
+                    "source_step_id": "step_3",
+                    "operation_id": "orders.item_sales_summary",
+                    "source_result_hash": "9943f30fae4c20225bfb1be767b08c3a6405d80605d88d330a4c17f6921cf677",
+                    "scope": {
+                      "account_scopes": [
+                        {
+                          "api_account_id": 101,
+                          "account_id": "2738",
+                          "store_name": "Pilot Ana",
+                          "platform": "TRENDYOL",
+                          "environment": "stage",
+                          "environment_source": "account.extra_config"
+                        }
+                      ],
+                      "environment_by_account": {
+                        "101": "stage"
+                      }
+                    },
+                    "period": {
+                      "period": "last_7_days",
+                      "start_date_ms": 1791147600000,
+                      "end_date_ms": 1791752399999
+                    },
+                    "coverage": null
+                  },
+                  {
+                    "source_id": "prior_items",
+                    "source_step_id": "step_4",
+                    "operation_id": "orders.item_sales_summary",
+                    "source_result_hash": "6ed6b3c1155e7f60c76aac48118ca680ab6062dd8ca1efb203ac5f515da28acd",
+                    "scope": {
+                      "account_scopes": [
+                        {
+                          "api_account_id": 101,
+                          "account_id": "2738",
+                          "store_name": "Pilot Ana",
+                          "platform": "TRENDYOL",
+                          "environment": "stage",
+                          "environment_source": "account.extra_config"
+                        }
+                      ],
+                      "environment_by_account": {
+                        "101": "stage"
+                      }
+                    },
+                    "period": {
+                      "period": "last_7_days",
+                      "start_date_ms": 1790542800000,
+                      "end_date_ms": 1791147599999
+                    },
+                    "coverage": null
+                  }
+                ],
+                "arithmetic_only": true,
+                "business_relationship_verified": false,
+                "calculation_id": "gross_change",
+                "arithmetic_evidence_hash": "a7f37fda8fa15c728ca08a188d0c886b1a73f8a9bc1269fc276a280ed9844b7c",
+                "evidence_hash": "e55cb6e7a31f339d8732378f1d84b25975ff6ac4b0e291e9199785a8872cb23f"
+              },
+              {
+                "operator": "subtract",
+                "operands": [
+                  "6",
+                  "4"
+                ],
+                "precision": 2,
+                "rounding": "ROUND_HALF_UP",
+                "result": "2.00",
+                "expression": "6 - 4 = 2.00",
+                "result_value": 2.0,
+                "verified": true,
+                "unit": "marketplace_item",
+                "result_unit": "native",
+                "result_kind": "count",
+                "operand_receipts": [
+                  {
+                    "source_id": "cur_items",
+                    "source_step_id": "step_3",
+                    "operation_id": "orders.item_sales_summary",
+                    "path": "total_quantity",
+                    "value": 6,
+                    "unit": "marketplace_item",
+                    "source_result_hash": "9943f30fae4c20225bfb1be767b08c3a6405d80605d88d330a4c17f6921cf677"
+                  },
+                  {
+                    "source_id": "prior_items",
+                    "source_step_id": "step_4",
+                    "operation_id": "orders.item_sales_summary",
+                    "path": "total_quantity",
+                    "value": 4,
+                    "unit": "marketplace_item",
+                    "source_result_hash": "6ed6b3c1155e7f60c76aac48118ca680ab6062dd8ca1efb203ac5f515da28acd"
+                  }
+                ],
+                "source_receipts": [
+                  {
+                    "source_id": "cur_items",
+                    "source_step_id": "step_3",
+                    "operation_id": "orders.item_sales_summary",
+                    "source_result_hash": "9943f30fae4c20225bfb1be767b08c3a6405d80605d88d330a4c17f6921cf677",
+                    "scope": {
+                      "account_scopes": [
+                        {
+                          "api_account_id": 101,
+                          "account_id": "2738",
+                          "store_name": "Pilot Ana",
+                          "platform": "TRENDYOL",
+                          "environment": "stage",
+                          "environment_source": "account.extra_config"
+                        }
+                      ],
+                      "environment_by_account": {
+                        "101": "stage"
+                      }
+                    },
+                    "period": {
+                      "period": "last_7_days",
+                      "start_date_ms": 1791147600000,
+                      "end_date_ms": 1791752399999
+                    },
+                    "coverage": null
+                  },
+                  {
+                    "source_id": "prior_items",
+                    "source_step_id": "step_4",
+                    "operation_id": "orders.item_sales_summary",
+                    "source_result_hash": "6ed6b3c1155e7f60c76aac48118ca680ab6062dd8ca1efb203ac5f515da28acd",
+                    "scope": {
+                      "account_scopes": [
+                        {
+                          "api_account_id": 101,
+                          "account_id": "2738",
+                          "store_name": "Pilot Ana",
+                          "platform": "TRENDYOL",
+                          "environment": "stage",
+                          "environment_source": "account.extra_config"
+                        }
+                      ],
+                      "environment_by_account": {
+                        "101": "stage"
+                      }
+                    },
+                    "period": {
+                      "period": "last_7_days",
+                      "start_date_ms": 1790542800000,
+                      "end_date_ms": 1791147599999
+                    },
+                    "coverage": null
+                  }
+                ],
+                "arithmetic_only": true,
+                "business_relationship_verified": false,
+                "calculation_id": "quantity_change",
+                "arithmetic_evidence_hash": "63cff5abba98ea130a2d00969adba516731e93fdefcf86949f0f0f0acd95f8b1",
+                "evidence_hash": "287d06460351859e945f4139bd781f2213ab40621076c13d5507cad06ab7185f"
+              }
+            ],
+            "verified_comparisons": [
+              {
+                "operator": "greater_than",
+                "left": "3000",
+                "right": "800",
+                "holds": true,
+                "difference": "2200",
+                "absolute_difference": "2200",
+                "expression": "3000 > 800",
+                "verified": true,
+                "unit": "TRY",
+                "result_unit": "native",
+                "result_kind": "boolean",
+                "operand_receipts": [
+                  {
+                    "source_id": "cur_items",
+                    "source_step_id": "step_3",
+                    "operation_id": "orders.item_sales_summary",
+                    "path": "total_gross_amount",
+                    "value": 3000.0,
+                    "unit": "TRY",
+                    "source_result_hash": "9943f30fae4c20225bfb1be767b08c3a6405d80605d88d330a4c17f6921cf677"
+                  },
+                  {
+                    "source_id": "prior_items",
+                    "source_step_id": "step_4",
+                    "operation_id": "orders.item_sales_summary",
+                    "path": "total_gross_amount",
+                    "value": 800.0,
+                    "unit": "TRY",
+                    "source_result_hash": "6ed6b3c1155e7f60c76aac48118ca680ab6062dd8ca1efb203ac5f515da28acd"
+                  }
+                ],
+                "source_receipts": [
+                  {
+                    "source_id": "cur_items",
+                    "source_step_id": "step_3",
+                    "operation_id": "orders.item_sales_summary",
+                    "source_result_hash": "9943f30fae4c20225bfb1be767b08c3a6405d80605d88d330a4c17f6921cf677",
+                    "scope": {
+                      "account_scopes": [
+                        {
+                          "api_account_id": 101,
+                          "account_id": "2738",
+                          "store_name": "Pilot Ana",
+                          "platform": "TRENDYOL",
+                          "environment": "stage",
+                          "environment_source": "account.extra_config"
+                        }
+                      ],
+                      "environment_by_account": {
+                        "101": "stage"
+                      }
+                    },
+                    "period": {
+                      "period": "last_7_days",
+                      "start_date_ms": 1791147600000,
+                      "end_date_ms": 1791752399999
+                    },
+                    "coverage": null
+                  },
+                  {
+                    "source_id": "prior_items",
+                    "source_step_id": "step_4",
+                    "operation_id": "orders.item_sales_summary",
+                    "source_result_hash": "6ed6b3c1155e7f60c76aac48118ca680ab6062dd8ca1efb203ac5f515da28acd",
+                    "scope": {
+                      "account_scopes": [
+                        {
+                          "api_account_id": 101,
+                          "account_id": "2738",
+                          "store_name": "Pilot Ana",
+                          "platform": "TRENDYOL",
+                          "environment": "stage",
+                          "environment_source": "account.extra_config"
+                        }
+                      ],
+                      "environment_by_account": {
+                        "101": "stage"
+                      }
+                    },
+                    "period": {
+                      "period": "last_7_days",
+                      "start_date_ms": 1790542800000,
+                      "end_date_ms": 1791147599999
+                    },
+                    "coverage": null
+                  }
+                ],
+                "arithmetic_only": true,
+                "business_relationship_verified": false,
+                "comparison_id": "gross_direction",
+                "arithmetic_evidence_hash": "7db77df14b9d091b25bafb0348792a22b1df50ec39aadfd7b3c38fe4e7f870cf",
+                "evidence_hash": "8fb3353600433166dd97a8acaf1c453c33d07ec71230242914ac65ff0194b791"
+              }
+            ],
+            "source_receipts": [
+              {
+                "source_id": "cur_items",
+                "source_step_id": "step_3",
+                "operation_id": "orders.item_sales_summary",
+                "source_result_hash": "9943f30fae4c20225bfb1be767b08c3a6405d80605d88d330a4c17f6921cf677",
+                "scope": {
+                  "account_scopes": [
+                    {
+                      "api_account_id": 101,
+                      "account_id": "2738",
+                      "store_name": "Pilot Ana",
+                      "platform": "TRENDYOL",
+                      "environment": "stage",
+                      "environment_source": "account.extra_config"
+                    }
+                  ],
+                  "environment_by_account": {
+                    "101": "stage"
+                  }
+                },
+                "period": {
+                  "period": "last_7_days",
+                  "start_date_ms": 1791147600000,
+                  "end_date_ms": 1791752399999
+                },
+                "coverage": null
+              },
+              {
+                "source_id": "prior_items",
+                "source_step_id": "step_4",
+                "operation_id": "orders.item_sales_summary",
+                "source_result_hash": "6ed6b3c1155e7f60c76aac48118ca680ab6062dd8ca1efb203ac5f515da28acd",
+                "scope": {
+                  "account_scopes": [
+                    {
+                      "api_account_id": 101,
+                      "account_id": "2738",
+                      "store_name": "Pilot Ana",
+                      "platform": "TRENDYOL",
+                      "environment": "stage",
+                      "environment_source": "account.extra_config"
+                    }
+                  ],
+                  "environment_by_account": {
+                    "101": "stage"
+                  }
+                },
+                "period": {
+                  "period": "last_7_days",
+                  "start_date_ms": 1790542800000,
+                  "end_date_ms": 1791147599999
+                },
+                "coverage": null
+              }
+            ],
+            "operand_receipts": [
+              {
+                "source_id": "cur_items",
+                "source_step_id": "step_3",
+                "operation_id": "orders.item_sales_summary",
+                "path": "total_gross_amount",
+                "value": 3000.0,
+                "unit": "TRY",
+                "source_result_hash": "9943f30fae4c20225bfb1be767b08c3a6405d80605d88d330a4c17f6921cf677"
+              },
+              {
+                "source_id": "prior_items",
+                "source_step_id": "step_4",
+                "operation_id": "orders.item_sales_summary",
+                "path": "total_gross_amount",
+                "value": 800.0,
+                "unit": "TRY",
+                "source_result_hash": "6ed6b3c1155e7f60c76aac48118ca680ab6062dd8ca1efb203ac5f515da28acd"
+              },
+              {
+                "source_id": "cur_items",
+                "source_step_id": "step_3",
+                "operation_id": "orders.item_sales_summary",
+                "path": "total_quantity",
+                "value": 6,
+                "unit": "marketplace_item",
+                "source_result_hash": "9943f30fae4c20225bfb1be767b08c3a6405d80605d88d330a4c17f6921cf677"
+              },
+              {
+                "source_id": "prior_items",
+                "source_step_id": "step_4",
+                "operation_id": "orders.item_sales_summary",
+                "path": "total_quantity",
+                "value": 4,
+                "unit": "marketplace_item",
+                "source_result_hash": "6ed6b3c1155e7f60c76aac48118ca680ab6062dd8ca1efb203ac5f515da28acd"
+              },
+              {
+                "source_id": "cur_items",
+                "source_step_id": "step_3",
+                "operation_id": "orders.item_sales_summary",
+                "path": "total_gross_amount",
+                "value": 3000.0,
+                "unit": "TRY",
+                "source_result_hash": "9943f30fae4c20225bfb1be767b08c3a6405d80605d88d330a4c17f6921cf677"
+              },
+              {
+                "source_id": "prior_items",
+                "source_step_id": "step_4",
+                "operation_id": "orders.item_sales_summary",
+                "path": "total_gross_amount",
+                "value": 800.0,
+                "unit": "TRY",
+                "source_result_hash": "6ed6b3c1155e7f60c76aac48118ca680ab6062dd8ca1efb203ac5f515da28acd"
+              }
+            ],
+            "evidence_hash": "9c999294a7e13c7f55a04cc643b76b24b0d8b226596527df4b1bf8e9f63c056c"
+          },
+          "conversation_context": {},
+          "dependency_bindings": {
+            "sources[0].result": "step_3:tool_result",
+            "sources[1].result": "step_4:tool_result"
+          },
+          "attempt_count": 1,
+          "attempt_failures": []
+        }
+      }
+    ],
+    "remaining_steps": [],
+    "last_tool_results": [
+      {
+        "step": 1,
+        "tool_names": [
+          "orders.summary"
+        ],
+        "data": {
+          "period": "last_7_days",
+          "period_label": "2026-10-05..2026-10-11",
+          "start_ms": 1791147600000,
+          "end_ms": 1791752399999,
+          "source_revision": 1791622800000,
+          "source_snapshot_hash": "9b30e3c78c30008f38a1b036abbe8e53af03b70cc1fa2d579fc4d5c19de1c9e0",
+          "simulated_excluded": 0,
+          "account_scopes": [
+            {
+              "api_account_id": 101,
+              "account_id": "2738",
+              "store_name": "Pilot Ana",
+              "platform": "TRENDYOL",
+              "environment": "stage",
+              "environment_source": "account.extra_config"
+            }
+          ],
+          "environment_by_account": {
+            "101": "stage"
+          },
+          "requested_api_account_ids": [
+            101
+          ],
+          "total_orders": 3,
+          "cancelled_orders": 0,
+          "estimated_revenue": 3000.0,
+          "currency": "TRY",
+          "currencies": [
+            "TRY"
+          ],
+          "revenue_by_currency": {
+            "TRY": 3000.0
+          },
+          "status_counts": {
+            "ReadyToShip": 1,
+            "Picking": 1,
+            "Delivered": 1
+          },
+          "status_rates": {
+            "ReadyToShip": 33.33,
+            "Picking": 33.33,
+            "Delivered": 33.33
+          },
+          "dominant_status": "ReadyToShip",
+          "dominant_status_count": 1,
+          "dominant_status_rate": 33.33,
+          "cancellation_rate": 0.0,
+          "revenue_order_count": 3,
+          "average_revenue_per_order": 1000.0,
+          "sample_orders": [
+            {
+              "api_account_id": 101,
+              "order_number": "PILOT-A-NEW-1",
+              "status": "ReadyToShip",
+              "total_price": 1000.0
+            },
+            {
+              "api_account_id": 101,
+              "order_number": "PILOT-A-NEW-2",
+              "status": "Picking",
+              "total_price": 1000.0
+            },
+            {
+              "api_account_id": 101,
+              "order_number": "PILOT-A-NEW-3",
+              "status": "Delivered",
+              "total_price": 1000.0
+            }
+          ],
+          "tool": "orders.summary"
+        }
+      },
+      {
+        "step": 9,
+        "tool_names": [
+          "orders.summary"
+        ],
+        "data": {
+          "period": "last_7_days",
+          "period_label": "2026-09-28..2026-10-04",
+          "start_ms": 1790542800000,
+          "end_ms": 1791147599999,
+          "source_revision": 1790845200000,
+          "source_snapshot_hash": "d8c956b59ae44c414edcdbdba43a1d5cf4e026f770c772e32e245e8d12656b5a",
+          "simulated_excluded": 0,
+          "account_scopes": [
+            {
+              "api_account_id": 101,
+              "account_id": "2738",
+              "store_name": "Pilot Ana",
+              "platform": "TRENDYOL",
+              "environment": "stage",
+              "environment_source": "account.extra_config"
+            }
+          ],
+          "environment_by_account": {
+            "101": "stage"
+          },
+          "requested_api_account_ids": [
+            101
+          ],
+          "total_orders": 2,
+          "cancelled_orders": 0,
+          "estimated_revenue": 800.0,
+          "currency": "TRY",
+          "currencies": [
+            "TRY"
+          ],
+          "revenue_by_currency": {
+            "TRY": 800.0
+          },
+          "status_counts": {
+            "Delivered": 2
+          },
+          "status_rates": {
+            "Delivered": 100.0
+          },
+          "dominant_status": "Delivered",
+          "dominant_status_count": 2,
+          "dominant_status_rate": 100.0,
+          "cancellation_rate": 0.0,
+          "revenue_order_count": 2,
+          "average_revenue_per_order": 400.0,
+          "sample_orders": [
+            {
+              "api_account_id": 101,
+              "order_number": "PILOT-A-OLD-1",
+              "status": "Delivered",
+              "total_price": 400.0
+            },
+            {
+              "api_account_id": 101,
+              "order_number": "PILOT-A-OLD-2",
+              "status": "Delivered",
+              "total_price": 400.0
+            }
+          ],
+          "tool": "orders.summary"
+        }
+      },
+      {
+        "step": 10,
+        "tool_names": [
+          "orders.item_sales_summary"
+        ],
+        "data": {
+          "rows": [
+            {
+              "identity": "PILOT-KUPA-BAR",
+              "product_name": "Pilot Kupa",
+              "sku": "PILOT-KUPA",
+              "barcode": "PILOT-KUPA-BAR",
+              "content_id": "",
+              "product_code": "",
+              "currency": "TRY",
+              "quantity": 4,
+              "quantity_unit": "marketplace_item",
+              "gross_amount": 2000.0,
+              "order_count": 2
+            },
+            {
+              "identity": "PILOT-FILTRE-BAR",
+              "product_name": "Pilot Filtre",
+              "sku": "PILOT-FILTRE",
+              "barcode": "PILOT-FILTRE-BAR",
+              "content_id": "",
+              "product_code": "",
+              "currency": "TRY",
+              "quantity": 2,
+              "quantity_unit": "marketplace_item",
+              "gross_amount": 1000.0,
+              "order_count": 1
+            }
+          ],
+          "group_by": "product",
+          "order_count": 3,
+          "matched_order_count": 3,
+          "population_order_count": 3,
+          "gross_amount_by_currency": {
+            "TRY": 3000.0
+          },
+          "total_gross_amount": 3000.0,
+          "currency": "TRY",
+          "product_count": 2,
+          "total_quantity": 6,
+          "quantity_unit": "marketplace_item",
+          "quantity_unit_description": "Ordered marketplace product units from OrderItem.quantity; not order-line count or Stock physical units.",
+          "empty_result": false,
+          "metrics_complete": true,
+          "currency_applicable": true,
+          "leading_five_quantity": 6,
+          "leading_five_quantity_share": 100.0,
+          "truncated": false,
+          "identity_filter_count": 0,
+          "excluded_statuses": [
+            "cancelled",
+            "returned",
+            "undeliveredandreturned",
+            "unsupplied"
+          ],
+          "start_date_ms": 1791147600000,
+          "end_date_ms": 1791752399999,
+          "source_revision": 1791622800000,
+          "source_snapshot_hash": "def511faae7627593a2e0c5ea6fef72e8d32ac07f2b1b6f9383e3fc0ac9801d6",
+          "period": "last_7_days",
+          "period_label": "2026-10-05..2026-10-11",
+          "account_scopes": [
+            {
+              "api_account_id": 101,
+              "account_id": "2738",
+              "store_name": "Pilot Ana",
+              "platform": "TRENDYOL",
+              "environment": "stage",
+              "environment_source": "account.extra_config"
+            }
+          ],
+          "environment_by_account": {
+            "101": "stage"
+          },
+          "requested_api_account_ids": [
+            101
+          ],
+          "tool": "orders.item_sales_summary"
+        }
+      },
+      {
+        "step": 11,
+        "tool_names": [
+          "orders.item_sales_summary"
+        ],
+        "data": {
+          "rows": [
+            {
+              "identity": "PILOT-KUPA-BAR",
+              "product_name": "Pilot Kupa",
+              "sku": "PILOT-KUPA",
+              "barcode": "PILOT-KUPA-BAR",
+              "content_id": "",
+              "product_code": "",
+              "currency": "TRY",
+              "quantity": 4,
+              "quantity_unit": "marketplace_item",
+              "gross_amount": 800.0,
+              "order_count": 2
+            }
+          ],
+          "group_by": "product",
+          "order_count": 2,
+          "matched_order_count": 2,
+          "population_order_count": 2,
+          "gross_amount_by_currency": {
+            "TRY": 800.0
+          },
+          "total_gross_amount": 800.0,
+          "currency": "TRY",
+          "product_count": 1,
+          "total_quantity": 4,
+          "quantity_unit": "marketplace_item",
+          "quantity_unit_description": "Ordered marketplace product units from OrderItem.quantity; not order-line count or Stock physical units.",
+          "empty_result": false,
+          "metrics_complete": true,
+          "currency_applicable": true,
+          "leading_five_quantity": 4,
+          "leading_five_quantity_share": 100.0,
+          "truncated": false,
+          "identity_filter_count": 0,
+          "excluded_statuses": [
+            "cancelled",
+            "returned",
+            "undeliveredandreturned",
+            "unsupplied"
+          ],
+          "start_date_ms": 1790542800000,
+          "end_date_ms": 1791147599999,
+          "source_revision": 1790845200000,
+          "source_snapshot_hash": "fe9defc19503f1c95a220089d024285bf2c729c41773ded94b9231f606f1e5b3",
+          "period": "last_7_days",
+          "period_label": "2026-09-28..2026-10-04",
+          "account_scopes": [
+            {
+              "api_account_id": 101,
+              "account_id": "2738",
+              "store_name": "Pilot Ana",
+              "platform": "TRENDYOL",
+              "environment": "stage",
+              "environment_source": "account.extra_config"
+            }
+          ],
+          "environment_by_account": {
+            "101": "stage"
+          },
+          "requested_api_account_ids": [
+            101
+          ],
+          "tool": "orders.item_sales_summary"
+        }
+      },
+      {
+        "step": 12,
+        "tool_names": [
+          "finance.cashflow_summary"
+        ],
+        "data": {
+          "period": "last_7_days",
+          "period_label": "2026-10-05..2026-10-11",
+          "start_ms": 1791147600000,
+          "end_ms": 1791752399999,
+          "currency": null,
+          "currency_totals": [
+            {
+              "marketplace_credit": 3000.0,
+              "marketplace_debt": 300.0,
+              "marketplace_net": 2700.0,
+              "manual_in": 0.0,
+              "manual_out": 2500.0,
+              "currency": "TRY",
+              "combined_net": 200.0,
+              "manual_by_category": {
+                "Kira": -2500.0
+              }
+            },
+            {
+              "marketplace_credit": 20.0,
+              "marketplace_debt": 0.0,
+              "marketplace_net": 20.0,
+              "manual_in": 0.0,
+              "manual_out": 0.0,
+              "currency": "USD",
+              "combined_net": 20.0,
+              "manual_by_category": {}
+            }
+          ],
+          "marketplace_credit": null,
+          "marketplace_debt": null,
+          "marketplace_net": null,
+          "manual_in": null,
+          "manual_out": null,
+          "combined_net": null,
+          "transaction_type_counts": {
+            "Sale": 2
+          },
+          "manual_by_category": {},
+          "tool": "finance.cashflow_summary"
+        }
+      },
+      {
+        "step": 13,
+        "tool_names": [
+          "stock.inventory_overview"
+        ],
+        "data": {
+          "total_items": 3,
+          "active_items": 3,
+          "zero_or_negative": 1,
+          "total_balance": 7.0,
+          "balance_by_unit": [
+            {
+              "unit": "adet",
+              "balance": 7.0
+            }
+          ],
+          "stock_value_by_currency": [
+            {
+              "currency": "TRY",
+              "amount": 400.0
+            },
+            {
+              "currency": "USD",
+              "amount": 30.0
+            }
+          ],
+          "stock_valuation_complete": true,
+          "valuation_missing_items": 0,
+          "top_balances": [
+            {
+              "sku": "PILOT-KUPA",
+              "name": "Pilot Kupa",
+              "balance": 4.0,
+              "unit": "adet",
+              "stock_value": 400.0,
+              "stock_value_currency": "TRY",
+              "stock_value_by_currency": [
+                {
+                  "currency": "TRY",
+                  "amount": 400.0
+                }
+              ],
+              "valuation_missing_quantity": 0.0
+            },
+            {
+              "sku": "PILOT-FILTRE",
+              "name": "Pilot Filtre",
+              "balance": 3.0,
+              "unit": "adet",
+              "stock_value": 30.0,
+              "stock_value_currency": "USD",
+              "stock_value_by_currency": [
+                {
+                  "currency": "USD",
+                  "amount": 30.0
+                }
+              ],
+              "valuation_missing_quantity": 0.0
+            },
+            {
+              "sku": "PILOT-BOS",
+              "name": "Pilot Boş Kart",
+              "balance": 0.0,
+              "unit": "adet",
+              "stock_value": null,
+              "stock_value_currency": "",
+              "stock_value_by_currency": [],
+              "valuation_missing_quantity": 0.0
+            }
+          ],
+          "zero_or_negative_items": [
+            {
+              "sku": "PILOT-BOS",
+              "name": "Pilot Boş Kart",
+              "balance": 0.0,
+              "unit": "adet",
+              "stock_value": null,
+              "stock_value_currency": "",
+              "stock_value_by_currency": [],
+              "valuation_missing_quantity": 0.0
+            }
+          ],
+          "tool": "stock.inventory_overview"
+        }
+      },
+      {
+        "step": 14,
+        "tool_names": [
+          "analysis.calculate"
+        ],
+        "data": {
+          "verified": true,
+          "arithmetic_only": true,
+          "business_relationship_verified": false,
+          "verified_calculations": [
+            {
+              "operator": "subtract",
+              "operands": [
+                "3000",
+                "800"
+              ],
+              "precision": 2,
+              "rounding": "ROUND_HALF_UP",
+              "result": "2200.00",
+              "expression": "3000 - 800 = 2200.00",
+              "result_value": 2200.0,
+              "verified": true,
+              "unit": "TRY",
+              "result_unit": "native",
+              "result_kind": "amount",
+              "operand_receipts": [
+                {
+                  "source_id": "cur",
+                  "source_step_id": "step_1",
+                  "operation_id": "orders.summary",
+                  "path": "estimated_revenue",
+                  "value": 3000.0,
+                  "unit": "TRY",
+                  "source_result_hash": "5536ad4728e12d471efe93394ab32412971a3142c6f51068464845f5d6a1472c"
+                },
+                {
+                  "source_id": "prior",
+                  "source_step_id": "step_2",
+                  "operation_id": "orders.summary",
+                  "path": "estimated_revenue",
+                  "value": 800.0,
+                  "unit": "TRY",
+                  "source_result_hash": "ffb8741173e4777cd60696e86d5ea4b0a9936349f35d7681e7f517ebeb387a62"
+                }
+              ],
+              "source_receipts": [
+                {
+                  "source_id": "cur",
+                  "source_step_id": "step_1",
+                  "operation_id": "orders.summary",
+                  "source_result_hash": "5536ad4728e12d471efe93394ab32412971a3142c6f51068464845f5d6a1472c",
+                  "scope": {
+                    "account_scopes": [
+                      {
+                        "api_account_id": 101,
+                        "account_id": "2738",
+                        "store_name": "Pilot Ana",
+                        "platform": "TRENDYOL",
+                        "environment": "stage",
+                        "environment_source": "account.extra_config"
+                      }
+                    ],
+                    "environment_by_account": {
+                      "101": "stage"
+                    }
+                  },
+                  "period": {
+                    "period": "last_7_days",
+                    "start_ms": 1791147600000,
+                    "end_ms": 1791752399999
+                  },
+                  "coverage": null
+                },
+                {
+                  "source_id": "prior",
+                  "source_step_id": "step_2",
+                  "operation_id": "orders.summary",
+                  "source_result_hash": "ffb8741173e4777cd60696e86d5ea4b0a9936349f35d7681e7f517ebeb387a62",
+                  "scope": {
+                    "account_scopes": [
+                      {
+                        "api_account_id": 101,
+                        "account_id": "2738",
+                        "store_name": "Pilot Ana",
+                        "platform": "TRENDYOL",
+                        "environment": "stage",
+                        "environment_source": "account.extra_config"
+                      }
+                    ],
+                    "environment_by_account": {
+                      "101": "stage"
+                    }
+                  },
+                  "period": {
+                    "period": "last_7_days",
+                    "start_ms": 1790542800000,
+                    "end_ms": 1791147599999
+                  },
+                  "coverage": null
+                }
+              ],
+              "arithmetic_only": true,
+              "business_relationship_verified": false,
+              "calculation_id": "revenue_change_pct",
+              "arithmetic_evidence_hash": "a7f37fda8fa15c728ca08a188d0c886b1a73f8a9bc1269fc276a280ed9844b7c",
+              "evidence_hash": "2701bf51cac1257f1f4c7b4097114b62fc7e99842f031102ea9babc83882cf0c"
+            },
+            {
+              "operator": "subtract",
+              "operands": [
+                "3",
+                "2"
+              ],
+              "precision": 2,
+              "rounding": "ROUND_HALF_UP",
+              "result": "1.00",
+              "expression": "3 - 2 = 1.00",
+              "result_value": 1.0,
+              "verified": true,
+              "unit": "order",
+              "result_unit": "native",
+              "result_kind": "count",
+              "operand_receipts": [
+                {
+                  "source_id": "cur",
+                  "source_step_id": "step_1",
+                  "operation_id": "orders.summary",
+                  "path": "total_orders",
+                  "value": 3,
+                  "unit": "order",
+                  "source_result_hash": "5536ad4728e12d471efe93394ab32412971a3142c6f51068464845f5d6a1472c"
+                },
+                {
+                  "source_id": "prior",
+                  "source_step_id": "step_2",
+                  "operation_id": "orders.summary",
+                  "path": "total_orders",
+                  "value": 2,
+                  "unit": "order",
+                  "source_result_hash": "ffb8741173e4777cd60696e86d5ea4b0a9936349f35d7681e7f517ebeb387a62"
+                }
+              ],
+              "source_receipts": [
+                {
+                  "source_id": "cur",
+                  "source_step_id": "step_1",
+                  "operation_id": "orders.summary",
+                  "source_result_hash": "5536ad4728e12d471efe93394ab32412971a3142c6f51068464845f5d6a1472c",
+                  "scope": {
+                    "account_scopes": [
+                      {
+                        "api_account_id": 101,
+                        "account_id": "2738",
+                        "store_name": "Pilot Ana",
+                        "platform": "TRENDYOL",
+                        "environment": "stage",
+                        "environment_source": "account.extra_config"
+                      }
+                    ],
+                    "environment_by_account": {
+                      "101": "stage"
+                    }
+                  },
+                  "period": {
+                    "period": "last_7_days",
+                    "start_ms": 1791147600000,
+                    "end_ms": 1791752399999
+                  },
+                  "coverage": null
+                },
+                {
+                  "source_id": "prior",
+                  "source_step_id": "step_2",
+                  "operation_id": "orders.summary",
+                  "source_result_hash": "ffb8741173e4777cd60696e86d5ea4b0a9936349f35d7681e7f517ebeb387a62",
+                  "scope": {
+                    "account_scopes": [
+                      {
+                        "api_account_id": 101,
+                        "account_id": "2738",
+                        "store_name": "Pilot Ana",
+                        "platform": "TRENDYOL",
+                        "environment": "stage",
+                        "environment_source": "account.extra_config"
+                      }
+                    ],
+                    "environment_by_account": {
+                      "101": "stage"
+                    }
+                  },
+                  "period": {
+                    "period": "last_7_days",
+                    "start_ms": 1790542800000,
+                    "end_ms": 1791147599999
+                  },
+                  "coverage": null
+                }
+              ],
+              "arithmetic_only": true,
+              "business_relationship_verified": false,
+              "calculation_id": "orders_change",
+              "arithmetic_evidence_hash": "c0b8ef68895d3105a6be654ad13333fd36dc13ebdbfd4265ff0e0cd8e6560918",
+              "evidence_hash": "7793f2747486f1149c7e33c24ab4c3fb7542605e2e2691e7b547e6b289b0e935"
+            }
+          ],
+          "verified_comparisons": [
+            {
+              "operator": "greater_than",
+              "left": "3000",
+              "right": "800",
+              "holds": true,
+              "difference": "2200",
+              "absolute_difference": "2200",
+              "expression": "3000 > 800",
+              "verified": true,
+              "unit": "TRY",
+              "result_unit": "native",
+              "result_kind": "boolean",
+              "operand_receipts": [
+                {
+                  "source_id": "cur",
+                  "source_step_id": "step_1",
+                  "operation_id": "orders.summary",
+                  "path": "estimated_revenue",
+                  "value": 3000.0,
+                  "unit": "TRY",
+                  "source_result_hash": "5536ad4728e12d471efe93394ab32412971a3142c6f51068464845f5d6a1472c"
+                },
+                {
+                  "source_id": "prior",
+                  "source_step_id": "step_2",
+                  "operation_id": "orders.summary",
+                  "path": "estimated_revenue",
+                  "value": 800.0,
+                  "unit": "TRY",
+                  "source_result_hash": "ffb8741173e4777cd60696e86d5ea4b0a9936349f35d7681e7f517ebeb387a62"
+                }
+              ],
+              "source_receipts": [
+                {
+                  "source_id": "cur",
+                  "source_step_id": "step_1",
+                  "operation_id": "orders.summary",
+                  "source_result_hash": "5536ad4728e12d471efe93394ab32412971a3142c6f51068464845f5d6a1472c",
+                  "scope": {
+                    "account_scopes": [
+                      {
+                        "api_account_id": 101,
+                        "account_id": "2738",
+                        "store_name": "Pilot Ana",
+                        "platform": "TRENDYOL",
+                        "environment": "stage",
+                        "environment_source": "account.extra_config"
+                      }
+                    ],
+                    "environment_by_account": {
+                      "101": "stage"
+                    }
+                  },
+                  "period": {
+                    "period": "last_7_days",
+                    "start_ms": 1791147600000,
+                    "end_ms": 1791752399999
+                  },
+                  "coverage": null
+                },
+                {
+                  "source_id": "prior",
+                  "source_step_id": "step_2",
+                  "operation_id": "orders.summary",
+                  "source_result_hash": "ffb8741173e4777cd60696e86d5ea4b0a9936349f35d7681e7f517ebeb387a62",
+                  "scope": {
+                    "account_scopes": [
+                      {
+                        "api_account_id": 101,
+                        "account_id": "2738",
+                        "store_name": "Pilot Ana",
+                        "platform": "TRENDYOL",
+                        "environment": "stage",
+                        "environment_source": "account.extra_config"
+                      }
+                    ],
+                    "environment_by_account": {
+                      "101": "stage"
+                    }
+                  },
+                  "period": {
+                    "period": "last_7_days",
+                    "start_ms": 1790542800000,
+                    "end_ms": 1791147599999
+                  },
+                  "coverage": null
+                }
+              ],
+              "arithmetic_only": true,
+              "business_relationship_verified": false,
+              "comparison_id": "revenue_direction",
+              "arithmetic_evidence_hash": "7db77df14b9d091b25bafb0348792a22b1df50ec39aadfd7b3c38fe4e7f870cf",
+              "evidence_hash": "45fc420089ece1a43f3dad7775f96a3292ad656eea11617aeda2d88032261c38"
+            },
+            {
+              "operator": "greater_than",
+              "left": "3",
+              "right": "2",
+              "holds": true,
+              "difference": "1",
+              "absolute_difference": "1",
+              "expression": "3 > 2",
+              "verified": true,
+              "unit": "order",
+              "result_unit": "native",
+              "result_kind": "boolean",
+              "operand_receipts": [
+                {
+                  "source_id": "cur",
+                  "source_step_id": "step_1",
+                  "operation_id": "orders.summary",
+                  "path": "total_orders",
+                  "value": 3,
+                  "unit": "order",
+                  "source_result_hash": "5536ad4728e12d471efe93394ab32412971a3142c6f51068464845f5d6a1472c"
+                },
+                {
+                  "source_id": "prior",
+                  "source_step_id": "step_2",
+                  "operation_id": "orders.summary",
+                  "path": "total_orders",
+                  "value": 2,
+                  "unit": "order",
+                  "source_result_hash": "ffb8741173e4777cd60696e86d5ea4b0a9936349f35d7681e7f517ebeb387a62"
+                }
+              ],
+              "source_receipts": [
+                {
+                  "source_id": "cur",
+                  "source_step_id": "step_1",
+                  "operation_id": "orders.summary",
+                  "source_result_hash": "5536ad4728e12d471efe93394ab32412971a3142c6f51068464845f5d6a1472c",
+                  "scope": {
+                    "account_scopes": [
+                      {
+                        "api_account_id": 101,
+                        "account_id": "2738",
+                        "store_name": "Pilot Ana",
+                        "platform": "TRENDYOL",
+                        "environment": "stage",
+                        "environment_source": "account.extra_config"
+                      }
+                    ],
+                    "environment_by_account": {
+                      "101": "stage"
+                    }
+                  },
+                  "period": {
+                    "period": "last_7_days",
+                    "start_ms": 1791147600000,
+                    "end_ms": 1791752399999
+                  },
+                  "coverage": null
+                },
+                {
+                  "source_id": "prior",
+                  "source_step_id": "step_2",
+                  "operation_id": "orders.summary",
+                  "source_result_hash": "ffb8741173e4777cd60696e86d5ea4b0a9936349f35d7681e7f517ebeb387a62",
+                  "scope": {
+                    "account_scopes": [
+                      {
+                        "api_account_id": 101,
+                        "account_id": "2738",
+                        "store_name": "Pilot Ana",
+                        "platform": "TRENDYOL",
+                        "environment": "stage",
+                        "environment_source": "account.extra_config"
+                      }
+                    ],
+                    "environment_by_account": {
+                      "101": "stage"
+                    }
+                  },
+                  "period": {
+                    "period": "last_7_days",
+                    "start_ms": 1790542800000,
+                    "end_ms": 1791147599999
+                  },
+                  "coverage": null
+                }
+              ],
+              "arithmetic_only": true,
+              "business_relationship_verified": false,
+              "comparison_id": "orders_direction",
+              "arithmetic_evidence_hash": "ad77ae2dc3da0f39216b8caf2038ac1cab06832a63c1fefe0f31dbe728b04b18",
+              "evidence_hash": "7ef95cdb0b90fab01ca1e877f0c8b2b55c217642deada8cce455c0515c656754"
+            }
+          ],
+          "source_receipts": [
+            {
+              "source_id": "cur",
+              "source_step_id": "step_1",
+              "operation_id": "orders.summary",
+              "source_result_hash": "5536ad4728e12d471efe93394ab32412971a3142c6f51068464845f5d6a1472c",
+              "scope": {
+                "account_scopes": [
+                  {
+                    "api_account_id": 101,
+                    "account_id": "2738",
+                    "store_name": "Pilot Ana",
+                    "platform": "TRENDYOL",
+                    "environment": "stage",
+                    "environment_source": "account.extra_config"
+                  }
+                ],
+                "environment_by_account": {
+                  "101": "stage"
+                }
+              },
+              "period": {
+                "period": "last_7_days",
+                "start_ms": 1791147600000,
+                "end_ms": 1791752399999
+              },
+              "coverage": null
+            },
+            {
+              "source_id": "prior",
+              "source_step_id": "step_2",
+              "operation_id": "orders.summary",
+              "source_result_hash": "ffb8741173e4777cd60696e86d5ea4b0a9936349f35d7681e7f517ebeb387a62",
+              "scope": {
+                "account_scopes": [
+                  {
+                    "api_account_id": 101,
+                    "account_id": "2738",
+                    "store_name": "Pilot Ana",
+                    "platform": "TRENDYOL",
+                    "environment": "stage",
+                    "environment_source": "account.extra_config"
+                  }
+                ],
+                "environment_by_account": {
+                  "101": "stage"
+                }
+              },
+              "period": {
+                "period": "last_7_days",
+                "start_ms": 1790542800000,
+                "end_ms": 1791147599999
+              },
+              "coverage": null
+            }
+          ],
+          "operand_receipts": [
+            {
+              "source_id": "cur",
+              "source_step_id": "step_1",
+              "operation_id": "orders.summary",
+              "path": "estimated_revenue",
+              "value": 3000.0,
+              "unit": "TRY",
+              "source_result_hash": "5536ad4728e12d471efe93394ab32412971a3142c6f51068464845f5d6a1472c"
+            },
+            {
+              "source_id": "prior",
+              "source_step_id": "step_2",
+              "operation_id": "orders.summary",
+              "path": "estimated_revenue",
+              "value": 800.0,
+              "unit": "TRY",
+              "source_result_hash": "ffb8741173e4777cd60696e86d5ea4b0a9936349f35d7681e7f517ebeb387a62"
+            },
+            {
+              "source_id": "cur",
+              "source_step_id": "step_1",
+              "operation_id": "orders.summary",
+              "path": "total_orders",
+              "value": 3,
+              "unit": "order",
+              "source_result_hash": "5536ad4728e12d471efe93394ab32412971a3142c6f51068464845f5d6a1472c"
+            },
+            {
+              "source_id": "prior",
+              "source_step_id": "step_2",
+              "operation_id": "orders.summary",
+              "path": "total_orders",
+              "value": 2,
+              "unit": "order",
+              "source_result_hash": "ffb8741173e4777cd60696e86d5ea4b0a9936349f35d7681e7f517ebeb387a62"
+            },
+            {
+              "source_id": "cur",
+              "source_step_id": "step_1",
+              "operation_id": "orders.summary",
+              "path": "estimated_revenue",
+              "value": 3000.0,
+              "unit": "TRY",
+              "source_result_hash": "5536ad4728e12d471efe93394ab32412971a3142c6f51068464845f5d6a1472c"
+            },
+            {
+              "source_id": "prior",
+              "source_step_id": "step_2",
+              "operation_id": "orders.summary",
+              "path": "estimated_revenue",
+              "value": 800.0,
+              "unit": "TRY",
+              "source_result_hash": "ffb8741173e4777cd60696e86d5ea4b0a9936349f35d7681e7f517ebeb387a62"
+            },
+            {
+              "source_id": "cur",
+              "source_step_id": "step_1",
+              "operation_id": "orders.summary",
+              "path": "total_orders",
+              "value": 3,
+              "unit": "order",
+              "source_result_hash": "5536ad4728e12d471efe93394ab32412971a3142c6f51068464845f5d6a1472c"
+            },
+            {
+              "source_id": "prior",
+              "source_step_id": "step_2",
+              "operation_id": "orders.summary",
+              "path": "total_orders",
+              "value": 2,
+              "unit": "order",
+              "source_result_hash": "ffb8741173e4777cd60696e86d5ea4b0a9936349f35d7681e7f517ebeb387a62"
+            }
+          ],
+          "evidence_hash": "9bb9a10f72d64150979c73c490a0cc3bfc149379565ed89e65864ac293e7621f"
+        }
+      },
+      {
+        "step": 15,
+        "tool_names": [
+          "analysis.calculate"
+        ],
+        "data": {
+          "verified": true,
+          "arithmetic_only": true,
+          "business_relationship_verified": false,
+          "verified_calculations": [
+            {
+              "operator": "subtract",
+              "operands": [
+                "3000",
+                "800"
+              ],
+              "precision": 2,
+              "rounding": "ROUND_HALF_UP",
+              "result": "2200.00",
+              "expression": "3000 - 800 = 2200.00",
+              "result_value": 2200.0,
+              "verified": true,
+              "unit": "TRY",
+              "result_unit": "native",
+              "result_kind": "amount",
+              "operand_receipts": [
+                {
+                  "source_id": "cur_items",
+                  "source_step_id": "step_3",
+                  "operation_id": "orders.item_sales_summary",
+                  "path": "total_gross_amount",
+                  "value": 3000.0,
+                  "unit": "TRY",
+                  "source_result_hash": "9943f30fae4c20225bfb1be767b08c3a6405d80605d88d330a4c17f6921cf677"
+                },
+                {
+                  "source_id": "prior_items",
+                  "source_step_id": "step_4",
+                  "operation_id": "orders.item_sales_summary",
+                  "path": "total_gross_amount",
+                  "value": 800.0,
+                  "unit": "TRY",
+                  "source_result_hash": "6ed6b3c1155e7f60c76aac48118ca680ab6062dd8ca1efb203ac5f515da28acd"
+                }
+              ],
+              "source_receipts": [
+                {
+                  "source_id": "cur_items",
+                  "source_step_id": "step_3",
+                  "operation_id": "orders.item_sales_summary",
+                  "source_result_hash": "9943f30fae4c20225bfb1be767b08c3a6405d80605d88d330a4c17f6921cf677",
+                  "scope": {
+                    "account_scopes": [
+                      {
+                        "api_account_id": 101,
+                        "account_id": "2738",
+                        "store_name": "Pilot Ana",
+                        "platform": "TRENDYOL",
+                        "environment": "stage",
+                        "environment_source": "account.extra_config"
+                      }
+                    ],
+                    "environment_by_account": {
+                      "101": "stage"
+                    }
+                  },
+                  "period": {
+                    "period": "last_7_days",
+                    "start_date_ms": 1791147600000,
+                    "end_date_ms": 1791752399999
+                  },
+                  "coverage": null
+                },
+                {
+                  "source_id": "prior_items",
+                  "source_step_id": "step_4",
+                  "operation_id": "orders.item_sales_summary",
+                  "source_result_hash": "6ed6b3c1155e7f60c76aac48118ca680ab6062dd8ca1efb203ac5f515da28acd",
+                  "scope": {
+                    "account_scopes": [
+                      {
+                        "api_account_id": 101,
+                        "account_id": "2738",
+                        "store_name": "Pilot Ana",
+                        "platform": "TRENDYOL",
+                        "environment": "stage",
+                        "environment_source": "account.extra_config"
+                      }
+                    ],
+                    "environment_by_account": {
+                      "101": "stage"
+                    }
+                  },
+                  "period": {
+                    "period": "last_7_days",
+                    "start_date_ms": 1790542800000,
+                    "end_date_ms": 1791147599999
+                  },
+                  "coverage": null
+                }
+              ],
+              "arithmetic_only": true,
+              "business_relationship_verified": false,
+              "calculation_id": "gross_change",
+              "arithmetic_evidence_hash": "a7f37fda8fa15c728ca08a188d0c886b1a73f8a9bc1269fc276a280ed9844b7c",
+              "evidence_hash": "e55cb6e7a31f339d8732378f1d84b25975ff6ac4b0e291e9199785a8872cb23f"
+            },
+            {
+              "operator": "subtract",
+              "operands": [
+                "6",
+                "4"
+              ],
+              "precision": 2,
+              "rounding": "ROUND_HALF_UP",
+              "result": "2.00",
+              "expression": "6 - 4 = 2.00",
+              "result_value": 2.0,
+              "verified": true,
+              "unit": "marketplace_item",
+              "result_unit": "native",
+              "result_kind": "count",
+              "operand_receipts": [
+                {
+                  "source_id": "cur_items",
+                  "source_step_id": "step_3",
+                  "operation_id": "orders.item_sales_summary",
+                  "path": "total_quantity",
+                  "value": 6,
+                  "unit": "marketplace_item",
+                  "source_result_hash": "9943f30fae4c20225bfb1be767b08c3a6405d80605d88d330a4c17f6921cf677"
+                },
+                {
+                  "source_id": "prior_items",
+                  "source_step_id": "step_4",
+                  "operation_id": "orders.item_sales_summary",
+                  "path": "total_quantity",
+                  "value": 4,
+                  "unit": "marketplace_item",
+                  "source_result_hash": "6ed6b3c1155e7f60c76aac48118ca680ab6062dd8ca1efb203ac5f515da28acd"
+                }
+              ],
+              "source_receipts": [
+                {
+                  "source_id": "cur_items",
+                  "source_step_id": "step_3",
+                  "operation_id": "orders.item_sales_summary",
+                  "source_result_hash": "9943f30fae4c20225bfb1be767b08c3a6405d80605d88d330a4c17f6921cf677",
+                  "scope": {
+                    "account_scopes": [
+                      {
+                        "api_account_id": 101,
+                        "account_id": "2738",
+                        "store_name": "Pilot Ana",
+                        "platform": "TRENDYOL",
+                        "environment": "stage",
+                        "environment_source": "account.extra_config"
+                      }
+                    ],
+                    "environment_by_account": {
+                      "101": "stage"
+                    }
+                  },
+                  "period": {
+                    "period": "last_7_days",
+                    "start_date_ms": 1791147600000,
+                    "end_date_ms": 1791752399999
+                  },
+                  "coverage": null
+                },
+                {
+                  "source_id": "prior_items",
+                  "source_step_id": "step_4",
+                  "operation_id": "orders.item_sales_summary",
+                  "source_result_hash": "6ed6b3c1155e7f60c76aac48118ca680ab6062dd8ca1efb203ac5f515da28acd",
+                  "scope": {
+                    "account_scopes": [
+                      {
+                        "api_account_id": 101,
+                        "account_id": "2738",
+                        "store_name": "Pilot Ana",
+                        "platform": "TRENDYOL",
+                        "environment": "stage",
+                        "environment_source": "account.extra_config"
+                      }
+                    ],
+                    "environment_by_account": {
+                      "101": "stage"
+                    }
+                  },
+                  "period": {
+                    "period": "last_7_days",
+                    "start_date_ms": 1790542800000,
+                    "end_date_ms": 1791147599999
+                  },
+                  "coverage": null
+                }
+              ],
+              "arithmetic_only": true,
+              "business_relationship_verified": false,
+              "calculation_id": "quantity_change",
+              "arithmetic_evidence_hash": "63cff5abba98ea130a2d00969adba516731e93fdefcf86949f0f0f0acd95f8b1",
+              "evidence_hash": "287d06460351859e945f4139bd781f2213ab40621076c13d5507cad06ab7185f"
+            }
+          ],
+          "verified_comparisons": [
+            {
+              "operator": "greater_than",
+              "left": "3000",
+              "right": "800",
+              "holds": true,
+              "difference": "2200",
+              "absolute_difference": "2200",
+              "expression": "3000 > 800",
+              "verified": true,
+              "unit": "TRY",
+              "result_unit": "native",
+              "result_kind": "boolean",
+              "operand_receipts": [
+                {
+                  "source_id": "cur_items",
+                  "source_step_id": "step_3",
+                  "operation_id": "orders.item_sales_summary",
+                  "path": "total_gross_amount",
+                  "value": 3000.0,
+                  "unit": "TRY",
+                  "source_result_hash": "9943f30fae4c20225bfb1be767b08c3a6405d80605d88d330a4c17f6921cf677"
+                },
+                {
+                  "source_id": "prior_items",
+                  "source_step_id": "step_4",
+                  "operation_id": "orders.item_sales_summary",
+                  "path": "total_gross_amount",
+                  "value": 800.0,
+                  "unit": "TRY",
+                  "source_result_hash": "6ed6b3c1155e7f60c76aac48118ca680ab6062dd8ca1efb203ac5f515da28acd"
+                }
+              ],
+              "source_receipts": [
+                {
+                  "source_id": "cur_items",
+                  "source_step_id": "step_3",
+                  "operation_id": "orders.item_sales_summary",
+                  "source_result_hash": "9943f30fae4c20225bfb1be767b08c3a6405d80605d88d330a4c17f6921cf677",
+                  "scope": {
+                    "account_scopes": [
+                      {
+                        "api_account_id": 101,
+                        "account_id": "2738",
+                        "store_name": "Pilot Ana",
+                        "platform": "TRENDYOL",
+                        "environment": "stage",
+                        "environment_source": "account.extra_config"
+                      }
+                    ],
+                    "environment_by_account": {
+                      "101": "stage"
+                    }
+                  },
+                  "period": {
+                    "period": "last_7_days",
+                    "start_date_ms": 1791147600000,
+                    "end_date_ms": 1791752399999
+                  },
+                  "coverage": null
+                },
+                {
+                  "source_id": "prior_items",
+                  "source_step_id": "step_4",
+                  "operation_id": "orders.item_sales_summary",
+                  "source_result_hash": "6ed6b3c1155e7f60c76aac48118ca680ab6062dd8ca1efb203ac5f515da28acd",
+                  "scope": {
+                    "account_scopes": [
+                      {
+                        "api_account_id": 101,
+                        "account_id": "2738",
+                        "store_name": "Pilot Ana",
+                        "platform": "TRENDYOL",
+                        "environment": "stage",
+                        "environment_source": "account.extra_config"
+                      }
+                    ],
+                    "environment_by_account": {
+                      "101": "stage"
+                    }
+                  },
+                  "period": {
+                    "period": "last_7_days",
+                    "start_date_ms": 1790542800000,
+                    "end_date_ms": 1791147599999
+                  },
+                  "coverage": null
+                }
+              ],
+              "arithmetic_only": true,
+              "business_relationship_verified": false,
+              "comparison_id": "gross_direction",
+              "arithmetic_evidence_hash": "7db77df14b9d091b25bafb0348792a22b1df50ec39aadfd7b3c38fe4e7f870cf",
+              "evidence_hash": "8fb3353600433166dd97a8acaf1c453c33d07ec71230242914ac65ff0194b791"
+            }
+          ],
+          "source_receipts": [
+            {
+              "source_id": "cur_items",
+              "source_step_id": "step_3",
+              "operation_id": "orders.item_sales_summary",
+              "source_result_hash": "9943f30fae4c20225bfb1be767b08c3a6405d80605d88d330a4c17f6921cf677",
+              "scope": {
+                "account_scopes": [
+                  {
+                    "api_account_id": 101,
+                    "account_id": "2738",
+                    "store_name": "Pilot Ana",
+                    "platform": "TRENDYOL",
+                    "environment": "stage",
+                    "environment_source": "account.extra_config"
+                  }
+                ],
+                "environment_by_account": {
+                  "101": "stage"
+                }
+              },
+              "period": {
+                "period": "last_7_days",
+                "start_date_ms": 1791147600000,
+                "end_date_ms": 1791752399999
+              },
+              "coverage": null
+            },
+            {
+              "source_id": "prior_items",
+              "source_step_id": "step_4",
+              "operation_id": "orders.item_sales_summary",
+              "source_result_hash": "6ed6b3c1155e7f60c76aac48118ca680ab6062dd8ca1efb203ac5f515da28acd",
+              "scope": {
+                "account_scopes": [
+                  {
+                    "api_account_id": 101,
+                    "account_id": "2738",
+                    "store_name": "Pilot Ana",
+                    "platform": "TRENDYOL",
+                    "environment": "stage",
+                    "environment_source": "account.extra_config"
+                  }
+                ],
+                "environment_by_account": {
+                  "101": "stage"
+                }
+              },
+              "period": {
+                "period": "last_7_days",
+                "start_date_ms": 1790542800000,
+                "end_date_ms": 1791147599999
+              },
+              "coverage": null
+            }
+          ],
+          "operand_receipts": [
+            {
+              "source_id": "cur_items",
+              "source_step_id": "step_3",
+              "operation_id": "orders.item_sales_summary",
+              "path": "total_gross_amount",
+              "value": 3000.0,
+              "unit": "TRY",
+              "source_result_hash": "9943f30fae4c20225bfb1be767b08c3a6405d80605d88d330a4c17f6921cf677"
+            },
+            {
+              "source_id": "prior_items",
+              "source_step_id": "step_4",
+              "operation_id": "orders.item_sales_summary",
+              "path": "total_gross_amount",
+              "value": 800.0,
+              "unit": "TRY",
+              "source_result_hash": "6ed6b3c1155e7f60c76aac48118ca680ab6062dd8ca1efb203ac5f515da28acd"
+            },
+            {
+              "source_id": "cur_items",
+              "source_step_id": "step_3",
+              "operation_id": "orders.item_sales_summary",
+              "path": "total_quantity",
+              "value": 6,
+              "unit": "marketplace_item",
+              "source_result_hash": "9943f30fae4c20225bfb1be767b08c3a6405d80605d88d330a4c17f6921cf677"
+            },
+            {
+              "source_id": "prior_items",
+              "source_step_id": "step_4",
+              "operation_id": "orders.item_sales_summary",
+              "path": "total_quantity",
+              "value": 4,
+              "unit": "marketplace_item",
+              "source_result_hash": "6ed6b3c1155e7f60c76aac48118ca680ab6062dd8ca1efb203ac5f515da28acd"
+            },
+            {
+              "source_id": "cur_items",
+              "source_step_id": "step_3",
+              "operation_id": "orders.item_sales_summary",
+              "path": "total_gross_amount",
+              "value": 3000.0,
+              "unit": "TRY",
+              "source_result_hash": "9943f30fae4c20225bfb1be767b08c3a6405d80605d88d330a4c17f6921cf677"
+            },
+            {
+              "source_id": "prior_items",
+              "source_step_id": "step_4",
+              "operation_id": "orders.item_sales_summary",
+              "path": "total_gross_amount",
+              "value": 800.0,
+              "unit": "TRY",
+              "source_result_hash": "6ed6b3c1155e7f60c76aac48118ca680ab6062dd8ca1efb203ac5f515da28acd"
+            }
+          ],
+          "evidence_hash": "9c999294a7e13c7f55a04cc643b76b24b0d8b226596527df4b1bf8e9f63c056c"
+        }
+      }
+    ],
+    "active_entities": {
+      "turn_interpretation": {
+        "mode": "inspect",
+        "domain": "general",
+        "objective": "Pilot Ana mağazasında son 7 günün satışlarını önceki 7 günle karşılaştırmak; stokta bağlı para değerini ve kayıtlı finans hareketlerini incelemek; sonuçları dövizleri karıştırmadan açıklamak; kanıt eksikse (ortak işletme/ürün bağlantısı, gerçekleşmiş banka bakiyesi) uydurmadan eksikleri ve sonraki araştırma adımlarını belirtmek",
+        "intent_kind": "data_read",
+        "request_shape": "broad_analysis",
+        "explanation_topics": [],
+        "information_source": "local_business_data",
+        "operation_policy": "allow_new_operations",
+        "comparison_policy": "required",
+        "comparison_policy_source": "model_authored",
+        "calculation_grouping": "none",
+        "calculation_count": 0,
+        "requested_fields": [
+          "item_sales_rows",
+          "currency",
+          "amount",
+          "count",
+          "calculation",
+          "scope"
+        ],
+        "direct_output_fields": [
+          "scope"
+        ],
+        "identifier_display": "auto",
+        "reason": "Çok alanlı işletme değerlendirmesi (sipariş satış karşılaştırması + stok değeri + finans hareketleri); tek bir domain upfront seçilemez, general ile mağaza kapsamı marketplace_account üzerinden bağlanır; işletme verisi yerel DB'den okunur, sync uydurulmaz",
+        "requires_clarification": false,
+        "clarification": "",
+        "missing_input": "none",
+        "population_basis": "entity_records",
+        "planner_invoked": true,
+        "valid": true,
+        "decision_path": "typed_model_turn_interpretation",
+        "semantic_corrections": [
+          "unbound_item_sales_quantity_projection_removed",
+          "unbound_item_sales_order_count_projection_removed",
+          "unbound_item_sales_amount_projection_removed",
+          "explicit_visible_base_metrics_restored_to_direct_projection",
+          "unread_source_formula_deferred_as_goal_obligation"
+        ],
+        "semantic_contract": {
+          "entity": "none",
+          "metric": "summary",
+          "period": "last_7_days",
+          "record_scope": "all_matching",
+          "request_shape": "broad_analysis",
+          "projection": [
+            "item_sales_rows",
+            "currency",
+            "amount",
+            "count",
+            "calculation",
+            "scope"
+          ],
+          "scope_anchor": {
+            "entity": "marketplace_account",
+            "owner_domain": "marketplaces"
+          },
+          "deferred_calculation": {
+            "status": "pending",
+            "required_calculation_count": 1,
+            "comparison_required": true,
+            "validation_reason_codes": [
+              "operator_not_allowed:missing",
+              "comparison_contract_missing"
+            ],
+            "requires_source_bound_calculation": true,
+            "expected_calculations": [],
+            "required_result_kinds": [],
+            "cardinality_authority": "provisional_initial_interpretation"
+          },
+          "information_source": "local_business_data"
+        },
+        "correction_target": {},
+        "intent_signal_observability": {
+          "normalized_message_sha256": "396eb99d22de243f07731e547cdd81c170166ea20fada6cf4f14ebb0559a25cf",
+          "normalized_message_length": 312,
+          "item_sales_report": false,
+          "report_export": false,
+          "report_export_prohibited": false
+        },
+        "turn_contract_provenance": {
+          "initial": {
+            "mode": "inspect",
+            "domain": "general",
+            "intent_kind": "data_read",
+            "request_shape": "broad_analysis",
+            "information_source": "local_business_data",
+            "operation_policy": "allow_new_operations",
+            "missing_input": "none",
+            "population_basis": "entity_records",
+            "metric_population": "missing_or_invalid",
+            "requires_clarification": false,
+            "response_sha256": "712d15d0e4369b25642d39272f129603ac0aa6141072514e5a12b6a8c7c08de4"
+          },
+          "accepted": {
+            "mode": "inspect",
+            "domain": "general",
+            "intent_kind": "data_read",
+            "request_shape": "broad_analysis",
+            "information_source": "local_business_data",
+            "operation_policy": "allow_new_operations",
+            "missing_input": "none",
+            "population_basis": "entity_records",
+            "metric_population": "missing_or_invalid",
+            "requires_clarification": false
+          },
+          "current_turn_business_observation": "not_read",
+          "input_sha256": "49c16f410f02ddbda7db0a3e0a13558c65d0def8bf4d8a0a533547afbbe2e5ce",
+          "application_prompt_sha256": "3dadf431c8db3fff95e9c9878621199afe5058b9610a20e4a210290437d76865",
+          "population_alignment": {
+            "required": false
+          }
+        }
+      },
+      "runtime_context": {
+        "source": "cloud",
+        "provider_id": 1,
+        "provider_label": "OpenRouter",
+        "model_name": "z-ai/glm-5.3-flash",
+        "provider_code": "openrouter",
+        "runtime_name": "openrouter_chat",
+        "reasoning_effort": "auto",
+        "allow_model_fallback": false,
+        "model_metadata": {
+          "supported_parameters": [
+            "frequency_penalty",
+            "include_reasoning",
+            "logit_bias",
+            "logprobs",
+            "max_tokens",
+            "min_p",
+            "parallel_tool_calls",
+            "presence_penalty",
+            "reasoning",
+            "reasoning_effort",
+            "repetition_penalty",
+            "response_format",
+            "seed",
+            "stop",
+            "structured_outputs",
+            "temperature",
+            "tool_choice",
+            "tools",
+            "top_k",
+            "top_logprobs",
+            "top_p"
+          ],
+          "context_length": 1048576,
+          "reasoning": {
+            "mandatory": true,
+            "default_effort": "max",
+            "supported_efforts": [
+              "max",
+              "high",
+              "low"
+            ]
+          }
+        },
+        "capability_profile": {
+          "provider_code": "openrouter",
+          "model_id": "z-ai/glm-5.3-flash",
+          "degradation_mode": "native_tools",
+          "source": "provider_metadata",
+          "prepare_write_allowed": true,
+          "external_write_planning_allowed": true
+        },
+        "runtime_policy_hash": "b7002a5e315611861dd207f866c81e29"
+      },
+      "execution_budget": {
+        "contract_version": 1,
+        "max_steps": 24,
+        "max_replans": 24,
+        "started_steps": 8,
+        "applied_replans": 1
+      },
+      "goal_obligations": [
+        {
+          "kind": "source_bound_calculation",
+          "fulfilled": true,
+          "required_calculation_count": 2,
+          "verified_calculation_count": 7,
+          "evidence_hashes": [
+            "2701bf51cac1257f1f4c7b4097114b62fc7e99842f031102ea9babc83882cf0c",
+            "7793f2747486f1149c7e33c24ab4c3fb7542605e2e2691e7b547e6b289b0e935",
+            "45fc420089ece1a43f3dad7775f96a3292ad656eea11617aeda2d88032261c38",
+            "7ef95cdb0b90fab01ca1e877f0c8b2b55c217642deada8cce455c0515c656754",
+            "e55cb6e7a31f339d8732378f1d84b25975ff6ac4b0e291e9199785a8872cb23f",
+            "287d06460351859e945f4139bd781f2213ab40621076c13d5507cad06ab7185f",
+            "8fb3353600433166dd97a8acaf1c453c33d07ec71230242914ac65ff0194b791"
+          ],
+          "semantic_verification_allowed": true,
+          "semantic_reason_codes": []
+        }
+      ],
+      "calculation_goal_verification": {
+        "evidence_fingerprint": "5a4becc496bebf01a7bf956f41aa447f74c854548a609287566811792a3f6a45",
+        "allowed": true,
+        "accepted_evidence_hashes": [
+          "2701bf51cac1257f1f4c7b4097114b62fc7e99842f031102ea9babc83882cf0c",
+          "7793f2747486f1149c7e33c24ab4c3fb7542605e2e2691e7b547e6b289b0e935",
+          "45fc420089ece1a43f3dad7775f96a3292ad656eea11617aeda2d88032261c38",
+          "7ef95cdb0b90fab01ca1e877f0c8b2b55c217642deada8cce455c0515c656754",
+          "e55cb6e7a31f339d8732378f1d84b25975ff6ac4b0e291e9199785a8872cb23f",
+          "287d06460351859e945f4139bd781f2213ab40621076c13d5507cad06ab7185f",
+          "8fb3353600433166dd97a8acaf1c453c33d07ec71230242914ac65ff0194b791"
+        ],
+        "comparison_satisfied": true,
+        "requested_calculation_count": 2,
+        "requested_result_kinds": [
+          "amount",
+          "count",
+          "boolean"
+        ],
+        "observed_period_relations": [
+          {
+            "relation": "previous_equal_period",
+            "prior_source_step_id": "step_2",
+            "current_source_step_id": "step_1",
+            "prior_bounds_ms": [
+              1790542800000.0,
+              1791147599999.0
+            ],
+            "current_bounds_ms": [
+              1791147600000.0,
+              1791752399999.0
+            ]
+          },
+          {
+            "relation": "previous_equal_period",
+            "prior_source_step_id": "step_4",
+            "current_source_step_id": "step_3",
+            "prior_bounds_ms": [
+              1790542800000.0,
+              1791147599999.0
+            ],
+            "current_bounds_ms": [
+              1791147600000.0,
+              1791752399999.0
+            ]
+          }
+        ],
+        "reason_codes": [],
+        "model_verdict": {
+          "verdict": "allow",
+          "objective_aligned": true,
+          "requested_calculations_complete": true,
+          "scope_aligned": true,
+          "periods_aligned": true,
+          "units_aligned": true,
+          "comparison_satisfied": true,
+          "accepted_evidence_hashes": [
+            "2701bf51cac1257f1f4c7b4097114b62fc7e99842f031102ea9babc83882cf0c",
+            "7793f2747486f1149c7e33c24ab4c3fb7542605e2e2691e7b547e6b289b0e935",
+            "45fc420089ece1a43f3dad7775f96a3292ad656eea11617aeda2d88032261c38",
+            "7ef95cdb0b90fab01ca1e877f0c8b2b55c217642deada8cce455c0515c656754",
+            "e55cb6e7a31f339d8732378f1d84b25975ff6ac4b0e291e9199785a8872cb23f",
+            "287d06460351859e945f4139bd781f2213ab40621076c13d5507cad06ab7185f",
+            "8fb3353600433166dd97a8acaf1c453c33d07ec71230242914ac65ff0194b791"
+          ],
+          "requested_calculation_count": 2,
+          "requested_result_kinds": [
+            "amount",
+            "count",
+            "boolean"
+          ],
+          "period_relations": [
+            {
+              "left_source_step_id": "step_1",
+              "right_source_step_id": "step_2",
+              "relation": "previous_equal_period"
+            },
+            {
+              "left_source_step_id": "step_3",
+              "right_source_step_id": "step_4",
+              "relation": "previous_equal_period"
+            }
+          ],
+          "reason": "Goal requests comparing last 7 days sales with the previous 7 days. Verified evidence covers revenue difference (3000-800=2200 TRY), order count difference (3-2=1), item gross amount difference (2200 TRY), item quantity difference (2), and verified greater_than boolean comparisons for revenue and orders across the same account (Pilot Ana, api_account 101, stage environment). Periods are distinct adjacent equal-duration 7-day intervals (1791147600000-1791752399999 vs 1790542800000-1791147599999). Units are consistent TRY and order/marketplace_item counts. Provisional cardinality of 1 undercounts; the comparison requires both amount and count differences plus boolean relations, corrected to 2 calculations with amount/count/boolean result kinds. Stock and finance components are raw observations checked separately, not calculations."
+        },
+        "attempts": 1
+      },
+      "verified_calculation": {
+        "operator": "subtract",
+        "operands": [
+          {
+            "value": 3000.0,
+            "label": "step_1:estimated_revenue",
+            "unit": "TRY",
+            "source_step_id": "step_1",
+            "operation_id": "orders.summary",
+            "path": "estimated_revenue"
+          },
+          {
+            "value": 800.0,
+            "label": "step_2:estimated_revenue",
+            "unit": "TRY",
+            "source_step_id": "step_2",
+            "operation_id": "orders.summary",
+            "path": "estimated_revenue"
+          }
+        ],
+        "precision": 2,
+        "rounding": "ROUND_HALF_UP",
+        "result": "2200.00",
+        "result_value": 2200.0,
+        "expression": "3000 - 800 = 2200.00",
+        "display_expression": "3000 - 800 = 2200.00",
+        "result_kind": "amount",
+        "result_label": "revenue_change_pct",
+        "unit": "TRY",
+        "arithmetic_evidence_hash": "a7f37fda8fa15c728ca08a188d0c886b1a73f8a9bc1269fc276a280ed9844b7c",
+        "evidence_hash": "2701bf51cac1257f1f4c7b4097114b62fc7e99842f031102ea9babc83882cf0c",
+        "verified": true
+      }
+    }
+  }
+}

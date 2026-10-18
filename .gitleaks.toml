@@ -1,0 +1,25 @@
+title = "OrderScout secret scanning"
+
+[extend]
+useDefault = true
+
+# tariffKey is a public business identifier, not an authentication key.
+# Restrict the exception to that exact field and value shape; scan the rest.
+[[rules]]
+id = "generic-api-key"
+[[rules.allowlists]]
+description = "Public cargo tariff identifiers"
+regexTarget = "match"
+regexes = ['''tariffKey["']?\s*:\s*["']trendyol-[a-z0-9-]+["']''']
+
+[[rules.allowlists]]
+description = "Cargo identifier split across a scanner chunk boundary"
+condition = "AND"
+paths = ['''(^|/)desktop/Logistics/constants/files/cargo_tariffs\.default\.json$''']
+regexTarget = "secret"
+regexes = ['''^trendyol-[a-z0-9-]+$''']
+
+[[rules.allowlists]]
+description = "Literal synthetic credential rejection fixture"
+regexTarget = "match"
+regexes = ['''previous-token", "sk-123456789abcdefgh''']

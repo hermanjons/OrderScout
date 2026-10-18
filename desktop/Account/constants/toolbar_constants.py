@@ -1,0 +1,15 @@
+from __future__ import annotations
+
+
+ACCOUNT_TOOLBAR_ACTION_TEXT = "Şirket Yönetimi"
+ACCOUNT_TOOLBAR_ACTION_TOOLTIP = "Şirket API hesaplarını yönet"
+ACCOUNT_TOOLBAR_ACTION_KEY = "company_manager"
+ACCOUNT_TOOLBAR_ICON_SIZE = (32, 32)
+
+
+__all__ = [
+    "ACCOUNT_TOOLBAR_ACTION_KEY",
+    "ACCOUNT_TOOLBAR_ACTION_TEXT",
+    "ACCOUNT_TOOLBAR_ACTION_TOOLTIP",
+    "ACCOUNT_TOOLBAR_ICON_SIZE",
+]

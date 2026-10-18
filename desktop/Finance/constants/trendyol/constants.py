@@ -1,0 +1,58 @@
+from __future__ import annotations
+
+from Core.constants.time_constants import TZ_GMT3
+from Marketplaces.processors.catalog import (
+    marketplace_api_scope_profile,
+    marketplace_finance_scope_int,
+    marketplace_finance_transaction_types,
+)
+
+
+FINANCE_PLATFORM_TRENDYOL = "TRENDYOL"
+FINANCE_API_SCOPE = "finance"
+FINANCE_SERVICE_SETTLEMENTS = "settlements"
+FINANCE_SERVICE_OTHER_FINANCIALS = "otherfinancials"
+FINANCE_SERVICE_CARGO_INVOICE_ITEMS = "cargo_invoice_items"
+
+TRENDYOL_FINANCE_SCOPE = marketplace_api_scope_profile(FINANCE_PLATFORM_TRENDYOL, FINANCE_API_SCOPE)
+TRENDYOL_FINANCE_SAFE_RANGE_DAYS = max(
+    1,
+    marketplace_finance_scope_int(FINANCE_PLATFORM_TRENDYOL, "safeRangeDays", 14),
+)
+TRENDYOL_FINANCE_DEFAULT_FETCH_DAYS = max(
+    1,
+    marketplace_finance_scope_int(FINANCE_PLATFORM_TRENDYOL, "defaultFetchDays", 14),
+)
+TRENDYOL_FINANCE_DEFAULT_PAGE_SIZE = max(1, int(TRENDYOL_FINANCE_SCOPE.get("defaultPageSize") or 500))
+TRENDYOL_FINANCE_MAX_PAGE_SIZE = max(1, int(TRENDYOL_FINANCE_SCOPE.get("maxPageSize") or 1000))
+TRENDYOL_FINANCE_DEFAULT_MAX_PAGES = max(1, int(TRENDYOL_FINANCE_SCOPE.get("defaultMaxPages") or 20))
+TRENDYOL_FINANCE_SETTLEMENT_TRANSACTION_TYPES = marketplace_finance_transaction_types(
+    FINANCE_PLATFORM_TRENDYOL,
+    FINANCE_SERVICE_SETTLEMENTS,
+)
+TRENDYOL_FINANCE_OTHER_TRANSACTION_TYPES = marketplace_finance_transaction_types(
+    FINANCE_PLATFORM_TRENDYOL,
+    FINANCE_SERVICE_OTHER_FINANCIALS,
+)
+TRENDYOL_FINANCE_CARGO_INVOICE_KEYWORDS: tuple[str, ...] = (
+    "kargo fatura",
+    "cargo invoice",
+)
+
+__all__ = [
+    "FINANCE_API_SCOPE",
+    "FINANCE_PLATFORM_TRENDYOL",
+    "FINANCE_SERVICE_CARGO_INVOICE_ITEMS",
+    "FINANCE_SERVICE_OTHER_FINANCIALS",
+    "FINANCE_SERVICE_SETTLEMENTS",
+    "TRENDYOL_FINANCE_CARGO_INVOICE_KEYWORDS",
+    "TRENDYOL_FINANCE_DEFAULT_FETCH_DAYS",
+    "TRENDYOL_FINANCE_DEFAULT_MAX_PAGES",
+    "TRENDYOL_FINANCE_DEFAULT_PAGE_SIZE",
+    "TRENDYOL_FINANCE_MAX_PAGE_SIZE",
+    "TRENDYOL_FINANCE_OTHER_TRANSACTION_TYPES",
+    "TRENDYOL_FINANCE_SAFE_RANGE_DAYS",
+    "TRENDYOL_FINANCE_SCOPE",
+    "TRENDYOL_FINANCE_SETTLEMENT_TRANSACTION_TYPES",
+    "TZ_GMT3",
+]

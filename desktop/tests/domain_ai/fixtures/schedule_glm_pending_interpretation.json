@@ -1,0 +1,36 @@
+{
+  "scenario_id": "workflow_save_pending",
+  "source_artifact": "output\\agentic-2026-10-11\\schedule-glm-candidate-3.json",
+  "prompt": "Onay bekleyen yönergenin tam talimatı, amaç şablonu ve parametre sınırları neler? Henüz kaydedildi mi ve çalıştırıldı mı?",
+  "requested_model": "z-ai/glm-5.3-flash",
+  "actual_model": "z-ai/glm-5.3-flash",
+  "fallback_used": false,
+  "response": {
+    "mode": "inspect",
+    "domain": "general",
+    "objective": "Onay bekleyen 'Pilot Stok İncelemesi' iş yönergesinin tam talimat metnini, amaç şablonunu ve parametre sınırlarını (report_title: zorunlu metin, en fazla 80 karakter) mevcut kayıtlardan göster; kaydedilip kaydedilmediğini ve çalıştırılıp çalıştırılmadığını belirt.",
+    "calculation_grouping": "none",
+    "comparison_policy": "not_requested",
+    "status_codes": [],
+    "requires_clarification": false,
+    "missing_input": "none",
+    "population_basis": "entity_records",
+    "intent_kind": "data_read",
+    "request_shape": "record_detail",
+    "entity": "none",
+    "metric": "detail",
+    "record_scope": "active_selection",
+    "operation_policy": "existing_observations_only",
+    "information_source": "local_business_data",
+    "freshness": "unspecified",
+    "period": "unspecified",
+    "status_scope": "unspecified",
+    "identifier_display": "auto",
+    "requested_fields": [
+      "scope",
+      "action_result"
+    ],
+    "reason": "Kullanıcı, onaya sunulmuş bekleyen iş yönergesinin içeriğini ve durumunu soruyor; bu, mevcut workflows.save.prepare gözleminden inspect + existing_observations_only ile okunabilir. Yeni kayıt veya çalıştırma yapılmaz; henüz kayıt onay bekliyor ve çalıştırma onay sonrasına bırakılmıştı.",
+    "explanation_topics": []
+  }
+}

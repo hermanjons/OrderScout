@@ -1,0 +1,194 @@
+[
+  {
+    "platformCode": "TRENDYOL",
+    "platform_source_id": 1,
+    "code": "YKMP",
+    "name": "Yurtici Kargo Marketplace",
+    "source_id": 1
+  },
+  {
+    "platformCode": "TRENDYOL",
+    "platform_source_id": 1,
+    "code": "ARASMP",
+    "name": "Aras Kargo Marketplace",
+    "logoPath": "desktop/images/aras-icon.png",
+    "source_id": 2
+  },
+  {
+    "platformCode": "TRENDYOL",
+    "platform_source_id": 1,
+    "code": "SURATMP",
+    "name": "Surat Kargo Marketplace",
+    "source_id": 3
+  },
+  {
+    "platformCode": "TRENDYOL",
+    "platform_source_id": 1,
+    "code": "HOROZMP",
+    "name": "Horoz Lojistik Marketplace",
+    "source_id": 4
+  },
+  {
+    "platformCode": "TRENDYOL",
+    "platform_source_id": 1,
+    "code": "DHLECOMMP",
+    "name": "DHL eCommerce Marketplace",
+    "source_id": 5
+  },
+  {
+    "platformCode": "TRENDYOL",
+    "platform_source_id": 1,
+    "code": "PTTMP",
+    "name": "PTT Kargo Marketplace",
+    "source_id": 6
+  },
+  {
+    "platformCode": "TRENDYOL",
+    "platform_source_id": 1,
+    "code": "CEVAMP",
+    "name": "Ceva Marketplace",
+    "source_id": 7
+  },
+  {
+    "platformCode": "TRENDYOL",
+    "platform_source_id": 1,
+    "code": "TEXMP",
+    "name": "Trendyol Express Marketplace",
+    "source_id": 8
+  },
+  {
+    "platformCode": "TRENDYOL",
+    "platform_source_id": 1,
+    "code": "KOLAYGELSINMP",
+    "name": "Kolay Gelsin Marketplace",
+    "source_id": 9
+  },
+  {
+    "platformCode": "TRENDYOL",
+    "platform_source_id": 1,
+    "code": "CEVATEDARIK",
+    "name": "Ceva Tedarik Marketplace",
+    "source_id": 10
+  },
+  {
+    "platformCode": "TRENDYOL",
+    "platform_source_id": 1,
+    "code": "UPSMP",
+    "name": "UPS Marketplace",
+    "source_id": 11
+  },
+  {
+    "platformCode": "HEPSIBURADA",
+    "platform_source_id": 2,
+    "code": "YURTICI",
+    "name": "Yurtici Kargo",
+    "source_id": 12
+  },
+  {
+    "platformCode": "HEPSIBURADA",
+    "platform_source_id": 2,
+    "code": "ARAS",
+    "name": "Aras Kargo",
+    "logoPath": "desktop/images/aras-icon.png",
+    "source_id": 13
+  },
+  {
+    "platformCode": "HEPSIBURADA",
+    "platform_source_id": 2,
+    "code": "MNG",
+    "name": "MNG Kargo",
+    "source_id": 14
+  },
+  {
+    "platformCode": "HEPSIBURADA",
+    "platform_source_id": 2,
+    "code": "SURAT",
+    "name": "Surat Kargo",
+    "source_id": 15
+  },
+  {
+    "platformCode": "HEPSIBURADA",
+    "platform_source_id": 2,
+    "code": "PTT",
+    "name": "PTT Kargo",
+    "source_id": 16
+  },
+  {
+    "platformCode": "HEPSIBURADA",
+    "platform_source_id": 2,
+    "code": "UPS",
+    "name": "UPS",
+    "source_id": 17
+  },
+  {
+    "platformCode": "AMAZON",
+    "platform_source_id": 3,
+    "code": "YURTICI",
+    "name": "Yurtici Kargo",
+    "source_id": 18
+  },
+  {
+    "platformCode": "AMAZON",
+    "platform_source_id": 3,
+    "code": "ARAS",
+    "name": "Aras Kargo",
+    "logoPath": "desktop/images/aras-icon.png",
+    "source_id": 19
+  },
+  {
+    "platformCode": "AMAZON",
+    "platform_source_id": 3,
+    "code": "MNG",
+    "name": "MNG Kargo",
+    "source_id": 20
+  },
+  {
+    "platformCode": "AMAZON",
+    "platform_source_id": 3,
+    "code": "PTT",
+    "name": "PTT Kargo",
+    "source_id": 21
+  },
+  {
+    "platformCode": "AMAZON",
+    "platform_source_id": 3,
+    "code": "UPS",
+    "name": "UPS",
+    "source_id": 22
+  },
+  {
+    "platformCode": "AMAZON",
+    "platform_source_id": 3,
+    "code": "DHL",
+    "name": "DHL",
+    "source_id": 23
+  },
+  {
+    "platformCode": "ETSY",
+    "platform_source_id": 4,
+    "code": "PTT",
+    "name": "PTT Kargo",
+    "source_id": 24
+  },
+  {
+    "platformCode": "ETSY",
+    "platform_source_id": 4,
+    "code": "UPS",
+    "name": "UPS",
+    "source_id": 25
+  },
+  {
+    "platformCode": "ETSY",
+    "platform_source_id": 4,
+    "code": "DHL",
+    "name": "DHL",
+    "source_id": 26
+  },
+  {
+    "platformCode": "ETSY",
+    "platform_source_id": 4,
+    "code": "FEDEX",
+    "name": "FedEx",
+    "source_id": 27
+  }
+]

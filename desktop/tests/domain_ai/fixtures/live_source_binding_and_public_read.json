@@ -1,0 +1,651 @@
+{
+  "description": "Actual failed public-document intent and historical-source graph; no runtime authority included.",
+  "cases": {
+    "business-glm-4": {
+      "raw_campaign": "output/agentic-2026-10-15/business-glm-4.json",
+      "raw_sha256": "c972b7f18cbd6f4ab117dec5d2332788ba663960d079e236b1301b96500a0e9c",
+      "prompt": "Pilot Ana mağazasının son 7 gün ve önceki 7 gün sipariş sayılarını ve tahmini cirolarını, stokta bağlı değeri ve kayıtlı finans hareketlerini araştırıp benim için çok sayfalı bir Excel raporu hazırla. Satış dönemlerini ayrı satırlarda, stok ve finansı ayrı sayfalarda göster; her dövizi ayrı tut ve kaynak kapsamını belirt. Raporun düzenini bu ihtiyaca göre seç. İşletme/mağaza bağlantısını veya gerçekleşmiş banka bakiyesini kanıt olmadan çıkarma; varsayımları ve önerileri kaynak verisinden ayrı işaretle. Dosyayı henüz kaydetme, oluşturulacak raporu onayıma sun.",
+      "interpretation": {
+        "mode": "act",
+        "domain": "general",
+        "objective": "Pilot Ana mağazası için son 7 gün ve önceki 7 gün sipariş sayısı ile tahmini cirosunu, stokta bağlı değeri ve kayıtlı finans hareketlerini okuyup çok sayfalı Excel rapor taslağı hazırlamak; satış dönemleri ayrı satırlarda, stok ve finans ayrı sayfalarda, dövizler ayrı tutularak kaynak kapsamı belirtilerek; dosyayı kaydetmeden onaya sunmak",
+        "intent_kind": "action",
+        "request_shape": "artifact_report",
+        "explanation_topics": [],
+        "information_source": "local_business_data",
+        "operation_policy": "allow_new_operations",
+        "comparison_policy": "required",
+        "comparison_policy_source": "model_authored",
+        "calculation_grouping": "independent_results",
+        "calculation_count": 0,
+        "requested_fields": [
+          "count",
+          "amount",
+          "currency",
+          "artifact",
+          "calculation"
+        ],
+        "direct_output_fields": [],
+        "identifier_display": "auto",
+        "reason": "Kullanıcı yeni veri okuma ve rapor taslağı hazırlama istiyor; dosya henüz kaydedilmeyecek, onay bekleyecek. Mağaza genelinde birden fazla alan (orders, stock, finance) kapsandığı için domain=general ve entity=marketplace_account kapsam çapasıdır; gerçek operation sahipleri plan aşamasında seçilir.",
+        "requires_clarification": false,
+        "clarification": "",
+        "missing_input": "none",
+        "population_basis": "entity_records",
+        "planner_invoked": true,
+        "valid": true,
+        "decision_path": "typed_model_turn_interpretation",
+        "semantic_corrections": [
+          "unread_source_formula_deferred_as_goal_obligation",
+          "unrequested_item_sales_rows_projection_removed",
+          "explicitly_prohibited_scope_projection_removed"
+        ],
+        "semantic_contract": {
+          "deferred_calculation": {
+            "status": "pending",
+            "required_calculation_count": 2,
+            "comparison_required": true,
+            "validation_reason_codes": [
+              "calculation_1:operand_domain_mismatch:orders.total_count",
+              "operator_not_allowed:missing",
+              "declared_calculation_count_missing:0:2",
+              "comparison_contract_missing"
+            ],
+            "requires_source_bound_calculation": true,
+            "expected_calculations": [],
+            "required_result_kinds": [
+              "count",
+              "amount"
+            ],
+            "cardinality_authority": "provisional_initial_interpretation"
+          },
+          "information_source": "local_business_data"
+        },
+        "correction_target": {},
+        "intent_signal_observability": {
+          "normalized_message_sha256": "2275d91bc2761e065cf4ea4d65f3f26a8e68d68393b54979ada6738e7e787124",
+          "normalized_message_length": 565,
+          "item_sales_report": false,
+          "report_export": true,
+          "report_export_prohibited": false
+        },
+        "turn_contract_provenance": {
+          "initial": {
+            "mode": "act",
+            "domain": "general",
+            "intent_kind": "action",
+            "request_shape": "artifact_report",
+            "information_source": "local_business_data",
+            "operation_policy": "allow_new_operations",
+            "missing_input": "none",
+            "population_basis": "entity_records",
+            "metric_population": "missing_or_invalid",
+            "requires_clarification": false,
+            "response_sha256": "3a67ea7ea2cf208775757427b12208896673b5b7dfaa17a922329e9246767f61"
+          },
+          "accepted": {
+            "mode": "act",
+            "domain": "general",
+            "intent_kind": "action",
+            "request_shape": "artifact_report",
+            "information_source": "local_business_data",
+            "operation_policy": "allow_new_operations",
+            "missing_input": "none",
+            "population_basis": "entity_records",
+            "metric_population": "missing_or_invalid",
+            "requires_clarification": false
+          },
+          "current_turn_business_observation": "not_read",
+          "input_sha256": "53dddad304c0d26ff4f5347ea9714b6bff8796cdeb316a0083b25c975a28bd2c",
+          "application_prompt_sha256": "c974c5a41f8994fb821cf91dc7f237c1aa0aaccdc7e444e1af9c4a4167465c88",
+          "population_alignment": {
+            "required": false
+          }
+        },
+        "formula_contract_provenance": {
+          "model_response_sha256": "3a67ea7ea2cf208775757427b12208896673b5b7dfaa17a922329e9246767f61",
+          "initial": [
+            {
+              "operator": "subtract",
+              "result_kind": "count"
+            },
+            {
+              "operator": "subtract",
+              "result_kind": "amount"
+            }
+          ],
+          "accepted": [],
+          "formula_repair_invoked": false
+        }
+      },
+      "responses": [
+        {
+          "mode": "act",
+          "domain": "general",
+          "objective": "Pilot Ana mağazası için son 7 gün ve önceki 7 gün sipariş sayısı ile tahmini cirosunu, stokta bağlı değeri ve kayıtlı finans hareketlerini okuyup çok sayfalı Excel rapor taslağı hazırlamak; satış dönemleri ayrı satırlarda, stok ve finans ayrı sayfalarda, dövizler ayrı tutularak kaynak kapsamı belirtilerek; dosyayı kaydetmeden onaya sunmak",
+          "reason": "Kullanıcı yeni veri okuma ve rapor taslağı hazırlama istiyor; dosya henüz kaydedilmeyecek, onay bekleyecek. Mağaza genelinde birden fazla alan (orders, stock, finance) kapsandığı için domain=general ve entity=marketplace_account kapsam çapasıdır; gerçek operation sahipleri plan aşamasında seçilir.",
+          "calculation_grouping": "independent_results",
+          "comparison_policy": "required",
+          "status_codes": [],
+          "requires_clarification": false,
+          "missing_input": "none",
+          "population_basis": "entity_records",
+          "intent_kind": "action",
+          "request_shape": "artifact_report",
+          "entity": "marketplace_account",
+          "metric": "summary",
+          "metric_population": null,
+          "record_scope": "all_matching",
+          "period": "last_7_days",
+          "status_scope": "unspecified",
+          "freshness": "current_local",
+          "information_source": "local_business_data",
+          "operation_policy": "allow_new_operations",
+          "identifier_display": "auto",
+          "requested_fields": [
+            "count",
+            "amount",
+            "currency",
+            "item_sales_rows",
+            "scope",
+            "artifact",
+            "calculation"
+          ],
+          "direct_output_fields": [],
+          "grouped_projection": null,
+          "explanation_topics": [],
+          "calculation_count": 2,
+          "derived_calculations": [
+            {
+              "operator": "subtract",
+              "operands": [
+                {
+                  "ref": "orders.total_count"
+                },
+                {
+                  "ref": "orders.total_count"
+                }
+              ],
+              "result_kind": "count",
+              "precision": 0,
+              "show_work": true
+            },
+            {
+              "operator": "subtract",
+              "operands": [
+                {
+                  "ref": "orders.revenue_total",
+                  "currency": "TRY"
+                },
+                {
+                  "ref": "orders.revenue_total",
+                  "currency": "TRY"
+                }
+              ],
+              "result_kind": "amount",
+              "precision": 2,
+              "show_work": true
+            }
+          ],
+          "derived_calculation": null
+        },
+        {
+          "steps": [
+            {
+              "id": "step_1",
+              "operation_id": "artifacts.read",
+              "arguments_json": "{\"artifact_id\":\"obs_c828b701eb3f4f4f9fa1b9bc756f23a9\"}",
+              "depends_on": [],
+              "objective": "Pilot Ana magazasinin son 7 gun (2026-10-09..2026-10-15) siparis ozeti ve tahmini cirosini granted tarihsel gozlemden oku; tarihli kanit olarak kullan, guncel sorgu sayma.",
+              "expected_evidence": [
+                "result",
+                "observed_at",
+                "freshness",
+                "verified"
+              ]
+            },
+            {
+              "id": "step_2",
+              "operation_id": "artifacts.read",
+              "arguments_json": "{\"artifact_id\":\"obs_c1d51587f5fd418eb4b416bbbd7fa87f\"}",
+              "depends_on": [],
+              "objective": "Onceki 7 gun (2026-10-02..2026-10-08) siparis ozeti ve tahmini cirosunu granted tarihsel gozlemden oku; ayni magaza kapsamini dogrula.",
+              "expected_evidence": [
+                "result",
+                "observed_at",
+                "freshness",
+                "verified"
+              ]
+            },
+            {
+              "id": "step_3",
+              "operation_id": "artifacts.read",
+              "arguments_json": "{\"artifact_id\":\"obs_df29ba808d334efa9f1abbdf1083bda7\"}",
+              "depends_on": [],
+              "objective": "Son 7 gunun urun kalemi satis ozetini (siparis ve brut tutar) granted tarihsel gozlemden oku; doviz ayrik tutulacak.",
+              "expected_evidence": [
+                "result",
+                "observed_at",
+                "freshness",
+                "verified"
+              ]
+            },
+            {
+              "id": "step_4",
+              "operation_id": "artifacts.read",
+              "arguments_json": "{\"artifact_id\":\"obs_508a66bb869c43e89f26668b1eeb6979\"}",
+              "depends_on": [],
+              "objective": "Onceki 7 gunun urun kalemi satis ozetini granted tarihsel gozlemden oku; donem etiketini kanit olarak tasi.",
+              "expected_evidence": [
+                "result",
+                "observed_at",
+                "freshness",
+                "verified"
+              ]
+            },
+            {
+              "id": "step_5",
+              "operation_id": "artifacts.read",
+              "arguments_json": "{\"artifact_id\":\"obs_e6280b40342e49c4826a48c905a8a3cd\"}",
+              "depends_on": [],
+              "objective": "Kayitli finans hareketlerinin currency_totals doviz ayrik ozetini granted tarihsel gozlemden oku; bu gerceklesen banka bakiyesi degil olarak isaretle.",
+              "expected_evidence": [
+                "result",
+                "observed_at",
+                "freshness",
+                "verified"
+              ]
+            },
+            {
+              "id": "step_6",
+              "operation_id": "artifacts.read",
+              "arguments_json": "{\"artifact_id\":\"obs_52e915035658428bbc788f7ff1ec4462\"}",
+              "depends_on": [],
+              "objective": "Stoga bagli degeri stock_value_by_currency satirlarinda doviz ayrik granted tarihsel gozlemden oku; degerleme kapsamini kaydet.",
+              "expected_evidence": [
+                "result",
+                "observed_at",
+                "freshness",
+                "verified"
+              ]
+            },
+            {
+              "id": "step_7",
+              "operation_id": "analysis.calculate",
+              "arguments_json": "{\"sources\":[{\"source_id\":\"sum_cur\",\"source_step_id\":\"step_1\",\"operation_id\":\"orders.summary\",\"result\":{\"$from_step\":\"step_1\",\"path\":\"tool_result\"}},{\"source_id\":\"sum_prev\",\"source_step_id\":\"step_2\",\"operation_id\":\"orders.summary\",\"result\":{\"$from_step\":\"step_2\",\"path\":\"tool_result\"}}],\"calculations\":[{\"calculation_id\":\"order_count_difference\",\"operator\":\"subtract\",\"operands\":[{\"source_id\":\"sum_cur\",\"path\":\"total_orders\"},{\"source_id\":\"sum_prev\",\"path\":\"total_orders\"}],\"precision\":0,\"result_unit\":\"native\"},{\"calculation_id\":\"revenue_amount_difference\",\"operator\":\"subtract\",\"operands\":[{\"source_id\":\"sum_cur\",\"path\":\"estimated_revenue\"},{\"source_id\":\"sum_prev\",\"path\":\"estimated_revenue\"}],\"precision\":2,\"result_unit\":\"native\"}],\"comparisons\":[{\"comparison_id\":\"order_count_vs_prev\",\"operator\":\"greater_than\",\"left\":{\"source_id\":\"sum_cur\",\"path\":\"total_orders\"},\"right\":{\"source_id\":\"sum_prev\",\"path\":\"total_orders\"}}]}",
+              "depends_on": [
+                "step_1",
+                "step_2"
+              ],
+              "objective": "Iki donemin siparis sayisi farkini, tahmini ciro farkini ve donem karsilastirmasini kaynak bagli aritmetikle dogrula; tek doviz varsayimi yok, doviz uyusmazligi reddedilir.",
+              "expected_evidence": [
+                "verified",
+                "evidence_hash",
+                "verified_calculations",
+                "verified_comparisons"
+              ]
+            },
+            {
+              "id": "step_8",
+              "operation_id": "reports.build_snapshot",
+              "arguments_json": "{\"title\":\"Pilot Ana - 7 Gunluk Siparis, Stok ve Finans Raporu\",\"sources\":[{\"source_id\":\"sum_cur\",\"source_step_id\":\"step_1\",\"operation_id\":\"orders.summary\",\"result\":{\"$from_step\":\"step_1\",\"path\":\"tool_result\"}},{\"source_id\":\"sum_prev\",\"source_step_id\":\"step_2\",\"operation_id\":\"orders.summary\",\"result\":{\"$from_step\":\"step_2\",\"path\":\"tool_result\"}},{\"source_id\":\"items_cur\",\"source_step_id\":\"step_3\",\"operation_id\":\"orders.item_sales_summary\",\"result\":{\"$from_step\":\"step_3\",\"path\":\"tool_result\"}},{\"source_id\":\"items_prev\",\"source_step_id\":\"step_4\",\"operation_id\":\"orders.item_sales_summary\",\"result\":{\"$from_step\":\"step_4\",\"path\":\"tool_result\"}},{\"source_id\":\"fin\",\"source_step_id\":\"step_5\",\"operation_id\":\"finance.cashflow_summary\",\"result\":{\"$from_step\":\"step_5\",\"path\":\"tool_result\"}},{\"source_id\":\"stk\",\"source_step_id\":\"step_6\",\"operation_id\":\"stock.inventory_overview\",\"result\":{\"$from_step\":\"step_6\",\"path\":\"tool_result\"}},{\"source_id\":\"cmp\",\"source_step_id\":\"step_7\",\"operation_id\":\"analysis.calculate\",\"result\":{\"$from_step\":\"step_7\",\"path\":\"tool_result\"}}],\"sheets\":[{\"name\":\"Ozet_Karsilastirma\",\"source_id\":\"cmp\",\"rows_path\":\"verified_calculations\",\"columns\":[{\"key\":\"calculation_id\",\"label\":\"Hesap\",\"source_path\":\"calculation_id\",\"data_type\":\"string\"},{\"key\":\"result\",\"label\":\"Sonuc\",\"source_path\":\"result\",\"data_type\":\"number\"}]},{\"name\":\"Siparis_Son7Gun\",\"source_id\":\"sum_cur\",\"rows_path\":\"\",\"columns\":[{\"key\":\"period_label\",\"label\":\"Donem\",\"source_path\":\"period_label\",\"data_type\":\"string\"},{\"key\":\"total_orders\",\"label\":\"Siparis Sayisi\",\"source_path\":\"total_orders\",\"data_type\":\"integer\"},{\"key\":\"cancelled_orders\",\"label\":\"Iptal Sayisi\",\"source_path\":\"cancelled_orders\",\"data_type\":\"integer\"},{\"key\":\"estimated_revenue\",\"label\":\"Tahmini Ciro\",\"source_path\":\"estimated_revenue\",\"data_type\":\"number\"},{\"key\":\"currency\",\"label\":\"Doviz\",\"source_path\":\"currency\",\"data_type\":\"string\"},{\"key\":\"revenue_by_currency\",\"label\":\"Ciro Doviz Kirilimi\",\"source_path\":\"revenue_by_currency\",\"data_type\":\"string\"},{\"key\":\"start_ms\",\"label\":\"Baslangic\",\"source_path\":\"start_ms\",\"data_type\":\"integer\"},{\"key\":\"end_ms\",\"label\":\"Bitis\",\"source_path\":\"end_ms\",\"data_type\":\"integer\"},{\"key\":\"source_snapshot_hash\",\"label\":\"Kaynak_hash\",\"source_path\":\"source_snapshot_hash\",\"data_type\":\"string\"}]},{\"name\":\"Siparis_Onceki7Gun\",\"source_id\":\"sum_prev\",\"rows_path\":\"\",\"columns\":[{\"key\":\"period_label\",\"label\":\"Donem\",\"source_path\":\"period_label\",\"data_type\":\"string\"},{\"key\":\"total_orders\",\"label\":\"Siparis Sayisi\",\"source_path\":\"total_orders\",\"data_type\":\"integer\"},{\"key\":\"cancelled_orders\",\"label\":\"Iptal Sayisi\",\"source_path\":\"cancelled_orders\",\"data_type\":\"integer\"},{\"key\":\"estimated_revenue\",\"label\":\"Tahmini Ciro\",\"source_path\":\"estimated_revenue\",\"data_type\":\"number\"},{\"key\":\"currency\",\"label\":\"Doviz\",\"source_path\":\"currency\",\"data_type\":\"string\"},{\"key\":\"revenue_by_currency\",\"label\":\"Ciro Doviz Kirilimi\",\"source_path\":\"revenue_by_currency\",\"data_type\":\"string\"},{\"key\":\"start_ms\",\"label\":\"Baslangic\",\"source_path\":\"start_ms\",\"data_type\":\"integer\"},{\"key\":\"end_ms\",\"label\":\"Bitis\",\"source_path\":\"end_ms\",\"data_type\":\"integer\"},{\"key\":\"source_snapshot_hash\",\"label\":\"Kaynak_hash\",\"source_path\":\"source_snapshot_hash\",\"data_type\":\"string\"}]},{\"name\":\"Satis_Son7Gun\",\"source_id\":\"items_cur\",\"rows_path\":\"rows\",\"columns\":[{\"key\":\"quantity\",\"label\":\"Adet\",\"source_path\":\"quantity\",\"data_type\":\"integer\"},{\"key\":\"quantity_unit\",\"label\":\"Birim\",\"source_path\":\"quantity_unit\",\"data_type\":\"string\"}]},{\"name\":\"Satis_Onceki7Gun\",\"source_id\":\"items_prev\",\"rows_path\":\"rows\",\"columns\":[{\"key\":\"quantity\",\"label\":\"Adet\",\"source_path\":\"quantity\",\"data_type\":\"integer\"},{\"key\":\"quantity_unit\",\"label\":\"Birim\",\"source_path\":\"quantity_unit\",\"data_type\":\"string\"}]},{\"name\":\"Stok\",\"source_id\":\"stk\",\"rows_path\":\"stock_value_by_currency\",\"columns\":[{\"key\":\"currency\",\"label\":\"Doviz\",\"source_path\":\"currency\",\"data_type\":\"string\"},{\"key\":\"amount\",\"label\":\"Deger\",\"source_path\":\"amount\",\"data_type\":\"number\"}]},{\"name\":\"Stok_Ozet\",\"source_id\":\"stk\",\"rows_path\":\"\",\"columns\":[{\"key\":\"total_items\",\"label\":\"Toplam Kart\",\"source_path\":\"total_items\",\"data_type\":\"integer\"},{\"key\":\"active_items\",\"label\":\"Aktif Kart\",\"source_path\":\"active_items\",\"data_type\":\"integer\"},{\"key\":\"stock_valuation_complete\",\"label\":\"Degerleme Tam\",\"source_path\":\"stock_valuation_complete\",\"data_type\":\"boolean\"},{\"key\":\"valuation_missing_items\",\"label\":\"Degerlemesiz Kart\",\"source_path\":\"valuation_missing_items\",\"data_type\":\"integer\"}]},{\"name\":\"Finans\",\"source_id\":\"fin\",\"rows_path\":\"currency_totals\",\"columns\":[{\"key\":\"currency\",\"label\":\"Doviz\",\"source_path\":\"currency\",\"data_type\":\"string\"},{\"key\":\"marketplace_credit\",\"label\":\"Pazaryeri Alacak\",\"source_path\":\"marketplace_credit\",\"data_type\":\"number\"},{\"key\":\"marketplace_debt\",\"label\":\"Pazaryeri Borc\",\"source_path\":\"marketplace_debt\",\"data_type\":\"number\"},{\"key\":\"marketplace_net\",\"label\":\"Pazaryeri Net\",\"source_path\":\"marketplace_net\",\"data_type\":\"number\"},{\"key\":\"manual_in\",\"label\":\"Manuel Giren\",\"source_path\":\"manual_in\",\"data_type\":\"number\"},{\"key\":\"manual_out\",\"label\":\"Manuel Cikan\",\"source_path\":\"manual_out\",\"data_type\":\"number\"},{\"key\":\"combined_net\",\"label\":\"Birlesik Net\",\"source_path\":\"combined_net\",\"data_type\":\"number\"}]}],\"notes\":[{\"kind\":\"assumption\",\"source_ids\":[\"sum_cur\",\"sum_prev\",\"items_cur\",\"items_prev\",\"fin\",\"stk\"],\"text\":\"Tum veriler granted tarihsel gozlemlerden (fresh_read=false) alinmistir; guncel sorgu veya islem onaji degildir; kaynak revision/snapshot hash kaynak kapsamini belirler.\"},{\"kind\":\"hypothesis\",\"source_ids\":[\"cmp\"],\"text\":\"Donemler arasi siparis ve ciro degisimi nedenleri kaynak verisinden kanitlanamaz; yalnizca gozlemlenen farklar raporlanir.\"},{\"kind\":\"recommendation\",\"source_ids\":[\"stk\"],\"text\":\"Degerlemesi eksik stok kartlari icin maliyet girisi tamamlanmali; stoga bagli deger doviz bazinda ayri degerlendirilmelidir.\"}]}",
+              "depends_on": [
+                "step_1",
+                "step_2",
+                "step_3",
+                "step_4",
+                "step_5",
+                "step_6",
+                "step_7"
+              ],
+              "objective": "Cok sayfali rapor snapshotini kur: ozet karsilastirma, iki donem siparis satirlari, satis kalemleri, stok ve finans sayfalari; dovizleri ayri tut, varsayim/onerileri Model Notlari sayfasinda ayri isaretle; dosya yazma.",
+              "expected_evidence": [
+                "report_snapshot",
+                "snapshot_id",
+                "data_row_count",
+                "model_note_count",
+                "source_receipts"
+              ]
+            },
+            {
+              "id": "step_9",
+              "operation_id": "reports.xlsx.prepare",
+              "arguments_json": "{\"report_snapshot\":{\"$from_step\":\"step_8\",\"path\":\"tool_result.report_snapshot\"},\"output_path\":\"pilot_ana_rapor_cok_sayfali.xlsx\"}",
+              "depends_on": [
+                "step_8"
+              ],
+              "objective": "Olusturulan rapor snapshotini XLSX onay paketine hazirla; dosyayi kaydetmek icin kullanici onayini bekle.",
+              "expected_evidence": [
+                "valid",
+                "action",
+                "output_path",
+                "snapshot_id"
+              ]
+            }
+          ]
+        },
+        {
+          "steps": [
+            {
+              "id": "step_1",
+              "operation_id": "artifacts.read",
+              "arguments_json": "{\"artifact_id\":\"obs_c828b701eb3f4f4f9fa1b9bc756f23a9\"}",
+              "depends_on": [],
+              "objective": "Pilot Ana magazasinin son 7 gun (2026-10-09..2026-10-15) siparis ozetini ve tahmini cirosini granted tarihsel gozlemden oku; tarihli kanit olarak kullan, guncel sorgu sayma.",
+              "expected_evidence": [
+                "result",
+                "observed_at",
+                "freshness",
+                "verified"
+              ]
+            },
+            {
+              "id": "step_2",
+              "operation_id": "artifacts.read",
+              "arguments_json": "{\"artifact_id\":\"obs_c1d51587f5fd418eb4b416bbbd7fa87f\"}",
+              "depends_on": [],
+              "objective": "Onceki 7 gun (2026-10-02..2026-10-08) siparis ozetini ve tahmini cirosunu granted tarihsel gozlemden oku; ayni magaza kapsamini dogrula.",
+              "expected_evidence": [
+                "result",
+                "observed_at",
+                "freshness",
+                "verified"
+              ]
+            },
+            {
+              "id": "step_3",
+              "operation_id": "artifacts.read",
+              "arguments_json": "{\"artifact_id\":\"obs_df29ba808d334efa9f1abbdf1083bda7\"}",
+              "depends_on": [],
+              "objective": "Son 7 gunun urun kalemi satis ozetini (siparis, adet ve brut tutar) granted tarihsel gozlemden oku; doviz ayrik tutulacak.",
+              "expected_evidence": [
+                "result",
+                "observed_at",
+                "freshness",
+                "verified"
+              ]
+            },
+            {
+              "id": "step_4",
+              "operation_id": "artifacts.read",
+              "arguments_json": "{\"artifact_id\":\"obs_508a66bb869c43e89f26668b1eeb6979\"}",
+              "depends_on": [],
+              "objective": "Onceki 7 gunun urun kalemi satis ozetini granted tarihsel gozlemden oku; donem etiketini kanit olarak tasi.",
+              "expected_evidence": [
+                "result",
+                "observed_at",
+                "freshness",
+                "verified"
+              ]
+            },
+            {
+              "id": "step_5",
+              "operation_id": "artifacts.read",
+              "arguments_json": "{\"artifact_id\":\"obs_e6280b40342e49c4826a48c905a8a3cd\"}",
+              "depends_on": [],
+              "objective": "Kayitli finans hareketlerinin currency_totals doviz ayrik ozetini granted tarihsel gozlemden oku; gerceklesen banka bakiyesi olmadigini ve kapsam partial oldugunu kaydet.",
+              "expected_evidence": [
+                "result",
+                "observed_at",
+                "freshness",
+                "verified"
+              ]
+            },
+            {
+              "id": "step_6",
+              "operation_id": "artifacts.read",
+              "arguments_json": "{\"artifact_id\":\"obs_52e915035658428bbc788f7ff1ec4462\"}",
+              "depends_on": [],
+              "objective": "Stoga bagli degeri stock_value_by_currency satirlarinda doviz ayrik granted tarihsel gozlemden oku; degerleme kapsamini kaydet.",
+              "expected_evidence": [
+                "result",
+                "observed_at",
+                "freshness",
+                "verified"
+              ]
+            },
+            {
+              "id": "step_7",
+              "operation_id": "analysis.calculate",
+              "arguments_json": "{\"sources\":[{\"source_id\":\"sum_cur\",\"source_step_id\":\"step_1\",\"operation_id\":\"artifacts.read\",\"result\":{\"$from_step\":\"step_1\",\"path\":\"tool_result.result\"}},{\"source_id\":\"sum_prev\",\"source_step_id\":\"step_2\",\"operation_id\":\"artifacts.read\",\"result\":{\"$from_step\":\"step_2\",\"path\":\"tool_result.result\"}}],\"calculations\":[{\"calculation_id\":\"order_count_difference\",\"operator\":\"subtract\",\"operands\":[{\"source_id\":\"sum_cur\",\"path\":\"total_orders\"},{\"source_id\":\"sum_prev\",\"path\":\"total_orders\"}],\"precision\":0,\"result_unit\":\"native\"},{\"calculation_id\":\"revenue_amount_difference\",\"operator\":\"subtract\",\"operands\":[{\"source_id\":\"sum_cur\",\"path\":\"estimated_revenue\"},{\"source_id\":\"sum_prev\",\"path\":\"estimated_revenue\"}],\"precision\":2,\"result_unit\":\"native\"}],\"comparisons\":[{\"comparison_id\":\"order_count_vs_prev\",\"operator\":\"greater_than\",\"left\":{\"source_id\":\"sum_cur\",\"path\":\"total_orders\"},\"right\":{\"source_id\":\"sum_prev\",\"path\":\"total_orders\"}}]}",
+              "depends_on": [
+                "step_1",
+                "step_2"
+              ],
+              "objective": "Iki donemin siparis sayisi farkini, tahmini ciro farkini ve donem karsilastirmasini kaynak bagli aritmetikle dogrula; kaynaklar artifacts.read tarihsel gozlemlerinden exact baglanir, doviz uyusmazligi reddedilir.",
+              "expected_evidence": [
+                "verified",
+                "evidence_hash",
+                "verified_calculations",
+                "verified_comparisons"
+              ]
+            },
+            {
+              "id": "step_8",
+              "operation_id": "reports.build_snapshot",
+              "arguments_json": "{\"title\":\"Pilot Ana - 7 Gunluk Siparis, Stok ve Finans Raporu\",\"sources\":[{\"source_id\":\"sum_cur\",\"source_step_id\":\"step_1\",\"operation_id\":\"artifacts.read\",\"result\":{\"$from_step\":\"step_1\",\"path\":\"tool_result.result\"}},{\"source_id\":\"sum_prev\",\"source_step_id\":\"step_2\",\"operation_id\":\"artifacts.read\",\"result\":{\"$from_step\":\"step_2\",\"path\":\"tool_result.result\"}},{\"source_id\":\"items_cur\",\"source_step_id\":\"step_3\",\"operation_id\":\"artifacts.read\",\"result\":{\"$from_step\":\"step_3\",\"path\":\"tool_result.result\"}},{\"source_id\":\"items_prev\",\"source_step_id\":\"step_4\",\"operation_id\":\"artifacts.read\",\"result\":{\"$from_step\":\"step_4\",\"path\":\"tool_result.result\"}},{\"source_id\":\"fin\",\"source_step_id\":\"step_5\",\"operation_id\":\"artifacts.read\",\"result\":{\"$from_step\":\"step_5\",\"path\":\"tool_result.result\"}},{\"source_id\":\"stk\",\"source_step_id\":\"step_6\",\"operation_id\":\"artifacts.read\",\"result\":{\"$from_step\":\"step_6\",\"path\":\"tool_result.result\"}},{\"source_id\":\"cmp\",\"source_step_id\":\"step_7\",\"operation_id\":\"analysis.calculate\",\"result\":{\"$from_step\":\"step_7\",\"path\":\"tool_result\"}}],\"sheets\":[{\"name\":\"Ozet_Karsilastirma\",\"source_id\":\"cmp\",\"rows_path\":\"verified_calculations\",\"columns\":[{\"key\":\"calculation_id\",\"label\":\"Hesap\",\"source_path\":\"calculation_id\",\"data_type\":\"string\"},{\"key\":\"result\",\"label\":\"Sonuc\",\"source_path\":\"result\",\"data_type\":\"number\"}]},{\"name\":\"Siparis_Son7Gun\",\"source_id\":\"sum_cur\",\"rows_path\":\"\",\"columns\":[{\"key\":\"period_label\",\"label\":\"Donem\",\"source_path\":\"period_label\",\"data_type\":\"string\"},{\"key\":\"total_orders\",\"label\":\"Siparis Sayisi\",\"source_path\":\"total_orders\",\"data_type\":\"integer\"},{\"key\":\"cancelled_orders\",\"label\":\"Iptal Sayisi\",\"source_path\":\"cancelled_orders\",\"data_type\":\"integer\"},{\"key\":\"estimated_revenue\",\"label\":\"Tahmini Ciro\",\"source_path\":\"estimated_revenue\",\"data_type\":\"number\"},{\"key\":\"currency\",\"label\":\"Doviz\",\"source_path\":\"currency\",\"data_type\":\"string\"},{\"key\":\"revenue_by_currency\",\"label\":\"Ciro Doviz Kirilimi\",\"source_path\":\"revenue_by_currency\",\"data_type\":\"string\"},{\"key\":\"start_ms\",\"label\":\"Baslangic\",\"source_path\":\"start_ms\",\"data_type\":\"integer\"},{\"key\":\"end_ms\",\"label\":\"Bitis\",\"source_path\":\"end_ms\",\"data_type\":\"integer\"},{\"key\":\"source_snapshot_hash\",\"label\":\"Kaynak_hash\",\"source_path\":\"source_snapshot_hash\",\"data_type\":\"string\"}]},{\"name\":\"Siparis_Onceki7Gun\",\"source_id\":\"sum_prev\",\"rows_path\":\"\",\"columns\":[{\"key\":\"period_label\",\"label\":\"Donem\",\"source_path\":\"period_label\",\"data_type\":\"string\"},{\"key\":\"total_orders\",\"label\":\"Siparis Sayisi\",\"source_path\":\"total_orders\",\"data_type\":\"integer\"},{\"key\":\"cancelled_orders\",\"label\":\"Iptal Sayisi\",\"source_path\":\"cancelled_orders\",\"data_type\":\"integer\"},{\"key\":\"estimated_revenue\",\"label\":\"Tahmini Ciro\",\"source_path\":\"estimated_revenue\",\"data_type\":\"number\"},{\"key\":\"currency\",\"label\":\"Doviz\",\"source_path\":\"currency\",\"data_type\":\"string\"},{\"key\":\"revenue_by_currency\",\"label\":\"Ciro Doviz Kirilimi\",\"source_path\":\"revenue_by_currency\",\"data_type\":\"string\"},{\"key\":\"start_ms\",\"label\":\"Baslangic\",\"source_path\":\"start_ms\",\"data_type\":\"integer\"},{\"key\":\"end_ms\",\"label\":\"Bitis\",\"source_path\":\"end_ms\",\"data_type\":\"integer\"},{\"key\":\"source_snapshot_hash\",\"label\":\"Kaynak_hash\",\"source_path\":\"source_snapshot_hash\",\"data_type\":\"string\"}]},{\"name\":\"Satis_Son7Gun\",\"source_id\":\"items_cur\",\"rows_path\":\"rows\",\"columns\":[{\"key\":\"quantity\",\"label\":\"Adet\",\"source_path\":\"quantity\",\"data_type\":\"integer\"},{\"key\":\"quantity_unit\",\"label\":\"Birim\",\"source_path\":\"quantity_unit\",\"data_type\":\"string\"}]},{\"name\":\"Satis_Onceki7Gun\",\"source_id\":\"items_prev\",\"rows_path\":\"rows\",\"columns\":[{\"key\":\"quantity\",\"label\":\"Adet\",\"source_path\":\"quantity\",\"data_type\":\"integer\"},{\"key\":\"quantity_unit\",\"label\":\"Birim\",\"source_path\":\"quantity_unit\",\"data_type\":\"string\"}]},{\"name\":\"Stok\",\"source_id\":\"stk\",\"rows_path\":\"stock_value_by_currency\",\"columns\":[{\"key\":\"currency\",\"label\":\"Doviz\",\"source_path\":\"currency\",\"data_type\":\"string\"},{\"key\":\"amount\",\"label\":\"Deger\",\"source_path\":\"amount\",\"data_type\":\"number\"}]},{\"name\":\"Stok_Ozet\",\"source_id\":\"stk\",\"rows_path\":\"\",\"columns\":[{\"key\":\"total_items\",\"label\":\"Toplam Kart\",\"source_path\":\"total_items\",\"data_type\":\"integer\"},{\"key\":\"active_items\",\"label\":\"Aktif Kart\",\"source_path\":\"active_items\",\"data_type\":\"integer\"},{\"key\":\"stock_valuation_complete\",\"label\":\"Degerleme Tam\",\"source_path\":\"stock_valuation_complete\",\"data_type\":\"boolean\"},{\"key\":\"valuation_missing_items\",\"label\":\"Degerlemesiz Kart\",\"source_path\":\"valuation_missing_items\",\"data_type\":\"integer\"}]},{\"name\":\"Finans\",\"source_id\":\"fin\",\"rows_path\":\"currency_totals\",\"columns\":[{\"key\":\"currency\",\"label\":\"Doviz\",\"source_path\":\"currency\",\"data_type\":\"string\"},{\"key\":\"marketplace_credit\",\"label\":\"Pazaryeri Alacak\",\"source_path\":\"marketplace_credit\",\"data_type\":\"number\"},{\"key\":\"marketplace_debt\",\"label\":\"Pazaryeri Borc\",\"source_path\":\"marketplace_debt\",\"data_type\":\"number\"},{\"key\":\"marketplace_net\",\"label\":\"Pazaryeri Net\",\"source_path\":\"marketplace_net\",\"data_type\":\"number\"},{\"key\":\"manual_in\",\"label\":\"Manuel Giren\",\"source_path\":\"manual_in\",\"data_type\":\"number\"},{\"key\":\"manual_out\",\"label\":\"Manuel Cikan\",\"source_path\":\"manual_out\",\"data_type\":\"number\"},{\"key\":\"combined_net\",\"label\":\"Birlesik Net\",\"source_path\":\"combined_net\",\"data_type\":\"number\"}]}],\"notes\":[{\"kind\":\"assumption\",\"source_ids\":[\"sum_cur\",\"sum_prev\",\"items_cur\",\"items_prev\",\"fin\",\"stk\"],\"text\":\"Tum veriler granted tarihsel gozlemlerden (fresh_read=false) alinmistir; guncel sorgu veya islem onaji degildir; kaynak revision/snapshot hash kaynak kapsamini belirler. Finans kapsami gozlemlenen donemle sinirlidir.\"},{\"kind\":\"hypothesis\",\"source_ids\":[\"cmp\"],\"text\":\"Donemler arasi siparis ve ciro degisimi nedenleri kaynak verisinden kanitlanamaz; yalnizca gozlemlenen farklar raporlanir.\"},{\"kind\":\"recommendation\",\"source_ids\":[\"stk\"],\"text\":\"Degerlemesi eksik stok kartlari icin maliyet girisi tamamlanmali; stoga bagli deger doviz bazinda ayri degerlendirilmelidir. Banka/kasa bakiyesi ve magaza eslestirmesi kanit olmadan cikarilmamalidir.\"}]}",
+              "depends_on": [
+                "step_1",
+                "step_2",
+                "step_3",
+                "step_4",
+                "step_5",
+                "step_6",
+                "step_7"
+              ],
+              "objective": "Cok sayfali rapor snapshotini kur: ozet karsilastirma, iki donem siparis satirlari, satis kalemleri, stok ve finans sayfalari; kaynaklari artifacts.read tarihsel gozlemlerinden exact bagla, dovizleri ayri tut, varsayim/onerileri Model Notlarinda ayri isaretle; dosya yazma.",
+              "expected_evidence": [
+                "snapshot_id",
+                "data_row_count",
+                "model_note_count",
+                "source_receipts"
+              ]
+            },
+            {
+              "id": "step_9",
+              "operation_id": "reports.xlsx.prepare",
+              "arguments_json": "{\"report_snapshot\":{\"$from_step\":\"step_8\",\"path\":\"tool_result.report_snapshot\"},\"output_path\":\"pilot_ana_rapor_cok_sayfali.xlsx\"}",
+              "depends_on": [
+                "step_8"
+              ],
+              "objective": "Olusturulan rapor snapshotini XLSX onay paketine hazirla; dosyayi kaydetmek icin kullanici onayini bekle.",
+              "expected_evidence": [
+                "valid",
+                "action",
+                "output_path",
+                "snapshot_id"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "public-reference-deepseek-2": {
+      "raw_campaign": "output/agentic-2026-10-15/public-reference-deepseek-2.json",
+      "raw_sha256": "9544267ad8adfcbc499b857a0cf746c1e111f2ca0a42420b504be52520437d1e",
+      "prompt": "Bu kamuya açık resmî Trendyol belgesini aç: https://developers.trendyol.com/docs/ortak-etiket-barkod-talebi-createcommonlabel Yalnız bu belgede anlatılan hizmetin amacını ve kapsamını iki kısa cümleyle, kaynak bağlantısını göstererek açıkla.",
+      "interpretation": {
+        "mode": "act",
+        "domain": "orders",
+        "objective": "Bu kamuya açık resmî Trendyol belgesini aç: https://developers.trendyol.com/docs/ortak-etiket-barkod-talebi-createcommonlabel Yalnız bu belgede anlatılan hizmetin amacını ve kapsamını iki kısa cümleyle, kaynak bağlantısını göstererek açıkla.",
+        "intent_kind": "action",
+        "request_shape": "focused_analysis",
+        "explanation_topics": [],
+        "information_source": "external_public_web",
+        "operation_policy": "allow_new_operations",
+        "comparison_policy": "not_requested",
+        "comparison_policy_source": "model_authored",
+        "calculation_grouping": "none",
+        "calculation_count": 0,
+        "requested_fields": [
+          "web_sources",
+          "research_findings",
+          "scope"
+        ],
+        "direct_output_fields": [
+          "web_sources",
+          "research_findings"
+        ],
+        "identifier_display": "auto",
+        "reason": "Kullanıcı kamuya açık harici bir belgeyi okumayı ve içeriğini özetlemeyi istiyor; bu yeni bir harici web okumasıdır.",
+        "requires_clarification": false,
+        "clarification": "",
+        "missing_input": "none",
+        "population_basis": "entity_records",
+        "planner_invoked": true,
+        "valid": true,
+        "decision_path": "typed_model_turn_interpretation",
+        "semantic_corrections": [
+          "explicit_label_prepare_mode_to_act",
+          "explicit_label_prepare_intent_to_action",
+          "explicit_label_prepare_domain_to_orders"
+        ],
+        "semantic_contract": {
+          "information_source": "external_public_web"
+        },
+        "correction_target": {},
+        "intent_signal_observability": {
+          "normalized_message_sha256": "17e8707229b0d200c31e065e60f47b45c7a1cbad1f8d2754e5bca449c3142719",
+          "normalized_message_length": 241,
+          "item_sales_report": false,
+          "report_export": false,
+          "report_export_prohibited": false
+        },
+        "turn_contract_provenance": {
+          "initial": {
+            "mode": "inspect",
+            "domain": "web",
+            "intent_kind": "data_read",
+            "request_shape": "focused_analysis",
+            "information_source": "external_public_web",
+            "operation_policy": "allow_new_operations",
+            "missing_input": "none",
+            "population_basis": "entity_records",
+            "metric_population": "missing_or_invalid",
+            "requires_clarification": false,
+            "response_sha256": "cccf4e1f048463a0e1783f5abba39173807b501758abb3f76fec4611126658fc"
+          },
+          "accepted": {
+            "mode": "act",
+            "domain": "orders",
+            "intent_kind": "action",
+            "request_shape": "focused_analysis",
+            "information_source": "external_public_web",
+            "operation_policy": "allow_new_operations",
+            "missing_input": "none",
+            "population_basis": "entity_records",
+            "metric_population": "missing_or_invalid",
+            "requires_clarification": false
+          },
+          "current_turn_business_observation": "not_read",
+          "input_sha256": "9b9f0cdda1f54105c94e53a2d725e4bff02a029cd0ed0174acc6f06c6f16d1d5",
+          "application_prompt_sha256": "39709d2fe7f7cdd09fdd14fd36b290bba5243a429c4858321245bc59379e1705",
+          "population_alignment": {
+            "required": false
+          }
+        },
+        "formula_contract_provenance": {
+          "model_response_sha256": "cccf4e1f048463a0e1783f5abba39173807b501758abb3f76fec4611126658fc",
+          "initial": [
+            {
+              "operator": "add",
+              "result_kind": "scalar"
+            }
+          ],
+          "accepted": [],
+          "formula_repair_invoked": false
+        }
+      },
+      "responses": [
+        {
+          "calculation_grouping": "none",
+          "clarification": "",
+          "comparison_policy": "not_requested",
+          "derived_calculations": [
+            {
+              "operands": [
+                {
+                  "ref": "literal",
+                  "value": 1
+                }
+              ],
+              "operator": "add",
+              "precision": 0,
+              "result_kind": "scalar",
+              "show_work": false
+            }
+          ],
+          "direct_output_fields": [
+            "web_sources",
+            "research_findings"
+          ],
+          "domain": "web",
+          "entity": "none",
+          "explanation_topics": [],
+          "freshness": "unspecified",
+          "grouped_projection": null,
+          "identifier_display": "auto",
+          "information_source": "external_public_web",
+          "intent_kind": "data_read",
+          "metric": "summary",
+          "metric_population": null,
+          "missing_input": "none",
+          "mode": "inspect",
+          "objective": "Açık resmî Trendyol belgesindeki (ortak etiket/barkod talebi) hizmetin amacını ve kapsamını iki kısa cümleyle, kaynak bağlantısıyla açıklamak",
+          "operation_policy": "allow_new_operations",
+          "period": "unspecified",
+          "population_basis": "entity_records",
+          "reason": "Kullanıcı kamuya açık harici bir belgeyi okumayı ve içeriğini özetlemeyi istiyor; bu yeni bir harici web okumasıdır.",
+          "record_scope": "unspecified",
+          "request_shape": "focused_analysis",
+          "requested_fields": [
+            "web_sources",
+            "research_findings"
+          ],
+          "requires_clarification": false,
+          "status_codes": [],
+          "status_scope": "unspecified"
+        },
+        {
+          "steps": [
+            {
+              "arguments_json": "{\"url\":\"https://developers.trendyol.com/docs/ortak-etiket-barkod-talebi-createcommonlabel\",\"official\":true}",
+              "depends_on": [],
+              "expected_evidence": [
+                "url",
+                "source_class",
+                "source_domain",
+                "web_observation.title",
+                "web_observation.relevant_text",
+                "freshness"
+              ],
+              "id": "step_1",
+              "objective": "Verilen resmî Trendyol belgesini aç; belgenin amacı ve kapsamı için authoritative metni al.",
+              "operation_id": "web.open"
+            }
+          ]
+        },
+        {
+          "steps": [
+            {
+              "id": "step_1",
+              "operation_id": "web.open",
+              "arguments_json": "{\"url\":\"https://developers.trendyol.com/docs/ortak-etiket-barkod-talebi-createcommonlabel\",\"official\":true}",
+              "depends_on": [],
+              "objective": "Verilen resmî Trendyol belgesini aç; belgenin amacı ve kapsamı için authoritative metni al.",
+              "expected_evidence": [
+                "url",
+                "source_class",
+                "source_domain",
+                "web_observation.title",
+                "web_observation.relevant_text",
+                "freshness"
+              ]
+            }
+          ],
+          "reason": "Kullanıcı hedefi yalnızca belirtilen kamuya açık resmî Trendyol belgesinin açılıp amacının ve kapsamının iki cümleyle açıklanmasıdır. Tek zorunlu atomic adım web.open ile exact URL'yi açmaktır; başka read veya write operation gerekmez."
+        }
+      ]
+    }
+  }
+}

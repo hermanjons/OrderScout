@@ -1,0 +1,7 @@
+{
+  "search_limit": 16,
+  "prefer_extensions": [
+    ".gguf"
+  ]
+}
+

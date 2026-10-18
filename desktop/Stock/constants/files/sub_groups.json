@@ -1,0 +1,175 @@
+{
+  "Elektronik & Teknoloji": [
+    "Telefon",
+    "Tablet",
+    "Bilgisayar",
+    "Monitör",
+    "Yazıcı",
+    "Ağ Ürünleri",
+    "Depolama",
+    "Aksesuar"
+  ],
+  "Moda & Giyim": [
+    "Kadın Giyim",
+    "Erkek Giyim",
+    "Çocuk Giyim",
+    "İç Giyim",
+    "Dış Giyim",
+    "Spor Giyim",
+    "Büyük Beden",
+    "Tesettür"
+  ],
+  "Ayakkabı & Çanta": [
+    "Sneaker",
+    "Klasik Ayakkabı",
+    "Bot",
+    "Sandalet",
+    "Sırt Çantası",
+    "Omuz Çantası",
+    "Valiz",
+    "Cüzdan"
+  ],
+  "Kozmetik & Kişisel Bakım": [
+    "Cilt Bakımı",
+    "Makyaj",
+    "Saç Bakımı",
+    "Parfüm",
+    "Ağız Bakımı",
+    "Erkek Bakım",
+    "Güneş Ürünleri",
+    "Dermokozmetik"
+  ],
+  "Ev, Yaşam & Mobilya": [
+    "Mobilya",
+    "Ev Tekstili",
+    "Mutfak",
+    "Aydınlatma",
+    "Dekorasyon",
+    "Banyo",
+    "Temizlik",
+    "Organizasyon"
+  ],
+  "Anne, Bebek & Çocuk": [
+    "Bebek Giyim",
+    "Bebek Bezi",
+    "Mama & Beslenme",
+    "Puset & Oto Koltuğu",
+    "Bebek Odası",
+    "Anne Bakım",
+    "Eğitici Ürünler",
+    "Çocuk Güvenliği"
+  ],
+  "Spor & Outdoor": [
+    "Fitness",
+    "Koşu",
+    "Bisiklet",
+    "Kamp",
+    "Doğa Sporları",
+    "Takım Sporları",
+    "Su Sporları",
+    "Kış Sporları"
+  ],
+  "Otomotiv & Motosiklet": [
+    "Yedek Parça",
+    "Aksesuar",
+    "Yağ & Kimyasal",
+    "Lastik",
+    "Elektronik",
+    "Motosiklet Ekipmanı",
+    "Bakım Ürünleri",
+    "Güvenlik"
+  ],
+  "Hırdavat, Yapı Market & Bahçe": [
+    "El Aletleri",
+    "Elektrikli Aletler",
+    "Boya & İzolasyon",
+    "Tesisat",
+    "Bahçe",
+    "Yapı Malzemesi",
+    "İş Güvenliği",
+    "Depolama"
+  ],
+  "Ofis & Kırtasiye": [
+    "Yazı Gereçleri",
+    "Defter & Kağıt",
+    "Dosyalama",
+    "Ofis Ekipmanı",
+    "Toner & Kartuş",
+    "Okul Ürünleri",
+    "Sunum",
+    "Kesme & Yapıştırma"
+  ],
+  "Kitap, Müzik & Hobi": [
+    "Kitap",
+    "Dergi",
+    "Müzik",
+    "Enstrüman",
+    "Hobi Setleri",
+    "Modelcilik",
+    "Sanat",
+    "Koleksiyon"
+  ],
+  "Oyuncak & Oyun": [
+    "Eğitici Oyuncak",
+    "Kutu Oyunu",
+    "Yapboz",
+    "Peluş",
+    "Figür",
+    "Uzaktan Kumandalı",
+    "Bebek Oyuncak",
+    "Açık Hava Oyuncak"
+  ],
+  "Pet Shop": [
+    "Kedi Maması",
+    "Köpek Maması",
+    "Kum & Tuvalet",
+    "Aksesuar",
+    "Oyuncak",
+    "Bakım",
+    "Kafes & Akvaryum",
+    "Kuş & Kemirgen"
+  ],
+  "Market & Gıda": [
+    "Atıştırmalık",
+    "İçecek",
+    "Kahvaltılık",
+    "Temel Gıda",
+    "Dondurulmuş",
+    "Organik",
+    "Glutensiz",
+    "Şarküteri"
+  ],
+  "Sağlık & Medikal": [
+    "Vitamin & Takviye",
+    "Medikal Cihaz",
+    "Ortopedik",
+    "İlk Yardım",
+    "Hijyen",
+    "Hasta Bakım",
+    "Koruyucu Ekipman",
+    "Tıbbi Sarf"
+  ],
+  "Endüstriyel & B2B": [
+    "Üretim Sarf",
+    "Ambalaj",
+    "Etiketleme",
+    "Depo Ekipmanı",
+    "Temizlik Endüstriyel",
+    "Kurumsal Kırtasiye",
+    "İşletme Demirbaş",
+    "Toplu Tüketim"
+  ],
+  "Hizmet & Dijital İçerik": [
+    "Eğitim",
+    "Danışmanlık",
+    "Yazılım Lisansı",
+    "Abonelik",
+    "Bakım Hizmeti",
+    "Destek Paketi",
+    "Dijital Dosya",
+    "Diğer Hizmet"
+  ],
+  "Diğer": [
+    "Diğer"
+  ]
+}

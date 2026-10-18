@@ -1,0 +1,1493 @@
+{
+  "state_projection": {
+    "session_id": "c35c2ab264a74c3c9d1deee2da68b0cb",
+    "goal": "Trendyol'un kamuya açık satıcı yardım kaynaklarında kargo etiketindeki barkodun ne için kullanıldığını araştır. Sayfaları açarak doğrula ve yalnız kaynakta geçen bilgiyle kısa bir kaynaklı özet ver. Özel sipariş veya müşteri bilgilerini internete gönderme.",
+    "status": "failed",
+    "active_domain": "web",
+    "active_entities": {
+      "turn_interpretation": {
+        "mode": "inspect",
+        "domain": "web",
+        "objective": "Trendyol'un kamuya açık satıcı yardım kaynaklarında kargo etiketindeki barkodun kullanım amacını sayfaları açarak doğrulamak ve yalnız kaynakta geçen bilgiyle kısa, kaynaklı bir özet sunmak; özel sipariş veya müşteri bilgilerini internete göndermemek.",
+        "intent_kind": "data_read",
+        "request_shape": "broad_analysis",
+        "explanation_topics": [],
+        "information_source": "external_public_web",
+        "operation_policy": "allow_new_operations",
+        "comparison_policy": "not_requested",
+        "comparison_policy_source": "model_authored",
+        "calculation_grouping": "none",
+        "calculation_count": 0,
+        "requested_fields": [
+          "web_sources",
+          "research_findings"
+        ],
+        "direct_output_fields": [
+          "web_sources",
+          "research_findings"
+        ],
+        "identifier_display": "auto",
+        "reason": "Kamuya açık harici web kaynaklarında arama ve sayfa doğrulaması gerektiren bir araştırma talebi; yerel iş verisi kullanılmıyor ve gizli veri paylaşımı yasaklanıyor.",
+        "requires_clarification": false,
+        "clarification": "",
+        "missing_input": "none",
+        "population_basis": "entity_records",
+        "planner_invoked": true,
+        "valid": true,
+        "decision_path": "typed_model_turn_interpretation",
+        "semantic_corrections": [
+          "unrequested_derived_calculation_removed"
+        ],
+        "semantic_contract": {
+          "information_source": "external_public_web"
+        },
+        "correction_target": {},
+        "intent_signal_observability": {
+          "normalized_message_sha256": "6992461a2c4cf4ab873b8323c7af9a271a0c1d7f08ddc2bebe831766f956486f",
+          "normalized_message_length": 256,
+          "item_sales_report": false,
+          "report_export": false,
+          "report_export_prohibited": false
+        },
+        "turn_contract_provenance": {
+          "initial": {
+            "mode": "inspect",
+            "domain": "web",
+            "intent_kind": "data_read",
+            "request_shape": "focused_analysis",
+            "information_source": "external_public_web",
+            "operation_policy": "allow_new_operations",
+            "missing_input": "none",
+            "population_basis": "entity_records",
+            "metric_population": "missing_or_invalid",
+            "requires_clarification": false,
+            "response_sha256": "9cf0d3f73ec73ebcc38cc69831d788acd6c36ff1c60a2e9a149696313fce0dd0"
+          },
+          "accepted": {
+            "mode": "inspect",
+            "domain": "web",
+            "intent_kind": "data_read",
+            "request_shape": "broad_analysis",
+            "information_source": "external_public_web",
+            "operation_policy": "allow_new_operations",
+            "missing_input": "none",
+            "population_basis": "entity_records",
+            "metric_population": "missing_or_invalid",
+            "requires_clarification": false
+          },
+          "current_turn_business_observation": "not_read",
+          "input_sha256": "6721b2c80eda98398d07846c83877ff3233427e2b2ede60b76f0555f0055a0c6",
+          "application_prompt_sha256": "e2fadd8a89cd910e4dd84fc9bd75e84c13306f2fec32d4ade72b17c9b2033b50",
+          "population_alignment": {
+            "required": false
+          }
+        },
+        "formula_contract_provenance": {
+          "model_response_sha256": "9cf0d3f73ec73ebcc38cc69831d788acd6c36ff1c60a2e9a149696313fce0dd0",
+          "initial": [
+            {
+              "operator": "add",
+              "result_kind": "scalar"
+            }
+          ],
+          "accepted": [],
+          "formula_repair_invoked": false
+        }
+      },
+      "task_plan": {
+        "source": "llm_direct",
+        "step_ids": [
+          "step_1",
+          "step_2",
+          "step_3",
+          "step_4",
+          "step_5",
+          "step_6"
+        ],
+        "rejected_step_ids": [],
+        "fallback_step_ids": [
+          "web_search",
+          "web_open_primary",
+          "web_open_secondary",
+          "web_compare"
+        ],
+        "model_plan_authorization": {
+          "mode": "inspect",
+          "domain": "web",
+          "requested_fields": [
+            "web_sources",
+            "research_findings"
+          ],
+          "semantic_contract": {
+            "information_source": "external_public_web"
+          }
+        },
+        "step_specs": [
+          {
+            "id": "step_1",
+            "operation_id": "web.search",
+            "operation_domain": "web",
+            "arguments": {
+              "query": "Trendyol satıcı yardım kargo etiketi barkod ne için kullanılır",
+              "allowed_domains": [
+                "help.trendyol.com",
+                "seller.trendyol.com",
+                "trendyol.com"
+              ],
+              "language": "tr",
+              "country": "TR",
+              "freshness": "year",
+              "limit": 10
+            },
+            "objective": "Trendyol kamuya açık satıcı yardım kaynaklarında kargo etiketindeki barkodun kullanım amacını arayan resmi sayfaları bul.",
+            "expected_evidence": [
+              "count",
+              "evidence_status",
+              "primary_candidate",
+              "primary_official",
+              "primary_published_at",
+              "primary_title",
+              "primary_url",
+              "public_product_fields",
+              "query_summary",
+              "requires_source_open",
+              "results",
+              "search_results_are_final_evidence",
+              "secondary_candidate",
+              "secondary_official",
+              "secondary_published_at",
+              "secondary_title",
+              "secondary_url"
+            ],
+            "depends_on": []
+          },
+          {
+            "id": "step_2",
+            "operation_id": "web.open",
+            "operation_domain": "web",
+            "arguments": {
+              "url": {
+                "$from_step": "step_1",
+                "path": "tool_result.primary_url"
+              },
+              "title": {
+                "$from_step": "step_1",
+                "path": "tool_result.primary_title"
+              },
+              "published_at": {
+                "$from_step": "step_1",
+                "path": "tool_result.primary_published_at"
+              },
+              "official": {
+                "$from_step": "step_1",
+                "path": "tool_result.primary_official"
+              },
+              "query_summary": "Trendyol kargo etiketi barkod kullanımı"
+            },
+            "objective": "Arama sonucundaki birincil resmi Trendyol yardım sayfasını açıp kargo etiketi barkodu hakkındaki metni doğrula.",
+            "expected_evidence": [
+              "freshness",
+              "observation_id",
+              "prompt_injection_detected",
+              "source_class",
+              "source_domain",
+              "url",
+              "web_observation"
+            ],
+            "depends_on": [
+              "step_1"
+            ]
+          },
+          {
+            "id": "step_3",
+            "operation_id": "web.open",
+            "operation_domain": "web",
+            "arguments": {
+              "url": {
+                "$from_step": "step_1",
+                "path": "tool_result.secondary_url"
+              },
+              "title": {
+                "$from_step": "step_1",
+                "path": "tool_result.secondary_title"
+              },
+              "published_at": {
+                "$from_step": "step_1",
+                "path": "tool_result.secondary_published_at"
+              },
+              "official": {
+                "$from_step": "step_1",
+                "path": "tool_result.secondary_official"
+              },
+              "query_summary": "Trendyol kargo etiketi barkod kullanımı"
+            },
+            "objective": "Arama sonucundaki ikincil Trendyol yardım sayfasını açıp kargo etiketi barkodu hakkındaki metni doğrula.",
+            "expected_evidence": [
+              "freshness",
+              "observation_id",
+              "prompt_injection_detected",
+              "source_class",
+              "source_domain",
+              "url",
+              "web_observation"
+            ],
+            "depends_on": [
+              "step_1"
+            ]
+          },
+          {
+            "id": "step_4",
+            "operation_id": "web.find",
+            "operation_domain": "web",
+            "arguments": {
+              "web_observation": {
+                "$from_step": "step_2",
+                "path": "tool_result.web_observation"
+              },
+              "pattern": "barkod",
+              "max_matches": 20
+            },
+            "objective": "Birincil sayfada barkod teriminin geçtiği bağlamı çıkar.",
+            "expected_evidence": [
+              "count",
+              "matches",
+              "observation_id",
+              "pattern",
+              "url"
+            ],
+            "depends_on": [
+              "step_2"
+            ]
+          },
+          {
+            "id": "step_5",
+            "operation_id": "web.find",
+            "operation_domain": "web",
+            "arguments": {
+              "web_observation": {
+                "$from_step": "step_3",
+                "path": "tool_result.web_observation"
+              },
+              "pattern": "kargo etiketi",
+              "max_matches": 20
+            },
+            "objective": "İkincil sayfada kargo etiketi teriminin geçtiği bağlamı çıkar.",
+            "expected_evidence": [
+              "count",
+              "matches",
+              "observation_id",
+              "pattern",
+              "url"
+            ],
+            "depends_on": [
+              "step_3"
+            ]
+          },
+          {
+            "id": "step_6",
+            "operation_id": "web.compare_sources",
+            "operation_domain": "web",
+            "arguments": {
+              "claim": "Trendyol kargo etiketindeki barkodun kullanım amacı",
+              "web_observations": [
+                {
+                  "$from_step": "step_2",
+                  "path": "tool_result.web_observation"
+                },
+                {
+                  "$from_step": "step_3",
+                  "path": "tool_result.web_observation"
+                }
+              ]
+            },
+            "objective": "İki Trendyol yardım sayfasındaki barkod/kargo etiketi bilgisini karşılaştır ve çelişki/kapsam durumunu belirle.",
+            "expected_evidence": [
+              "citations",
+              "claim",
+              "comparison",
+              "conflict_details",
+              "conflicting_observation_ids",
+              "independent_source_count",
+              "source_count",
+              "status",
+              "supporting_observation_ids",
+              "weak_observation_ids"
+            ],
+            "depends_on": [
+              "step_2",
+              "step_3"
+            ]
+          }
+        ],
+        "llm_step_ids": [
+          "step_1",
+          "step_2",
+          "step_3",
+          "step_4",
+          "step_5",
+          "step_6"
+        ],
+        "operation_candidate_ids": [
+          "web.search",
+          "web.document.read",
+          "web.research_report",
+          "analysis.table",
+          "workflows.save.prepare",
+          "web.open",
+          "web.compare_sources",
+          "files.list",
+          "files.read",
+          "reports.build_snapshot",
+          "workflows.list",
+          "analysis.calculate",
+          "reports.xlsx.prepare",
+          "web.find",
+          "workflows.read",
+          "operations.discover",
+          "agent.delegate",
+          "artifacts.read"
+        ],
+        "discovery_only_plan": false,
+        "capability_profile": {
+          "provider_code": "openrouter",
+          "model_id": "deepseek/deepseek-v4.1-flash",
+          "chat": true,
+          "streaming": false,
+          "native_tool_calling_available": true,
+          "native_tool_runtime_enabled": true,
+          "structured_output_available": true,
+          "structured_output_runtime_enabled": true,
+          "context_tokens": 1048576,
+          "output_tokens": null,
+          "reasoning": {
+            "supported": true,
+            "control": "reasoning_effort",
+            "efforts": [
+              "auto",
+              "off",
+              "low",
+              "high"
+            ],
+            "off_supported": true,
+            "mandatory": false,
+            "default_effort": "high"
+          },
+          "multimodal_inputs": [],
+          "usage_reporting": true,
+          "quota_reporting": false,
+          "pricing": {
+            "prompt": "0.0000000124",
+            "completion": "0.0000008",
+            "input_cache_read": "0.00000001"
+          },
+          "degradation_mode": "native_tools",
+          "prepare_write_allowed": true,
+          "external_write_planning_allowed": true,
+          "source": "provider_metadata"
+        },
+        "planning_objective": "Trendyol'un kamuya açık satıcı yardım kaynaklarında kargo etiketindeki barkodun ne için kullanıldığını araştır. Sayfaları açarak doğrula ve yalnız kaynakta geçen bilgiyle kısa bir kaynaklı özet ver. Özel sipariş veya müşteri bilgilerini internete gönderme.",
+        "planning_objective_source": "user_message",
+        "plan_id": "9a173ee22d5b4ca28f32685daed0b22f",
+        "revision": 1
+      }
+    },
+    "conversation_turns": [
+      {
+        "turn_id": "d9adeff769a143b18d72b4de7177fcbe",
+        "role": "user",
+        "mode": "inspect",
+        "objective": "Trendyol'un kamuya açık satıcı yardım kaynaklarında kargo etiketindeki barkodun kullanım amacını sayfaları açarak doğrulamak ve yalnız kaynakta geçen bilgiyle kısa, kaynaklı bir özet sunmak; özel sipariş veya müşteri bilgilerini internete göndermemek.",
+        "content": "Trendyol'un kamuya açık satıcı yardım kaynaklarında kargo etiketindeki barkodun ne için kullanıldığını araştır. Sayfaları açarak doğrula ve yalnız kaynakta geçen bilgiyle kısa bir kaynaklı özet ver. Özel sipariş veya müşteri bilgilerini internete gönderme.",
+        "created_at": "2026-10-15T18:07:44.312490+00:00",
+        "tool_names": [],
+        "intent_kind": "data_read",
+        "requested_fields": [
+          "web_sources",
+          "research_findings"
+        ],
+        "semantic_contract": {
+          "information_source": "external_public_web"
+        },
+        "correction_of_turn_id": ""
+      },
+      {
+        "turn_id": "b626ff310daf407fa2f808972279073d",
+        "role": "assistant",
+        "mode": "failed",
+        "objective": "Trendyol'un kamuya açık satıcı yardım kaynaklarında kargo etiketindeki barkodun ne için kullanıldığını araştır. Sayfaları açarak doğrula ve yalnız kaynakta geçen bilgiyle kısa bir kaynaklı özet ver. Özel sipariş veya müşteri bilgilerini internete gönderme.",
+        "content": "Agent task runtime ara durumda durdu.",
+        "created_at": "2026-10-15T18:08:31.052077+00:00",
+        "tool_names": [
+          "web.search"
+        ],
+        "intent_kind": "",
+        "requested_fields": [],
+        "semantic_contract": {},
+        "correction_of_turn_id": ""
+      }
+    ],
+    "active_scopes": {},
+    "selection_snapshots": [],
+    "active_selection_ids": {},
+    "analysis_contexts": [],
+    "active_analysis_ids": {},
+    "observations": [
+      {
+        "observation_id": "0eb804cd540d03bd23ad4cd4dcea212e",
+        "domain": "web",
+        "operation_name": "web.search",
+        "success": true,
+        "scope_id": "",
+        "selection_id": "",
+        "record_refs": [],
+        "facts": {
+          "context_kind": "",
+          "message": "0 web sonucu bulundu."
+        },
+        "aggregates": {
+          "count": 0
+        },
+        "source": "web.search",
+        "observed_at": "2026-10-15T18:08:19.260521+00:00"
+      }
+    ],
+    "pending_actions": [],
+    "active_pending_action_id": "",
+    "state_events": [
+      {
+        "event_id": "782c8c78b6b9422192cba599ebe4cce9",
+        "event_type": "goal_plan",
+        "entity_id": "9a173ee22d5b4ca28f32685daed0b22f",
+        "status": "activated",
+        "payload": {
+          "domain": "web",
+          "revision": 1,
+          "step_ids": [
+            "step_1",
+            "step_2",
+            "step_3",
+            "step_4",
+            "step_5",
+            "step_6"
+          ],
+          "superseded_plan_id": ""
+        },
+        "created_at": "2026-10-15T18:08:00.245492+00:00"
+      },
+      {
+        "event_id": "9a19adba244f438597f113565614410a",
+        "event_type": "goal_plan",
+        "entity_id": "9a173ee22d5b4ca28f32685daed0b22f",
+        "status": "running",
+        "payload": {
+          "revision": 1
+        },
+        "created_at": "2026-10-15T18:08:00.270816+00:00"
+      },
+      {
+        "event_id": "99e0a1b9544641188fd23a477de381c7",
+        "event_type": "observation",
+        "entity_id": "0eb804cd540d03bd23ad4cd4dcea212e",
+        "status": "succeeded",
+        "payload": {
+          "domain": "web",
+          "operation_name": "web.search",
+          "selection_id": ""
+        },
+        "created_at": "2026-10-15T18:08:19.260521+00:00"
+      },
+      {
+        "event_id": "7535e773ef4f4bc0824856f23552cc6d",
+        "event_type": "goal_plan_revised",
+        "entity_id": "9a173ee22d5b4ca28f32685daed0b22f",
+        "status": "running",
+        "payload": {
+          "revision": 2,
+          "failed_step_id": "observation:0eb804cd540d03bd23ad4cd4dcea212e",
+          "replacement_step_ids": [
+            "step_2"
+          ],
+          "reason": "Önceki web araması 0 sonuç döndürdü; hedef tamamlanmadı ve kalan plan boş. Daha hedefli sorgu ve Trendyol kamuya açık alan adlarıyla yeni arama adımı gerekli."
+        },
+        "created_at": "2026-10-15T18:08:30.967689+00:00"
+      },
+      {
+        "event_id": "17320aca2d7943409932501a6f4fc282",
+        "event_type": "goal_plan",
+        "entity_id": "9a173ee22d5b4ca28f32685daed0b22f",
+        "status": "failed",
+        "payload": {
+          "revision": 2
+        },
+        "created_at": "2026-10-15T18:08:31.005079+00:00"
+      },
+      {
+        "event_id": "ac13e5ee9e67409fa377b10308292b18",
+        "event_type": "conversation_turn",
+        "entity_id": "d9adeff769a143b18d72b4de7177fcbe",
+        "status": "recorded",
+        "payload": {
+          "role": "user",
+          "mode": "inspect",
+          "objective": "Trendyol'un kamuya açık satıcı yardım kaynaklarında kargo etiketindeki barkodun kullanım amacını sayfaları açarak doğrulamak ve yalnız kaynakta geçen bilgiyle kısa, kaynaklı bir özet sunmak; özel sipariş veya müşteri bilgilerini internete göndermemek.",
+          "intent_kind": "data_read",
+          "requested_fields": [
+            "web_sources",
+            "research_findings"
+          ],
+          "semantic_contract": {
+            "information_source": "external_public_web"
+          },
+          "correction_of_turn_id": ""
+        },
+        "created_at": "2026-10-15T18:07:44.312490+00:00"
+      },
+      {
+        "event_id": "e9962faa816840f8a382660042e52c8a",
+        "event_type": "conversation_turn",
+        "entity_id": "b626ff310daf407fa2f808972279073d",
+        "status": "recorded",
+        "payload": {
+          "role": "assistant",
+          "mode": "failed",
+          "objective": "Trendyol'un kamuya açık satıcı yardım kaynaklarında kargo etiketindeki barkodun ne için kullanıldığını araştır. Sayfaları açarak doğrula ve yalnız kaynakta geçen bilgiyle kısa bir kaynaklı özet ver. Özel sipariş veya müşteri bilgilerini internete gönderme.",
+          "intent_kind": "",
+          "requested_fields": [],
+          "semantic_contract": {},
+          "correction_of_turn_id": ""
+        },
+        "created_at": "2026-10-15T18:08:31.052077+00:00"
+      }
+    ],
+    "action_history": [],
+    "progress_events": [
+      {
+        "index": 1,
+        "phase": "planned",
+        "status": "running",
+        "message": "Gorevi 6 adima ayirdim; ilk adimi calistiriyorum.",
+        "percent": 10,
+        "created_at": "2026-10-15T18:08:00.245492+00:00",
+        "step_count": 6
+      },
+      {
+        "index": 2,
+        "phase": "step_started",
+        "status": "running",
+        "message": "Adim 1/6: Trendyol kamuya açık satıcı yardım kaynaklarında kargo etiketindeki barkodun kullanım amacını arayan resmi sayfaları bul.",
+        "percent": 14,
+        "created_at": "2026-10-15T18:08:00.270816+00:00",
+        "step_index": 1,
+        "step_count": 6
+      },
+      {
+        "index": 3,
+        "phase": "step_completed",
+        "status": "completed",
+        "message": "Adim 1/6 tamamlandi.",
+        "percent": 24,
+        "created_at": "2026-10-15T18:08:30.967689+00:00",
+        "step_index": 1,
+        "step_count": 6
+      },
+      {
+        "index": 4,
+        "phase": "observation_replanned",
+        "status": "running",
+        "message": "Yeni observation sonraki atomic adimlari degistirdi.",
+        "percent": 24,
+        "created_at": "2026-10-15T18:08:30.986709+00:00",
+        "step_index": 1,
+        "step_count": 6
+      },
+      {
+        "index": 5,
+        "phase": "plan_dependency_blocked",
+        "status": "failed",
+        "message": "GoalPlan bagimliliklari cozumlenemedi; hicbir operation calistirilmadi.",
+        "percent": 14,
+        "created_at": "2026-10-15T18:08:31.005079+00:00",
+        "step_count": 6
+      }
+    ],
+    "goal_plans": [
+      {
+        "plan_id": "9a173ee22d5b4ca28f32685daed0b22f",
+        "goal": "Trendyol'un kamuya açık satıcı yardım kaynaklarında kargo etiketindeki barkodun ne için kullanıldığını araştır. Sayfaları açarak doğrula ve yalnız kaynakta geçen bilgiyle kısa bir kaynaklı özet ver. Özel sipariş veya müşteri bilgilerini internete gönderme.",
+        "domain": "web",
+        "status": "failed",
+        "source": "llm_direct",
+        "revision": 2,
+        "parent_plan_id": "",
+        "metadata": {
+          "source": "llm_direct",
+          "step_ids": [
+            "step_1",
+            "step_2",
+            "step_3",
+            "step_4",
+            "step_5",
+            "step_6"
+          ],
+          "rejected_step_ids": [],
+          "fallback_step_ids": [
+            "web_search",
+            "web_open_primary",
+            "web_open_secondary",
+            "web_compare"
+          ],
+          "model_plan_authorization": {
+            "mode": "inspect",
+            "domain": "web",
+            "requested_fields": [
+              "web_sources",
+              "research_findings"
+            ],
+            "semantic_contract": {
+              "information_source": "external_public_web"
+            }
+          },
+          "step_specs": [
+            {
+              "id": "step_1",
+              "operation_id": "web.search",
+              "operation_domain": "web",
+              "arguments": {
+                "query": "Trendyol satıcı yardım kargo etiketi barkod ne için kullanılır",
+                "allowed_domains": [
+                  "help.trendyol.com",
+                  "seller.trendyol.com",
+                  "trendyol.com"
+                ],
+                "language": "tr",
+                "country": "TR",
+                "freshness": "year",
+                "limit": 10
+              },
+              "objective": "Trendyol kamuya açık satıcı yardım kaynaklarında kargo etiketindeki barkodun kullanım amacını arayan resmi sayfaları bul.",
+              "expected_evidence": [
+                "count",
+                "evidence_status",
+                "primary_candidate",
+                "primary_official",
+                "primary_published_at",
+                "primary_title",
+                "primary_url",
+                "public_product_fields",
+                "query_summary",
+                "requires_source_open",
+                "results",
+                "search_results_are_final_evidence",
+                "secondary_candidate",
+                "secondary_official",
+                "secondary_published_at",
+                "secondary_title",
+                "secondary_url"
+              ],
+              "depends_on": []
+            },
+            {
+              "id": "step_2",
+              "operation_id": "web.open",
+              "operation_domain": "web",
+              "arguments": {
+                "url": {
+                  "$from_step": "step_1",
+                  "path": "tool_result.primary_url"
+                },
+                "title": {
+                  "$from_step": "step_1",
+                  "path": "tool_result.primary_title"
+                },
+                "published_at": {
+                  "$from_step": "step_1",
+                  "path": "tool_result.primary_published_at"
+                },
+                "official": {
+                  "$from_step": "step_1",
+                  "path": "tool_result.primary_official"
+                },
+                "query_summary": "Trendyol kargo etiketi barkod kullanımı"
+              },
+              "objective": "Arama sonucundaki birincil resmi Trendyol yardım sayfasını açıp kargo etiketi barkodu hakkındaki metni doğrula.",
+              "expected_evidence": [
+                "freshness",
+                "observation_id",
+                "prompt_injection_detected",
+                "source_class",
+                "source_domain",
+                "url",
+                "web_observation"
+              ],
+              "depends_on": [
+                "step_1"
+              ]
+            },
+            {
+              "id": "step_3",
+              "operation_id": "web.open",
+              "operation_domain": "web",
+              "arguments": {
+                "url": {
+                  "$from_step": "step_1",
+                  "path": "tool_result.secondary_url"
+                },
+                "title": {
+                  "$from_step": "step_1",
+                  "path": "tool_result.secondary_title"
+                },
+                "published_at": {
+                  "$from_step": "step_1",
+                  "path": "tool_result.secondary_published_at"
+                },
+                "official": {
+                  "$from_step": "step_1",
+                  "path": "tool_result.secondary_official"
+                },
+                "query_summary": "Trendyol kargo etiketi barkod kullanımı"
+              },
+              "objective": "Arama sonucundaki ikincil Trendyol yardım sayfasını açıp kargo etiketi barkodu hakkındaki metni doğrula.",
+              "expected_evidence": [
+                "freshness",
+                "observation_id",
+                "prompt_injection_detected",
+                "source_class",
+                "source_domain",
+                "url",
+                "web_observation"
+              ],
+              "depends_on": [
+                "step_1"
+              ]
+            },
+            {
+              "id": "step_4",
+              "operation_id": "web.find",
+              "operation_domain": "web",
+              "arguments": {
+                "web_observation": {
+                  "$from_step": "step_2",
+                  "path": "tool_result.web_observation"
+                },
+                "pattern": "barkod",
+                "max_matches": 20
+              },
+              "objective": "Birincil sayfada barkod teriminin geçtiği bağlamı çıkar.",
+              "expected_evidence": [
+                "count",
+                "matches",
+                "observation_id",
+                "pattern",
+                "url"
+              ],
+              "depends_on": [
+                "step_2"
+              ]
+            },
+            {
+              "id": "step_5",
+              "operation_id": "web.find",
+              "operation_domain": "web",
+              "arguments": {
+                "web_observation": {
+                  "$from_step": "step_3",
+                  "path": "tool_result.web_observation"
+                },
+                "pattern": "kargo etiketi",
+                "max_matches": 20
+              },
+              "objective": "İkincil sayfada kargo etiketi teriminin geçtiği bağlamı çıkar.",
+              "expected_evidence": [
+                "count",
+                "matches",
+                "observation_id",
+                "pattern",
+                "url"
+              ],
+              "depends_on": [
+                "step_3"
+              ]
+            },
+            {
+              "id": "step_6",
+              "operation_id": "web.compare_sources",
+              "operation_domain": "web",
+              "arguments": {
+                "claim": "Trendyol kargo etiketindeki barkodun kullanım amacı",
+                "web_observations": [
+                  {
+                    "$from_step": "step_2",
+                    "path": "tool_result.web_observation"
+                  },
+                  {
+                    "$from_step": "step_3",
+                    "path": "tool_result.web_observation"
+                  }
+                ]
+              },
+              "objective": "İki Trendyol yardım sayfasındaki barkod/kargo etiketi bilgisini karşılaştır ve çelişki/kapsam durumunu belirle.",
+              "expected_evidence": [
+                "citations",
+                "claim",
+                "comparison",
+                "conflict_details",
+                "conflicting_observation_ids",
+                "independent_source_count",
+                "source_count",
+                "status",
+                "supporting_observation_ids",
+                "weak_observation_ids"
+              ],
+              "depends_on": [
+                "step_2",
+                "step_3"
+              ]
+            }
+          ],
+          "llm_step_ids": [
+            "step_1",
+            "step_2",
+            "step_3",
+            "step_4",
+            "step_5",
+            "step_6"
+          ],
+          "operation_candidate_ids": [
+            "web.search",
+            "web.document.read",
+            "web.research_report",
+            "analysis.table",
+            "workflows.save.prepare",
+            "web.open",
+            "web.compare_sources",
+            "files.list",
+            "files.read",
+            "reports.build_snapshot",
+            "workflows.list",
+            "analysis.calculate",
+            "reports.xlsx.prepare",
+            "web.find",
+            "workflows.read",
+            "operations.discover",
+            "agent.delegate",
+            "artifacts.read"
+          ],
+          "discovery_only_plan": false,
+          "capability_profile": {
+            "provider_code": "openrouter",
+            "model_id": "deepseek/deepseek-v4.1-flash",
+            "chat": true,
+            "streaming": false,
+            "native_tool_calling_available": true,
+            "native_tool_runtime_enabled": true,
+            "structured_output_available": true,
+            "structured_output_runtime_enabled": true,
+            "context_tokens": 1048576,
+            "output_tokens": null,
+            "reasoning": {
+              "supported": true,
+              "control": "reasoning_effort",
+              "efforts": [
+                "auto",
+                "off",
+                "low",
+                "high"
+              ],
+              "off_supported": true,
+              "mandatory": false,
+              "default_effort": "high"
+            },
+            "multimodal_inputs": [],
+            "usage_reporting": true,
+            "quota_reporting": false,
+            "pricing": {
+              "prompt": "0.0000000124",
+              "completion": "0.0000008",
+              "input_cache_read": "0.00000001"
+            },
+            "degradation_mode": "native_tools",
+            "prepare_write_allowed": true,
+            "external_write_planning_allowed": true,
+            "source": "provider_metadata"
+          },
+          "planning_objective": "Trendyol'un kamuya açık satıcı yardım kaynaklarında kargo etiketindeki barkodun ne için kullanıldığını araştır. Sayfaları açarak doğrula ve yalnız kaynakta geçen bilgiyle kısa bir kaynaklı özet ver. Özel sipariş veya müşteri bilgilerini internete gönderme.",
+          "planning_objective_source": "user_message",
+          "replans": [
+            {
+              "revision": 2,
+              "failed_step_id": "observation:0eb804cd540d03bd23ad4cd4dcea212e",
+              "replacement_step_ids": [],
+              "reason": "Önceki web araması 0 sonuç döndürdü; hedef tamamlanmadı ve kalan plan boş. Daha hedefli sorgu ve Trendyol kamuya açık alan adlarıyla yeni arama adımı gerekli."
+            }
+          ]
+        },
+        "steps": [
+          {
+            "index": 1,
+            "prompt": "Trendyol kamuya açık satıcı yardım kaynaklarında kargo etiketindeki barkodun kullanım amacını arayan resmi sayfaları bul.",
+            "step_id": "step_1",
+            "objective": "Trendyol kamuya açık satıcı yardım kaynaklarında kargo etiketindeki barkodun kullanım amacını arayan resmi sayfaları bul.",
+            "depends_on": [],
+            "operation_candidates": [
+              "web.search"
+            ],
+            "operation_domain": "web",
+            "arguments": {
+              "query": "Trendyol satıcı yardım kargo etiketi barkod ne için kullanılır",
+              "allowed_domains": [
+                "help.trendyol.com",
+                "seller.trendyol.com",
+                "trendyol.com"
+              ],
+              "language": "tr",
+              "country": "TR",
+              "freshness": "year",
+              "limit": 10
+            },
+            "expected_evidence": [
+              "count",
+              "evidence_status",
+              "primary_candidate",
+              "primary_official",
+              "primary_published_at",
+              "primary_title",
+              "primary_url",
+              "public_product_fields",
+              "query_summary",
+              "requires_source_open",
+              "results",
+              "search_results_are_final_evidence",
+              "secondary_candidate",
+              "secondary_official",
+              "secondary_published_at",
+              "secondary_title",
+              "secondary_url"
+            ],
+            "status": "completed",
+            "tool_names": [
+              "web.search"
+            ],
+            "observation_ids": [
+              "0eb804cd540d03bd23ad4cd4dcea212e"
+            ],
+            "verification_status": "observed",
+            "attempt_count": 1,
+            "result_message": "0 web sonucu bulundu.",
+            "result_data": {
+              "mode": "tool",
+              "tool_names": [
+                "web.search"
+              ],
+              "answer": "0 web sonucu bulundu.",
+              "tool_result": {
+                "query": "Trendyol satıcı yardım kargo etiketi barkod ne için kullanılır",
+                "query_summary": "Trendyol satıcı yardım kargo etiketi barkod ne için kullanılır",
+                "query_variants": [
+                  "site:developers.trendyol.com trendyol satici yardim kargo etiketi barkod icin kullanilir",
+                  "site:partner.trendyol.com trendyol satici yardim kargo etiketi barkod icin kullanilir",
+                  "Trendyol Partner trendyol satici yardim kargo etiketi barkod icin kullanilir",
+                  "Trendyol satıcı yardım kargo etiketi barkod ne için kullanılır",
+                  "trendyol satici yardim kargo etiketi barkod icin kullanilir"
+                ],
+                "count": 0,
+                "results": [],
+                "primary_candidate": {},
+                "secondary_candidate": {},
+                "primary_url": "",
+                "secondary_url": "",
+                "primary_title": "",
+                "secondary_title": "",
+                "primary_published_at": "",
+                "secondary_published_at": "",
+                "primary_official": false,
+                "secondary_official": false,
+                "tool": "web.search",
+                "query_sent": true,
+                "blocked_private_data": false,
+                "official_result_count": 0,
+                "content_enriched_count": 0,
+                "result_quality": "no_results",
+                "authority_warning": "",
+                "freshness": "year",
+                "language": "tr",
+                "country": "TR",
+                "allowed_domains": [
+                  "help.trendyol.com",
+                  "seller.trendyol.com",
+                  "trendyol.com"
+                ],
+                "evidence_status": "candidate_sources_only",
+                "search_results_are_final_evidence": false,
+                "requires_source_open": false,
+                "public_product_fields": [],
+                "source_domain_count": 0
+              },
+              "conversation_context": {},
+              "dependency_bindings": {},
+              "attempt_count": 1,
+              "attempt_failures": []
+            }
+          },
+          {
+            "index": 2,
+            "prompt": "Arama sonucundaki birincil resmi Trendyol yardım sayfasını açıp kargo etiketi barkodu hakkındaki metni doğrula.",
+            "step_id": "step_2",
+            "objective": "Arama sonucundaki birincil resmi Trendyol yardım sayfasını açıp kargo etiketi barkodu hakkındaki metni doğrula.",
+            "depends_on": [
+              "step_1"
+            ],
+            "operation_candidates": [
+              "web.open"
+            ],
+            "operation_domain": "web",
+            "arguments": {
+              "url": {
+                "$from_step": "step_1",
+                "path": "tool_result.primary_url"
+              },
+              "title": {
+                "$from_step": "step_1",
+                "path": "tool_result.primary_title"
+              },
+              "published_at": {
+                "$from_step": "step_1",
+                "path": "tool_result.primary_published_at"
+              },
+              "official": {
+                "$from_step": "step_1",
+                "path": "tool_result.primary_official"
+              },
+              "query_summary": "Trendyol kargo etiketi barkod kullanımı"
+            },
+            "expected_evidence": [
+              "freshness",
+              "observation_id",
+              "prompt_injection_detected",
+              "source_class",
+              "source_domain",
+              "url",
+              "web_observation"
+            ],
+            "status": "skipped",
+            "tool_names": [],
+            "observation_ids": [],
+            "verification_status": "skipped",
+            "attempt_count": 0,
+            "result_message": "",
+            "result_data": {
+              "skip_reason": "web_source_dependency_unavailable"
+            }
+          },
+          {
+            "index": 3,
+            "prompt": "Arama sonucundaki ikincil Trendyol yardım sayfasını açıp kargo etiketi barkodu hakkındaki metni doğrula.",
+            "step_id": "step_3",
+            "objective": "Arama sonucundaki ikincil Trendyol yardım sayfasını açıp kargo etiketi barkodu hakkındaki metni doğrula.",
+            "depends_on": [
+              "step_1"
+            ],
+            "operation_candidates": [
+              "web.open"
+            ],
+            "operation_domain": "web",
+            "arguments": {
+              "url": {
+                "$from_step": "step_1",
+                "path": "tool_result.secondary_url"
+              },
+              "title": {
+                "$from_step": "step_1",
+                "path": "tool_result.secondary_title"
+              },
+              "published_at": {
+                "$from_step": "step_1",
+                "path": "tool_result.secondary_published_at"
+              },
+              "official": {
+                "$from_step": "step_1",
+                "path": "tool_result.secondary_official"
+              },
+              "query_summary": "Trendyol kargo etiketi barkod kullanımı"
+            },
+            "expected_evidence": [
+              "freshness",
+              "observation_id",
+              "prompt_injection_detected",
+              "source_class",
+              "source_domain",
+              "url",
+              "web_observation"
+            ],
+            "status": "skipped",
+            "tool_names": [],
+            "observation_ids": [],
+            "verification_status": "skipped",
+            "attempt_count": 0,
+            "result_message": "",
+            "result_data": {
+              "skip_reason": "web_source_dependency_unavailable"
+            }
+          },
+          {
+            "index": 4,
+            "prompt": "Birincil sayfada barkod teriminin geçtiği bağlamı çıkar.",
+            "step_id": "step_4",
+            "objective": "Birincil sayfada barkod teriminin geçtiği bağlamı çıkar.",
+            "depends_on": [
+              "step_2"
+            ],
+            "operation_candidates": [
+              "web.find"
+            ],
+            "operation_domain": "web",
+            "arguments": {
+              "web_observation": {
+                "$from_step": "step_2",
+                "path": "tool_result.web_observation"
+              },
+              "pattern": "barkod",
+              "max_matches": 20
+            },
+            "expected_evidence": [
+              "count",
+              "matches",
+              "observation_id",
+              "pattern",
+              "url"
+            ],
+            "status": "skipped",
+            "tool_names": [],
+            "observation_ids": [],
+            "verification_status": "skipped",
+            "attempt_count": 0,
+            "result_message": "",
+            "result_data": {
+              "skip_reason": "web_source_dependency_unavailable"
+            }
+          },
+          {
+            "index": 5,
+            "prompt": "İkincil sayfada kargo etiketi teriminin geçtiği bağlamı çıkar.",
+            "step_id": "step_5",
+            "objective": "İkincil sayfada kargo etiketi teriminin geçtiği bağlamı çıkar.",
+            "depends_on": [
+              "step_3"
+            ],
+            "operation_candidates": [
+              "web.find"
+            ],
+            "operation_domain": "web",
+            "arguments": {
+              "web_observation": {
+                "$from_step": "step_3",
+                "path": "tool_result.web_observation"
+              },
+              "pattern": "kargo etiketi",
+              "max_matches": 20
+            },
+            "expected_evidence": [
+              "count",
+              "matches",
+              "observation_id",
+              "pattern",
+              "url"
+            ],
+            "status": "skipped",
+            "tool_names": [],
+            "observation_ids": [],
+            "verification_status": "skipped",
+            "attempt_count": 0,
+            "result_message": "",
+            "result_data": {
+              "skip_reason": "web_source_dependency_unavailable"
+            }
+          },
+          {
+            "index": 6,
+            "prompt": "İki Trendyol yardım sayfasındaki barkod/kargo etiketi bilgisini karşılaştır ve çelişki/kapsam durumunu belirle.",
+            "step_id": "step_6",
+            "objective": "İki Trendyol yardım sayfasındaki barkod/kargo etiketi bilgisini karşılaştır ve çelişki/kapsam durumunu belirle.",
+            "depends_on": [
+              "step_2",
+              "step_3"
+            ],
+            "operation_candidates": [
+              "web.compare_sources"
+            ],
+            "operation_domain": "web",
+            "arguments": {
+              "claim": "Trendyol kargo etiketindeki barkodun kullanım amacı",
+              "web_observations": [
+                {
+                  "$from_step": "step_2",
+                  "path": "tool_result.web_observation"
+                },
+                {
+                  "$from_step": "step_3",
+                  "path": "tool_result.web_observation"
+                }
+              ]
+            },
+            "expected_evidence": [
+              "citations",
+              "claim",
+              "comparison",
+              "conflict_details",
+              "conflicting_observation_ids",
+              "independent_source_count",
+              "source_count",
+              "status",
+              "supporting_observation_ids",
+              "weak_observation_ids"
+            ],
+            "status": "skipped",
+            "tool_names": [],
+            "observation_ids": [],
+            "verification_status": "skipped",
+            "attempt_count": 0,
+            "result_message": "",
+            "result_data": {
+              "skip_reason": "web_source_dependency_unavailable"
+            }
+          }
+        ],
+        "created_at": "2026-10-15T18:08:00.245492+00:00",
+        "updated_at": "2026-10-15T18:08:31.005079+00:00"
+      }
+    ],
+    "active_goal_plan_id": "9a173ee22d5b4ca28f32685daed0b22f",
+    "completed_steps": [
+      {
+        "index": 1,
+        "prompt": "Trendyol kamuya açık satıcı yardım kaynaklarında kargo etiketindeki barkodun kullanım amacını arayan resmi sayfaları bul.",
+        "step_id": "step_1",
+        "objective": "Trendyol kamuya açık satıcı yardım kaynaklarında kargo etiketindeki barkodun kullanım amacını arayan resmi sayfaları bul.",
+        "depends_on": [],
+        "operation_candidates": [
+          "web.search"
+        ],
+        "operation_domain": "web",
+        "arguments": {
+          "query": "Trendyol satıcı yardım kargo etiketi barkod ne için kullanılır",
+          "allowed_domains": [
+            "help.trendyol.com",
+            "seller.trendyol.com",
+            "trendyol.com"
+          ],
+          "language": "tr",
+          "country": "TR",
+          "freshness": "year",
+          "limit": 10
+        },
+        "expected_evidence": [
+          "count",
+          "evidence_status",
+          "primary_candidate",
+          "primary_official",
+          "primary_published_at",
+          "primary_title",
+          "primary_url",
+          "public_product_fields",
+          "query_summary",
+          "requires_source_open",
+          "results",
+          "search_results_are_final_evidence",
+          "secondary_candidate",
+          "secondary_official",
+          "secondary_published_at",
+          "secondary_title",
+          "secondary_url"
+        ],
+        "status": "completed",
+        "tool_names": [
+          "web.search"
+        ],
+        "observation_ids": [
+          "0eb804cd540d03bd23ad4cd4dcea212e"
+        ],
+        "verification_status": "observed",
+        "attempt_count": 1,
+        "result_message": "0 web sonucu bulundu.",
+        "result_data": {
+          "mode": "tool",
+          "tool_names": [
+            "web.search"
+          ],
+          "answer": "0 web sonucu bulundu.",
+          "tool_result": {
+            "query": "Trendyol satıcı yardım kargo etiketi barkod ne için kullanılır",
+            "query_summary": "Trendyol satıcı yardım kargo etiketi barkod ne için kullanılır",
+            "query_variants": [
+              "site:developers.trendyol.com trendyol satici yardim kargo etiketi barkod icin kullanilir",
+              "site:partner.trendyol.com trendyol satici yardim kargo etiketi barkod icin kullanilir",
+              "Trendyol Partner trendyol satici yardim kargo etiketi barkod icin kullanilir",
+              "Trendyol satıcı yardım kargo etiketi barkod ne için kullanılır",
+              "trendyol satici yardim kargo etiketi barkod icin kullanilir"
+            ],
+            "count": 0,
+            "results": [],
+            "primary_candidate": {},
+            "secondary_candidate": {},
+            "primary_url": "",
+            "secondary_url": "",
+            "primary_title": "",
+            "secondary_title": "",
+            "primary_published_at": "",
+            "secondary_published_at": "",
+            "primary_official": false,
+            "secondary_official": false,
+            "tool": "web.search",
+            "query_sent": true,
+            "blocked_private_data": false,
+            "official_result_count": 0,
+            "content_enriched_count": 0,
+            "result_quality": "no_results",
+            "authority_warning": "",
+            "freshness": "year",
+            "language": "tr",
+            "country": "TR",
+            "allowed_domains": [
+              "help.trendyol.com",
+              "seller.trendyol.com",
+              "trendyol.com"
+            ],
+            "evidence_status": "candidate_sources_only",
+            "search_results_are_final_evidence": false,
+            "requires_source_open": false,
+            "public_product_fields": [],
+            "source_domain_count": 0
+          },
+          "conversation_context": {},
+          "dependency_bindings": {},
+          "attempt_count": 1,
+          "attempt_failures": []
+        }
+      }
+    ],
+    "remaining_steps": [
+      {
+        "index": 2,
+        "prompt": "Trendyol kamuya açık satıcı yardım kaynaklarında kargo etiketi barkodunun kullanım amacına dair aday sayfaları bul.",
+        "step_id": "step_2",
+        "objective": "Trendyol kamuya açık satıcı yardım kaynaklarında kargo etiketi barkodunun kullanım amacına dair aday sayfaları bul.",
+        "depends_on": [],
+        "operation_candidates": [
+          "web.search"
+        ],
+        "operation_domain": "web",
+        "arguments": {
+          "query": "Trendyol satıcı yardım kargo etiketi barkod kullanımı",
+          "limit": 10,
+          "freshness": "year",
+          "language": "tr",
+          "country": "TR",
+          "allowed_domains": [
+            "help.trendyol.com",
+            "seller.trendyol.com",
+            "trendyol.com"
+          ]
+        },
+        "expected_evidence": [
+          "count",
+          "results",
+          "primary_url",
+          "primary_title",
+          "primary_official",
+          "requires_source_open",
+          "search_results_are_final_evidence",
+          "evidence_status",
+          "query_summary"
+        ],
+        "status": "pending",
+        "tool_names": [],
+        "observation_ids": [],
+        "verification_status": "pending",
+        "attempt_count": 0,
+        "result_message": "",
+        "result_data": {}
+      }
+    ],
+    "last_tool_results": [
+      {
+        "step": 1,
+        "tool_names": [
+          "web.search"
+        ],
+        "data": {
+          "query": "Trendyol satıcı yardım kargo etiketi barkod ne için kullanılır",
+          "query_summary": "Trendyol satıcı yardım kargo etiketi barkod ne için kullanılır",
+          "query_variants": [
+            "site:developers.trendyol.com trendyol satici yardim kargo etiketi barkod icin kullanilir",
+            "site:partner.trendyol.com trendyol satici yardim kargo etiketi barkod icin kullanilir",
+            "Trendyol Partner trendyol satici yardim kargo etiketi barkod icin kullanilir",
+            "Trendyol satıcı yardım kargo etiketi barkod ne için kullanılır",
+            "trendyol satici yardim kargo etiketi barkod icin kullanilir"
+          ],
+          "count": 0,
+          "results": [],
+          "primary_candidate": {},
+          "secondary_candidate": {},
+          "primary_url": "",
+          "secondary_url": "",
+          "primary_title": "",
+          "secondary_title": "",
+          "primary_published_at": "",
+          "secondary_published_at": "",
+          "primary_official": false,
+          "secondary_official": false,
+          "tool": "web.search",
+          "query_sent": true,
+          "blocked_private_data": false,
+          "official_result_count": 0,
+          "content_enriched_count": 0,
+          "result_quality": "no_results",
+          "authority_warning": "",
+          "freshness": "year",
+          "language": "tr",
+          "country": "TR",
+          "allowed_domains": [
+            "help.trendyol.com",
+            "seller.trendyol.com",
+            "trendyol.com"
+          ],
+          "evidence_status": "candidate_sources_only",
+          "search_results_are_final_evidence": false,
+          "requires_source_open": false,
+          "public_product_fields": [],
+          "source_domain_count": 0
+        }
+      }
+    ],
+    "memory_summary": "",
+    "created_at": "2026-10-15T18:07:44.312490+00:00",
+    "updated_at": "2026-10-15T18:08:31.052077+00:00"
+  },
+  "response": {
+    "decision": "replan",
+    "reason": "Önceki web araması 0 sonuç döndürdü; hedef tamamlanmadı ve kalan plan boş. Daha hedefli sorgu ve Trendyol kamuya açık alan adlarıyla yeni arama adımı gerekli.",
+    "clarification": "",
+    "steps": [
+      {
+        "id": "step_2",
+        "operation_id": "web.search",
+        "arguments_json": "{\"query\":\"Trendyol satıcı yardım kargo etiketi barkod kullanımı\",\"limit\":10,\"freshness\":\"year\",\"language\":\"tr\",\"country\":\"TR\",\"allowed_domains\":[\"help.trendyol.com\",\"seller.trendyol.com\",\"trendyol.com\"]}",
+        "depends_on": [],
+        "objective": "Trendyol kamuya açık satıcı yardım kaynaklarında kargo etiketi barkodunun kullanım amacına dair aday sayfaları bul.",
+        "expected_evidence": [
+          "count",
+          "results",
+          "primary_url",
+          "primary_title",
+          "primary_official",
+          "requires_source_open",
+          "search_results_are_final_evidence",
+          "evidence_status",
+          "query_summary"
+        ]
+      }
+    ]
+  },
+  "source_artifact": "output/agentic-2026-10-15/public-web-deepseek-2.json",
+  "source_artifact_sha256": "73f78278a764d55266afdac2c125b557f9bbe23e3a2605f021050e1fae3a82c2",
+  "replay_limit": "Original failed web plan and skipped nodes; a constructed repair must not rewrite completed evidence or resurrect a skipped definition."
+}

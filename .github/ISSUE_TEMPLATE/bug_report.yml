@@ -1,0 +1,26 @@
+name: Hata bildirimi
+description: Tekrarlanabilir bir uygulama hatasını bildir.
+body:
+  - type: markdown
+    attributes:
+      value: "API anahtarlarını, log/veritabanı dosyalarını veya müşteri bilgilerini paylaşma. Güvenlik açıkları için SECURITY.md yolunu kullan."
+  - type: input
+    id: version
+    attributes:
+      label: Sürüm ve ortam
+      placeholder: "OrderScout sürümü, Windows sürümü, kaynak/paket"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Tekrarlama adımları
+      description: Sentetik veriyle adım adım açıkla.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Beklenen ve gerçekleşen davranış
+    validations:
+      required: true

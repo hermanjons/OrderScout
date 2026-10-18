@@ -1,0 +1,2305 @@
+{
+  "fixture_kind": "captured_public_schedule3_pending_authority_loss",
+  "source_artifact_name": "schedule-glm-candidate-3.json",
+  "source_artifact_sha256": "9d7e4e0fd2c7c8eb33744b3e2fb4b152a3726021460de042737b2a03a1934870",
+  "selected_model": "z-ai/glm-5.3-flash",
+  "scope": "Exact public selected source-UI fields from failed real GLM campaign; historical regression fixture, not current live acceptance.",
+  "turns": [
+    {
+      "scenario_id": "workflow_save_prepare",
+      "prompt": "Şu tekrar kullanılabilir iş yönergesini kaydetmek için tam paketi onayıma hazırla; işi şimdi çalıştırma. Adı: Pilot Stok İncelemesi. Talimat metnini aynen koru: «Tüm aktif stok kayıtlarını güncel kaynaktan oku. Ürün, miktar, birim ve stok değerini göster; her para birimini ayrı tut. Mağaza bağlantısı kanıtı yoksa çıkarma. Excel dosyası oluşturmadan önce o çalışmanın tam raporunu onaya sun.» Amaç şablonunu aynen koru: «Güncel stok için {{report_title}} başlıklı Excel raporunu hazırla ve kaydetmeden onayıma sun.» Tek parametre report_title olsun: zorunlu metin, en fazla 80 karakter. Başka parametre kabul etme. Kaynak politikası aynen: «Her çalıştırmada güncel stok kaynağını yeniden oku.» İşlem onayı politikası aynen: «Her dosya oluşturma için o çalışmanın tam rapor teklifini onaya sun.» Her çalıştırma güncel kaynak ve her dosya oluşturma güncel onay gerektirsin. Henüz kalıcı olarak kaydetme.",
+      "success": true,
+      "answer": "Onay gerekiyor: tam iş talimatları ve parametreleri kaydedilmeye hazır.\nOnaydan once gercek API istegi, DB yazimi veya dosya/cikti uretimi yapilmadi.",
+      "pending_action": {
+        "approval_required": true,
+        "status": "pending_approval",
+        "domain": "workflows",
+        "action_type": "ai.action_save_workflow_spec",
+        "title": "İş talimatlarını kaydetme onayı",
+        "summary": "Pilot Stok İncelemesi\n\nTalimatlar:\nTüm aktif stok kayıtlarını güncel kaynaktan oku. Ürün, miktar, birim ve stok değerini göster; her para birimini ayrı tut. Mağaza bağlantısı kanıtı yoksa çıkarma. Excel dosyası oluşturmadan önce o çalışmanın tam raporunu onaya sun.\n\nAmaç:\nGüncel stok için {{report_title}} başlıklı Excel raporunu hazırla ve kaydetmeden onayıma sun.\n\nParametreler:\n- report_title: metin; zorunlu; en çok karakter: 80\nBaşka parametre kabul edilmez.\n\nKaynaklar:\nHer çalıştırmada güncel stok kaynağını yeniden oku.\nHer çalıştırmada güncel kaynak gerekir: evet.\n\nİşlem onayı:\nHer dosya oluşturma için o çalışmanın tam rapor teklifini onaya sun.\nHer işlem için güncel onay gerekir: evet.",
+        "risk_level": "low",
+        "tool": "workflows.save.prepare",
+        "operation_metadata": {
+          "name": "ai.action_save_workflow_spec",
+          "version": "1.0",
+          "owner_domain": "workflows",
+          "effect_class": "local_effect",
+          "input_schema": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "output_schema": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "record_ref_types": [],
+          "environment_scope": [
+            "local"
+          ],
+          "account_scope": "runtime_resolved",
+          "risk_level": "R1",
+          "approval_policy": "prepare_then_confirm",
+          "idempotency": "operation_defined",
+          "retry_behavior": "operation_defined",
+          "supports_prepare": true,
+          "supports_execute": true,
+          "supports_verify": true,
+          "timeout_seconds": 30,
+          "supports_cancellation": true,
+          "supports_progress": true,
+          "sensitive_fields": [
+            "credentials",
+            "api_key",
+            "api_secret",
+            "token",
+            "password"
+          ],
+          "required_capabilities": []
+        },
+        "arguments": {
+          "payload": {
+            "proposal": {
+              "schema_version": 1,
+              "action_type": "workflow.save_spec",
+              "workflow_id": "wf_b552cab039b34b3ba8dcf81a4017eae7",
+              "expected_revision_id": "",
+              "revision_id": "wfr_0e6a89fca078a09b73c076a246cc56a2ee1e9ee3917454aaca0b159933ac4bd3",
+              "spec": {
+                "effect_policy": {
+                  "description": "Her dosya oluşturma için o çalışmanın tam rapor teklifini onaya sun.",
+                  "requires_current_approval": true
+                },
+                "instructions": "Tüm aktif stok kayıtlarını güncel kaynaktan oku. Ürün, miktar, birim ve stok değerini göster; her para birimini ayrı tut. Mağaza bağlantısı kanıtı yoksa çıkarma. Excel dosyası oluşturmadan önce o çalışmanın tam raporunu onaya sun.",
+                "name": "Pilot Stok İncelemesi",
+                "objective_template": "Güncel stok için {{report_title}} başlıklı Excel raporunu hazırla ve kaydetmeden onayıma sun.",
+                "parameter_schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "report_title": {
+                      "maxLength": 80,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "report_title"
+                  ],
+                  "type": "object"
+                },
+                "schema_version": 1,
+                "source_policy": {
+                  "description": "Her çalıştırmada güncel stok kaynağını yeniden oku.",
+                  "requires_current_sources": true
+                }
+              },
+              "spec_hash": "3ada4d780d5ea58ae20098c8c9e53fc4114af921a3dd5e62060c13a1df3396fb",
+              "requires_current_approval": true,
+              "action_hash": "090adb7fe1c831402a74370557df08b1a90c4df7e4ead645faf684ff11e6684b",
+              "action_id": "wfa_090adb7fe1c831402a74370557df08b1a90c4df7e4ead645faf684ff11e6684b"
+            }
+          }
+        },
+        "rows": [
+          {
+            "workflow_id": "wf_b552cab039b34b3ba8dcf81a4017eae7",
+            "revision_id": "wfr_0e6a89fca078a09b73c076a246cc56a2ee1e9ee3917454aaca0b159933ac4bd3",
+            "spec_hash": "3ada4d780d5ea58ae20098c8c9e53fc4114af921a3dd5e62060c13a1df3396fb",
+            "expected_revision_id": "",
+            "name": "Pilot Stok İncelemesi",
+            "review": "Pilot Stok İncelemesi\n\nTalimatlar:\nTüm aktif stok kayıtlarını güncel kaynaktan oku. Ürün, miktar, birim ve stok değerini göster; her para birimini ayrı tut. Mağaza bağlantısı kanıtı yoksa çıkarma. Excel dosyası oluşturmadan önce o çalışmanın tam raporunu onaya sun.\n\nAmaç:\nGüncel stok için {{report_title}} başlıklı Excel raporunu hazırla ve kaydetmeden onayıma sun.\n\nParametreler:\n- report_title: metin; zorunlu; en çok karakter: 80\nBaşka parametre kabul edilmez.\n\nKaynaklar:\nHer çalıştırmada güncel stok kaynağını yeniden oku.\nHer çalıştırmada güncel kaynak gerekir: evet.\n\nİşlem onayı:\nHer dosya oluşturma için o çalışmanın tam rapor teklifini onaya sun.\nHer işlem için güncel onay gerekir: evet."
+          }
+        ],
+        "warnings": [],
+        "execute_enabled": true,
+        "api_call_performed": false,
+        "db_write_performed": false,
+        "external_write": false,
+        "destructive": false,
+        "next_step": "Kullanici onayi olmadan gercek API istegi veya DB yazimi yapilmaz.",
+        "selection_id": "wfr_0e6a89fca078a09b73c076a246cc56a2ee1e9ee3917454aaca0b159933ac4bd3",
+        "record_refs": [],
+        "selected_record_count": 0,
+        "preview_item_count": 0,
+        "execute_input_count": 0,
+        "action_id": "4864ccfb33979cacc24db89f5d0cfc88",
+        "prepare_fingerprint": "4864ccfb33979cacc24db89f5d0cfc88",
+        "semantic_verification": {
+          "required": true,
+          "status": "verified",
+          "verifier_version": "1.0",
+          "verified_at": "2026-10-11T14:01:11.192398+00:00",
+          "mode": "act",
+          "plan_id": "b8c97563e7ff4e7eb7e2d88d8f9f133c",
+          "step_id": "step_3_save_prepare",
+          "operation_id": "workflows.save.prepare",
+          "action_type": "ai.action_save_workflow_spec",
+          "prepare_fingerprint": "4864ccfb33979cacc24db89f5d0cfc88",
+          "action_fingerprint": "4864ccfb33979cacc24db89f5d0cfc88",
+          "objective_hash": "5da55f1ae1cf2a2a2a36e5eadeac952a",
+          "record_count": 0,
+          "configuration_schema_fingerprint": "1a20c151cb7b5e55313d335014dee2baf02d1a460de50012907f3d7117427196"
+        },
+        "_agent_task_session_id": "da90a35ad27d49ea8e7736811276d15d",
+        "_agent_task_resume": true,
+        "_agent_task_runtime": {
+          "source": "cloud",
+          "provider_id": 1,
+          "provider_label": "OpenRouter",
+          "model_name": "z-ai/glm-5.3-flash",
+          "provider_code": "openrouter",
+          "runtime_name": "openrouter_chat",
+          "reasoning_effort": "auto",
+          "allow_model_fallback": false,
+          "model_metadata": {
+            "supported_parameters": [
+              "frequency_penalty",
+              "include_reasoning",
+              "logit_bias",
+              "logprobs",
+              "max_tokens",
+              "min_p",
+              "parallel_tool_calls",
+              "presence_penalty",
+              "reasoning",
+              "reasoning_effort",
+              "repetition_penalty",
+              "response_format",
+              "seed",
+              "stop",
+              "structured_outputs",
+              "temperature",
+              "tool_choice",
+              "tools",
+              "top_k",
+              "top_logprobs",
+              "top_p"
+            ],
+            "context_length": 1048576,
+            "reasoning": {
+              "mandatory": true,
+              "default_effort": "max",
+              "supported_efforts": [
+                "max",
+                "high",
+                "low"
+              ]
+            }
+          },
+          "capability_profile": {
+            "provider_code": "openrouter",
+            "model_id": "z-ai/glm-5.3-flash",
+            "degradation_mode": "native_tools",
+            "source": "provider_metadata",
+            "prepare_write_allowed": true,
+            "external_write_planning_allowed": true
+          },
+          "runtime_policy_hash": "b7002a5e315611861dd207f866c81e29"
+        },
+        "_agent_task_state_path": "C:\\Users\\HERMAN~1\\AppData\\Local\\Temp\\orderscout-live-business-mxhwl1eg\\OrderScout\\ai\\tasks\\da90a35ad27d49ea8e7736811276d15d.json",
+        "_agent_task_store_root": "C:\\Users\\HERMAN~1\\AppData\\Local\\Temp\\orderscout-live-business-mxhwl1eg\\OrderScout\\ai\\tasks"
+      },
+      "action_proposal": {
+        "approval_required": true,
+        "status": "pending_approval",
+        "domain": "workflows",
+        "action_type": "ai.action_save_workflow_spec",
+        "title": "İş talimatlarını kaydetme onayı",
+        "summary": "Pilot Stok İncelemesi\n\nTalimatlar:\nTüm aktif stok kayıtlarını güncel kaynaktan oku. Ürün, miktar, birim ve stok değerini göster; her para birimini ayrı tut. Mağaza bağlantısı kanıtı yoksa çıkarma. Excel dosyası oluşturmadan önce o çalışmanın tam raporunu onaya sun.\n\nAmaç:\nGüncel stok için {{report_title}} başlıklı Excel raporunu hazırla ve kaydetmeden onayıma sun.\n\nParametreler:\n- report_title: metin; zorunlu; en çok karakter: 80\nBaşka parametre kabul edilmez.\n\nKaynaklar:\nHer çalıştırmada güncel stok kaynağını yeniden oku.\nHer çalıştırmada güncel kaynak gerekir: evet.\n\nİşlem onayı:\nHer dosya oluşturma için o çalışmanın tam rapor teklifini onaya sun.\nHer işlem için güncel onay gerekir: evet.",
+        "risk_level": "low",
+        "tool": "workflows.save.prepare",
+        "operation_metadata": {
+          "name": "ai.action_save_workflow_spec",
+          "version": "1.0",
+          "owner_domain": "workflows",
+          "effect_class": "local_effect",
+          "input_schema": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "output_schema": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "record_ref_types": [],
+          "environment_scope": [
+            "local"
+          ],
+          "account_scope": "runtime_resolved",
+          "risk_level": "R1",
+          "approval_policy": "prepare_then_confirm",
+          "idempotency": "operation_defined",
+          "retry_behavior": "operation_defined",
+          "supports_prepare": true,
+          "supports_execute": true,
+          "supports_verify": true,
+          "timeout_seconds": 30,
+          "supports_cancellation": true,
+          "supports_progress": true,
+          "sensitive_fields": [
+            "credentials",
+            "api_key",
+            "api_secret",
+            "token",
+            "password"
+          ],
+          "required_capabilities": []
+        },
+        "arguments": {
+          "payload": {
+            "proposal": {
+              "schema_version": 1,
+              "action_type": "workflow.save_spec",
+              "workflow_id": "wf_b552cab039b34b3ba8dcf81a4017eae7",
+              "expected_revision_id": "",
+              "revision_id": "wfr_0e6a89fca078a09b73c076a246cc56a2ee1e9ee3917454aaca0b159933ac4bd3",
+              "spec": {
+                "effect_policy": {
+                  "description": "Her dosya oluşturma için o çalışmanın tam rapor teklifini onaya sun.",
+                  "requires_current_approval": true
+                },
+                "instructions": "Tüm aktif stok kayıtlarını güncel kaynaktan oku. Ürün, miktar, birim ve stok değerini göster; her para birimini ayrı tut. Mağaza bağlantısı kanıtı yoksa çıkarma. Excel dosyası oluşturmadan önce o çalışmanın tam raporunu onaya sun.",
+                "name": "Pilot Stok İncelemesi",
+                "objective_template": "Güncel stok için {{report_title}} başlıklı Excel raporunu hazırla ve kaydetmeden onayıma sun.",
+                "parameter_schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "report_title": {
+                      "maxLength": 80,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "report_title"
+                  ],
+                  "type": "object"
+                },
+                "schema_version": 1,
+                "source_policy": {
+                  "description": "Her çalıştırmada güncel stok kaynağını yeniden oku.",
+                  "requires_current_sources": true
+                }
+              },
+              "spec_hash": "3ada4d780d5ea58ae20098c8c9e53fc4114af921a3dd5e62060c13a1df3396fb",
+              "requires_current_approval": true,
+              "action_hash": "090adb7fe1c831402a74370557df08b1a90c4df7e4ead645faf684ff11e6684b",
+              "action_id": "wfa_090adb7fe1c831402a74370557df08b1a90c4df7e4ead645faf684ff11e6684b"
+            }
+          }
+        },
+        "rows": [
+          {
+            "workflow_id": "wf_b552cab039b34b3ba8dcf81a4017eae7",
+            "revision_id": "wfr_0e6a89fca078a09b73c076a246cc56a2ee1e9ee3917454aaca0b159933ac4bd3",
+            "spec_hash": "3ada4d780d5ea58ae20098c8c9e53fc4114af921a3dd5e62060c13a1df3396fb",
+            "expected_revision_id": "",
+            "name": "Pilot Stok İncelemesi",
+            "review": "Pilot Stok İncelemesi\n\nTalimatlar:\nTüm aktif stok kayıtlarını güncel kaynaktan oku. Ürün, miktar, birim ve stok değerini göster; her para birimini ayrı tut. Mağaza bağlantısı kanıtı yoksa çıkarma. Excel dosyası oluşturmadan önce o çalışmanın tam raporunu onaya sun.\n\nAmaç:\nGüncel stok için {{report_title}} başlıklı Excel raporunu hazırla ve kaydetmeden onayıma sun.\n\nParametreler:\n- report_title: metin; zorunlu; en çok karakter: 80\nBaşka parametre kabul edilmez.\n\nKaynaklar:\nHer çalıştırmada güncel stok kaynağını yeniden oku.\nHer çalıştırmada güncel kaynak gerekir: evet.\n\nİşlem onayı:\nHer dosya oluşturma için o çalışmanın tam rapor teklifini onaya sun.\nHer işlem için güncel onay gerekir: evet."
+          }
+        ],
+        "warnings": [],
+        "execute_enabled": true,
+        "api_call_performed": false,
+        "db_write_performed": false,
+        "external_write": false,
+        "destructive": false,
+        "next_step": "Kullanici onayi olmadan gercek API istegi veya DB yazimi yapilmaz.",
+        "selection_id": "wfr_0e6a89fca078a09b73c076a246cc56a2ee1e9ee3917454aaca0b159933ac4bd3",
+        "record_refs": [],
+        "selected_record_count": 0,
+        "preview_item_count": 0,
+        "execute_input_count": 0,
+        "action_id": "4864ccfb33979cacc24db89f5d0cfc88",
+        "prepare_fingerprint": "4864ccfb33979cacc24db89f5d0cfc88",
+        "semantic_verification": {
+          "required": true,
+          "status": "verified",
+          "verifier_version": "1.0",
+          "verified_at": "2026-10-11T14:01:11.192398+00:00",
+          "mode": "act",
+          "plan_id": "b8c97563e7ff4e7eb7e2d88d8f9f133c",
+          "step_id": "step_3_save_prepare",
+          "operation_id": "workflows.save.prepare",
+          "action_type": "ai.action_save_workflow_spec",
+          "prepare_fingerprint": "4864ccfb33979cacc24db89f5d0cfc88",
+          "action_fingerprint": "4864ccfb33979cacc24db89f5d0cfc88",
+          "objective_hash": "5da55f1ae1cf2a2a2a36e5eadeac952a",
+          "record_count": 0,
+          "configuration_schema_fingerprint": "1a20c151cb7b5e55313d335014dee2baf02d1a460de50012907f3d7117427196"
+        },
+        "_agent_task_session_id": "da90a35ad27d49ea8e7736811276d15d",
+        "_agent_task_resume": true,
+        "_agent_task_runtime": {
+          "source": "cloud",
+          "provider_id": 1,
+          "provider_label": "OpenRouter",
+          "model_name": "z-ai/glm-5.3-flash",
+          "provider_code": "openrouter",
+          "runtime_name": "openrouter_chat",
+          "reasoning_effort": "auto",
+          "allow_model_fallback": false,
+          "model_metadata": {
+            "supported_parameters": [
+              "frequency_penalty",
+              "include_reasoning",
+              "logit_bias",
+              "logprobs",
+              "max_tokens",
+              "min_p",
+              "parallel_tool_calls",
+              "presence_penalty",
+              "reasoning",
+              "reasoning_effort",
+              "repetition_penalty",
+              "response_format",
+              "seed",
+              "stop",
+              "structured_outputs",
+              "temperature",
+              "tool_choice",
+              "tools",
+              "top_k",
+              "top_logprobs",
+              "top_p"
+            ],
+            "context_length": 1048576,
+            "reasoning": {
+              "mandatory": true,
+              "default_effort": "max",
+              "supported_efforts": [
+                "max",
+                "high",
+                "low"
+              ]
+            }
+          },
+          "capability_profile": {
+            "provider_code": "openrouter",
+            "model_id": "z-ai/glm-5.3-flash",
+            "degradation_mode": "native_tools",
+            "source": "provider_metadata",
+            "prepare_write_allowed": true,
+            "external_write_planning_allowed": true
+          },
+          "runtime_policy_hash": "b7002a5e315611861dd207f866c81e29"
+        },
+        "_agent_task_state_path": "C:\\Users\\HERMAN~1\\AppData\\Local\\Temp\\orderscout-live-business-mxhwl1eg\\OrderScout\\ai\\tasks\\da90a35ad27d49ea8e7736811276d15d.json",
+        "_agent_task_store_root": "C:\\Users\\HERMAN~1\\AppData\\Local\\Temp\\orderscout-live-business-mxhwl1eg\\OrderScout\\ai\\tasks"
+      },
+      "tool_call": {
+        "tool": "workflows.save.prepare",
+        "arguments": {},
+        "decision_source": "task_runtime"
+      },
+      "tool_calls": [
+        {
+          "tool": "workflows.save.prepare",
+          "arguments": {},
+          "decision_source": "task_runtime"
+        }
+      ],
+      "execute": {
+        "success": null,
+        "message": "",
+        "data": {}
+      },
+      "runtime": {
+        "model_response_count": 9,
+        "actual_model": "z-ai/glm-5.3-flash",
+        "requested_model": "z-ai/glm-5.3-flash",
+        "fallback_used": false,
+        "decision_path": ""
+      },
+      "raw_turn_data": {
+        "state": {
+          "session_id": "da90a35ad27d49ea8e7736811276d15d",
+          "status": "pending_approval",
+          "goal": "Şu tekrar kullanılabilir iş yönergesini kaydetmek için tam paketi onayıma hazırla; işi şimdi çalıştırma. Adı: Pilot Stok İncelemesi. Talimat metnini aynen koru: «Tüm aktif stok kayıtlarını güncel kaynaktan oku. Ürün, miktar, birim ve stok değerini göster; her para birimini ayrı tut. Mağaza bağlantısı kanıtı yoksa çıkarma. Excel dosyası oluşturmadan önce o çalışmanın tam raporunu onaya sun.» Amaç şablonunu aynen koru: «Güncel stok için {{report_title}} başlıklı Excel raporunu hazırla ve kaydetmeden onayıma sun.» Tek parametre report_title olsun: zorunlu metin, en fazla 80 karakter. Başka parametre kabul etme. Kaynak politikası aynen: «Her çalıştırmada güncel stok kaynağını yeniden oku.» İşlem onayı politikası aynen: «Her dosya oluşturma için o çalışmanın tam rapor teklifini onaya sun.» Her çalıştırma güncel kaynak ve her dosya oluşturma güncel onay gerektirsin. Henüz kalıcı olarak kaydetme.",
+          "active_pending_action_id": "4864ccfb33979cacc24db89f5d0cfc88",
+          "pending_actions": [
+            {
+              "approval_required": true,
+              "status": "pending_approval",
+              "domain": "workflows",
+              "action_type": "ai.action_save_workflow_spec",
+              "title": "İş talimatlarını kaydetme onayı",
+              "summary": "Pilot Stok İncelemesi\n\nTalimatlar:\nTüm aktif stok kayıtlarını güncel kaynaktan oku. Ürün, miktar, birim ve stok değerini göster; her para birimini ayrı tut. Mağaza bağlantısı kanıtı yoksa çıkarma. Excel dosyası oluşturmadan önce o çalışmanın tam raporunu onaya sun.\n\nAmaç:\nGüncel stok için {{report_title}} başlıklı Excel raporunu hazırla ve kaydetmeden onayıma sun.\n\nParametreler:\n- report_title: metin; zorunlu; en çok karakter: 80\nBaşka parametre kabul edilmez.\n\nKaynaklar:\nHer çalıştırmada güncel stok kaynağını yeniden oku.\nHer çalıştırmada güncel kaynak gerekir: evet.\n\nİşlem onayı:\nHer dosya oluşturma için o çalışmanın tam rapor teklifini onaya sun.\nHer işlem için güncel onay gerekir: evet.",
+              "risk_level": "low",
+              "tool": "workflows.save.prepare",
+              "operation_metadata": {
+                "name": "ai.action_save_workflow_spec",
+                "version": "1.0",
+                "owner_domain": "workflows",
+                "effect_class": "local_effect",
+                "input_schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "output_schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "record_ref_types": [],
+                "environment_scope": [
+                  "local"
+                ],
+                "account_scope": "runtime_resolved",
+                "risk_level": "R1",
+                "approval_policy": "prepare_then_confirm",
+                "idempotency": "operation_defined",
+                "retry_behavior": "operation_defined",
+                "supports_prepare": true,
+                "supports_execute": true,
+                "supports_verify": true,
+                "timeout_seconds": 30,
+                "supports_cancellation": true,
+                "supports_progress": true,
+                "sensitive_fields": [
+                  "credentials",
+                  "api_key",
+                  "api_secret",
+                  "token",
+                  "password"
+                ],
+                "required_capabilities": []
+              },
+              "arguments": {
+                "payload": {
+                  "proposal": {
+                    "schema_version": 1,
+                    "action_type": "workflow.save_spec",
+                    "workflow_id": "wf_b552cab039b34b3ba8dcf81a4017eae7",
+                    "expected_revision_id": "",
+                    "revision_id": "wfr_0e6a89fca078a09b73c076a246cc56a2ee1e9ee3917454aaca0b159933ac4bd3",
+                    "spec": {
+                      "effect_policy": {
+                        "description": "Her dosya oluşturma için o çalışmanın tam rapor teklifini onaya sun.",
+                        "requires_current_approval": true
+                      },
+                      "instructions": "Tüm aktif stok kayıtlarını güncel kaynaktan oku. Ürün, miktar, birim ve stok değerini göster; her para birimini ayrı tut. Mağaza bağlantısı kanıtı yoksa çıkarma. Excel dosyası oluşturmadan önce o çalışmanın tam raporunu onaya sun.",
+                      "name": "Pilot Stok İncelemesi",
+                      "objective_template": "Güncel stok için {{report_title}} başlıklı Excel raporunu hazırla ve kaydetmeden onayıma sun.",
+                      "parameter_schema": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "report_title": {
+                            "maxLength": 80,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "report_title"
+                        ],
+                        "type": "object"
+                      },
+                      "schema_version": 1,
+                      "source_policy": {
+                        "description": "Her çalıştırmada güncel stok kaynağını yeniden oku.",
+                        "requires_current_sources": true
+                      }
+                    },
+                    "spec_hash": "3ada4d780d5ea58ae20098c8c9e53fc4114af921a3dd5e62060c13a1df3396fb",
+                    "requires_current_approval": true,
+                    "action_hash": "090adb7fe1c831402a74370557df08b1a90c4df7e4ead645faf684ff11e6684b",
+                    "action_id": "wfa_090adb7fe1c831402a74370557df08b1a90c4df7e4ead645faf684ff11e6684b"
+                  }
+                }
+              },
+              "rows": [
+                {
+                  "workflow_id": "wf_b552cab039b34b3ba8dcf81a4017eae7",
+                  "revision_id": "wfr_0e6a89fca078a09b73c076a246cc56a2ee1e9ee3917454aaca0b159933ac4bd3",
+                  "spec_hash": "3ada4d780d5ea58ae20098c8c9e53fc4114af921a3dd5e62060c13a1df3396fb",
+                  "expected_revision_id": "",
+                  "name": "Pilot Stok İncelemesi",
+                  "review": "Pilot Stok İncelemesi\n\nTalimatlar:\nTüm aktif stok kayıtlarını güncel kaynaktan oku. Ürün, miktar, birim ve stok değerini göster; her para birimini ayrı tut. Mağaza bağlantısı kanıtı yoksa çıkarma. Excel dosyası oluşturmadan önce o çalışmanın tam raporunu onaya sun.\n\nAmaç:\nGüncel stok için {{report_title}} başlıklı Excel raporunu hazırla ve kaydetmeden onayıma sun.\n\nParametreler:\n- report_title: metin; zorunlu; en çok karakter: 80\nBaşka parametre kabul edilmez.\n\nKaynaklar:\nHer çalıştırmada güncel stok kaynağını yeniden oku.\nHer çalıştırmada güncel kaynak gerekir: evet.\n\nİşlem onayı:\nHer dosya oluşturma için o çalışmanın tam rapor teklifini onaya sun.\nHer işlem için güncel onay gerekir: evet."
+                }
+              ],
+              "warnings": [],
+              "execute_enabled": true,
+              "api_call_performed": false,
+              "db_write_performed": false,
+              "external_write": false,
+              "destructive": false,
+              "next_step": "Kullanici onayi olmadan gercek API istegi veya DB yazimi yapilmaz.",
+              "selection_id": "wfr_0e6a89fca078a09b73c076a246cc56a2ee1e9ee3917454aaca0b159933ac4bd3",
+              "record_refs": [],
+              "selected_record_count": 0,
+              "preview_item_count": 0,
+              "execute_input_count": 0,
+              "action_id": "4864ccfb33979cacc24db89f5d0cfc88",
+              "prepare_fingerprint": "4864ccfb33979cacc24db89f5d0cfc88",
+              "semantic_verification": {
+                "required": true,
+                "status": "verified",
+                "verifier_version": "1.0",
+                "verified_at": "2026-10-11T14:01:11.192398+00:00",
+                "mode": "act",
+                "plan_id": "b8c97563e7ff4e7eb7e2d88d8f9f133c",
+                "step_id": "step_3_save_prepare",
+                "operation_id": "workflows.save.prepare",
+                "action_type": "ai.action_save_workflow_spec",
+                "prepare_fingerprint": "4864ccfb33979cacc24db89f5d0cfc88",
+                "action_fingerprint": "4864ccfb33979cacc24db89f5d0cfc88",
+                "objective_hash": "5da55f1ae1cf2a2a2a36e5eadeac952a",
+                "record_count": 0,
+                "configuration_schema_fingerprint": "1a20c151cb7b5e55313d335014dee2baf02d1a460de50012907f3d7117427196"
+              },
+              "_agent_task_session_id": "da90a35ad27d49ea8e7736811276d15d",
+              "_agent_task_resume": true,
+              "_agent_task_runtime": {
+                "source": "cloud",
+                "provider_id": 1,
+                "provider_label": "OpenRouter",
+                "model_name": "z-ai/glm-5.3-flash",
+                "provider_code": "openrouter",
+                "runtime_name": "openrouter_chat",
+                "reasoning_effort": "auto",
+                "allow_model_fallback": false,
+                "model_metadata": {
+                  "supported_parameters": [
+                    "frequency_penalty",
+                    "include_reasoning",
+                    "logit_bias",
+                    "logprobs",
+                    "max_tokens",
+                    "min_p",
+                    "parallel_tool_calls",
+                    "presence_penalty",
+                    "reasoning",
+                    "reasoning_effort",
+                    "repetition_penalty",
+                    "response_format",
+                    "seed",
+                    "stop",
+                    "structured_outputs",
+                    "temperature",
+                    "tool_choice",
+                    "tools",
+                    "top_k",
+                    "top_logprobs",
+                    "top_p"
+                  ],
+                  "context_length": 1048576,
+                  "reasoning": {
+                    "mandatory": true,
+                    "default_effort": "max",
+                    "supported_efforts": [
+                      "max",
+                      "high",
+                      "low"
+                    ]
+                  }
+                },
+                "capability_profile": {
+                  "provider_code": "openrouter",
+                  "model_id": "z-ai/glm-5.3-flash",
+                  "degradation_mode": "native_tools",
+                  "source": "provider_metadata",
+                  "prepare_write_allowed": true,
+                  "external_write_planning_allowed": true
+                },
+                "runtime_policy_hash": "b7002a5e315611861dd207f866c81e29"
+              },
+              "_agent_task_state_path": "C:\\Users\\HERMAN~1\\AppData\\Local\\Temp\\orderscout-live-business-mxhwl1eg\\OrderScout\\ai\\tasks\\da90a35ad27d49ea8e7736811276d15d.json",
+              "_agent_task_store_root": "C:\\Users\\HERMAN~1\\AppData\\Local\\Temp\\orderscout-live-business-mxhwl1eg\\OrderScout\\ai\\tasks"
+            }
+          ],
+          "action_history": [
+            {
+              "phase": "prepare",
+              "status": "pending_approval",
+              "action_type": "ai.action_save_workflow_spec",
+              "step_index": 4,
+              "approved_by": "",
+              "approval_required": true,
+              "execute_enabled": true,
+              "action": {
+                "approval_required": true,
+                "status": "pending_approval",
+                "domain": "workflows",
+                "action_type": "ai.action_save_workflow_spec",
+                "title": "İş talimatlarını kaydetme onayı",
+                "summary": "Pilot Stok İncelemesi\n\nTalimatlar:\nTüm aktif stok kayıtlarını güncel kaynaktan oku. Ürün, miktar, birim ve stok değerini göster; her para birimini ayrı tut. Mağaza bağlantısı kanıtı yoksa çıkarma. Excel dosyası oluşturmadan önce o çalışmanın tam raporunu onaya sun.\n\nAmaç:\nGüncel stok için {{report_title}} başlıklı Excel raporunu hazırla ve kaydetmeden onayıma sun.\n\nParametreler:\n- report_title: metin; zorunlu; en çok karakter: 80\nBaşka parametre kabul edilmez.\n\nKaynaklar:\nHer çalıştırmada güncel stok kaynağını yeniden oku.\nHer çalıştırmada güncel kaynak gerekir: evet.\n\nİşlem onayı:\nHer dosya oluşturma için o çalışmanın tam rapor teklifini onaya sun.\nHer işlem için güncel onay gerekir: evet.",
+                "risk_level": "low",
+                "tool": "workflows.save.prepare",
+                "operation_metadata": {
+                  "name": "ai.action_save_workflow_spec",
+                  "version": "1.0",
+                  "owner_domain": "workflows",
+                  "effect_class": "local_effect",
+                  "input_schema": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "output_schema": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "record_ref_types": [],
+                  "environment_scope": [
+                    "local"
+                  ],
+                  "account_scope": "runtime_resolved",
+                  "risk_level": "R1",
+                  "approval_policy": "prepare_then_confirm",
+                  "idempotency": "operation_defined",
+                  "retry_behavior": "operation_defined",
+                  "supports_prepare": true,
+                  "supports_execute": true,
+                  "supports_verify": true,
+                  "timeout_seconds": 30,
+                  "supports_cancellation": true,
+                  "supports_progress": true,
+                  "sensitive_fields": [
+                    "credentials",
+                    "api_key",
+                    "api_secret",
+                    "token",
+                    "password"
+                  ],
+                  "required_capabilities": []
+                },
+                "arguments": {
+                  "payload": {
+                    "proposal": {
+                      "schema_version": 1,
+                      "action_type": "workflow.save_spec",
+                      "workflow_id": "wf_b552cab039b34b3ba8dcf81a4017eae7",
+                      "expected_revision_id": "",
+                      "revision_id": "wfr_0e6a89fca078a09b73c076a246cc56a2ee1e9ee3917454aaca0b159933ac4bd3",
+                      "spec": {
+                        "effect_policy": {
+                          "description": "Her dosya oluşturma için o çalışmanın tam rapor teklifini onaya sun.",
+                          "requires_current_approval": true
+                        },
+                        "instructions": "Tüm aktif stok kayıtlarını güncel kaynaktan oku. Ürün, miktar, birim ve stok değerini göster; her para birimini ayrı tut. Mağaza bağlantısı kanıtı yoksa çıkarma. Excel dosyası oluşturmadan önce o çalışmanın tam raporunu onaya sun.",
+                        "name": "Pilot Stok İncelemesi",
+                        "objective_template": "Güncel stok için {{report_title}} başlıklı Excel raporunu hazırla ve kaydetmeden onayıma sun.",
+                        "parameter_schema": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "report_title": {
+                              "maxLength": 80,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "report_title"
+                          ],
+                          "type": "object"
+                        },
+                        "schema_version": 1,
+                        "source_policy": {
+                          "description": "Her çalıştırmada güncel stok kaynağını yeniden oku.",
+                          "requires_current_sources": true
+                        }
+                      },
+                      "spec_hash": "3ada4d780d5ea58ae20098c8c9e53fc4114af921a3dd5e62060c13a1df3396fb",
+                      "requires_current_approval": true,
+                      "action_hash": "090adb7fe1c831402a74370557df08b1a90c4df7e4ead645faf684ff11e6684b",
+                      "action_id": "wfa_090adb7fe1c831402a74370557df08b1a90c4df7e4ead645faf684ff11e6684b"
+                    }
+                  }
+                },
+                "rows": [
+                  {
+                    "workflow_id": "wf_b552cab039b34b3ba8dcf81a4017eae7",
+                    "revision_id": "wfr_0e6a89fca078a09b73c076a246cc56a2ee1e9ee3917454aaca0b159933ac4bd3",
+                    "spec_hash": "3ada4d780d5ea58ae20098c8c9e53fc4114af921a3dd5e62060c13a1df3396fb",
+                    "expected_revision_id": "",
+                    "name": "Pilot Stok İncelemesi",
+                    "review": "Pilot Stok İncelemesi\n\nTalimatlar:\nTüm aktif stok kayıtlarını güncel kaynaktan oku. Ürün, miktar, birim ve stok değerini göster; her para birimini ayrı tut. Mağaza bağlantısı kanıtı yoksa çıkarma. Excel dosyası oluşturmadan önce o çalışmanın tam raporunu onaya sun.\n\nAmaç:\nGüncel stok için {{report_title}} başlıklı Excel raporunu hazırla ve kaydetmeden onayıma sun.\n\nParametreler:\n- report_title: metin; zorunlu; en çok karakter: 80\nBaşka parametre kabul edilmez.\n\nKaynaklar:\nHer çalıştırmada güncel stok kaynağını yeniden oku.\nHer çalıştırmada güncel kaynak gerekir: evet.\n\nİşlem onayı:\nHer dosya oluşturma için o çalışmanın tam rapor teklifini onaya sun.\nHer işlem için güncel onay gerekir: evet."
+                  }
+                ],
+                "warnings": [],
+                "execute_enabled": true,
+                "api_call_performed": false,
+                "db_write_performed": false,
+                "external_write": false,
+                "destructive": false,
+                "next_step": "Kullanici onayi olmadan gercek API istegi veya DB yazimi yapilmaz.",
+                "selection_id": "wfr_0e6a89fca078a09b73c076a246cc56a2ee1e9ee3917454aaca0b159933ac4bd3",
+                "record_refs": [],
+                "selected_record_count": 0,
+                "preview_item_count": 0,
+                "execute_input_count": 0,
+                "action_id": "4864ccfb33979cacc24db89f5d0cfc88",
+                "prepare_fingerprint": "4864ccfb33979cacc24db89f5d0cfc88",
+                "semantic_verification": {
+                  "required": true,
+                  "status": "verified",
+                  "verifier_version": "1.0",
+                  "verified_at": "2026-10-11T14:01:11.192398+00:00",
+                  "mode": "act",
+                  "plan_id": "b8c97563e7ff4e7eb7e2d88d8f9f133c",
+                  "step_id": "step_3_save_prepare",
+                  "operation_id": "workflows.save.prepare",
+                  "action_type": "ai.action_save_workflow_spec",
+                  "prepare_fingerprint": "4864ccfb33979cacc24db89f5d0cfc88",
+                  "action_fingerprint": "4864ccfb33979cacc24db89f5d0cfc88",
+                  "objective_hash": "5da55f1ae1cf2a2a2a36e5eadeac952a",
+                  "record_count": 0,
+                  "configuration_schema_fingerprint": "1a20c151cb7b5e55313d335014dee2baf02d1a460de50012907f3d7117427196"
+                }
+              }
+            }
+          ],
+          "completed_steps": [
+            {
+              "index": 1,
+              "prompt": "Pilot Stok İncelemesi işini talimat metni, amaç şablonu, tek report_title parametresi ve kaynak/onay politikalarıyla kaydetmeye hazırla; kalıcı kayıt yalnız kullanıcı onayı sonrası.",
+              "step_id": "step_1",
+              "objective": "Pilot Stok İncelemesi işini talimat metni, amaç şablonu, tek report_title parametresi ve kaynak/onay politikalarıyla kaydetmeye hazırla; kalıcı kayıt yalnız kullanıcı onayı sonrası.",
+              "depends_on": [],
+              "operation_candidates": [
+                "workflows.save.prepare"
+              ],
+              "operation_domain": "workflows",
+              "arguments": {
+                "spec": {
+                  "schema_version": 1,
+                  "name": "Pilot Stok İncelemesi",
+                  "instructions": "Tüm aktif stok kayıtlarını güncel kaynaktan oku. Ürün, miktar, birim ve stok değerini göster; her para birimini ayrı tut. Mağaza bağlantısı kanıtı yoksa çıkarma. Excel dosyası oluşturmadan önce o çalışmanın tam raporunu onaya sun.",
+                  "objective_template": "Güncel stok için {{report_title}} başlıklı Excel raporunu hazırla ve kaydetmeden onayıma sun.",
+                  "parameter_schema": {
+                    "type": "object",
+                    "properties": {
+                      "report_title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                      }
+                    },
+                    "required": [
+                      "report_title"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "source_policy": {
+                    "description": "Her çalıştırmada güncel stok kaynağını yeniden oku.",
+                    "requires_current_sources": true
+                  },
+                  "effect_policy": {
+                    "description": "Her dosya oluşturma için o çalışmanın tam rapor teklifini onaya sun.",
+                    "requires_current_approval": true
+                  }
+                }
+              },
+              "expected_evidence": [
+                "workflow_id",
+                "revision_id",
+                "spec_hash",
+                "review",
+                "action"
+              ],
+              "status": "failed",
+              "tool_names": [],
+              "observation_ids": [
+                "5d656434ba7a23b474c8c4408811a56e"
+              ],
+              "verification_status": "superseded",
+              "attempt_count": 1,
+              "result_message": "Semantic verifier operation ile kullanici hedefini uyumlu bulmadi.",
+              "result_data": {
+                "mode": null,
+                "tool_names": [],
+                "answer": null,
+                "tool_result": null,
+                "tool": "workflows.save.prepare",
+                "retryable": false,
+                "argument_problems": [
+                  "configuration_schema_request_mismatch:/spec/parameter_schema"
+                ],
+                "semantic_verification": {
+                  "phase": "plan_step",
+                  "allowed": false,
+                  "step_id": "step_1",
+                  "operation_id": "workflows.save.prepare",
+                  "action_id": "",
+                  "reason_codes": [
+                    "configuration_schema_request_mismatch:/spec/parameter_schema"
+                  ],
+                  "evidence": {
+                    "mode": "act",
+                    "operation_domain": "workflows",
+                    "effectful": true,
+                    "deterministic_intent_alignment": false,
+                    "deterministic_intent_reason": "operation_has_no_deterministic_intent_policy",
+                    "model_verdict": {
+                      "verdict": "deny",
+                      "objective_aligned": true,
+                      "domain_aligned": true,
+                      "unwanted_effect": false,
+                      "reason": "Operation semantically aligned (workflows domain, prepare_write with approval, no execution). However the proposed parameter schema adds an extra constraint not present in the Goal: /properties/report_title includes minLength=1, while the Goal only specifies 'zorunlu metin, en fazla 80 karakter' (required string, maxLength 80). A required string does not imply minLength=1. Added constraint at /properties/report_title/minLength: requested absent, proposed 1. Remove minLength to align.",
+                      "configuration_schema_reviews": [
+                        {
+                          "argument_path": "/spec/parameter_schema",
+                          "requested_schema_json": "{\"type\":\"object\",\"properties\":{\"report_title\":{\"type\":\"string\",\"maxLength\":80}},\"required\":[\"report_title\"],\"additionalProperties\":false}",
+                          "requirement_quotes": [
+                            "Tek parametre report_title olsun: zorunlu metin, en fazla 80 karakter.",
+                            "Başka parametre kabul etme."
+                          ]
+                        }
+                      ]
+                    },
+                    "config_schema_contract": {
+                      "schema_version": 1,
+                      "evaluated_arguments_sha256": "e611d51066760c830003d7594e64cfe66ccd5ffb873f84e8eaa68c970b8a3be8",
+                      "model_arguments_sha256": "e611d51066760c830003d7594e64cfe66ccd5ffb873f84e8eaa68c970b8a3be8",
+                      "evaluated_schema_fingerprint": "a2cd8e0585b7d6b220eb32c4cbcab072e4445f909c514de0c63759395bdffb21",
+                      "current_request_sha256": "5a790fb27d81269e3b20d7a4db62ad46a2d17357eb4adaf3fe08d3a0e8bcfb3b",
+                      "schema_count": 1
+                    },
+                    "configuration_schema_reviews": [
+                      {
+                        "argument_path": "/spec/parameter_schema",
+                        "requested_schema_sha256": "de5b23c92903f8f9350f0fc0a81d513c30254030537aac3b0d41968b162cf909",
+                        "proposed_schema_sha256": "b38afb1ac737c9cc74ea9fcf0ed2e4df99ce4e7321daf95c70c65effc8921120",
+                        "requirement_quotes": [
+                          "Tek parametre report_title olsun: zorunlu metin, en fazla 80 karakter.",
+                          "Başka parametre kabul etme."
+                        ],
+                        "requested_schema": {
+                          "type": "object",
+                          "properties": {
+                            "report_title": {
+                              "type": "string",
+                              "maxLength": 80
+                            }
+                          },
+                          "required": [
+                            "report_title"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "proposed_schema": {
+                          "type": "object",
+                          "properties": {
+                            "report_title": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 80
+                            }
+                          },
+                          "required": [
+                            "report_title"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    ],
+                    "semantic_contract": {
+                      "information_source": "unspecified"
+                    },
+                    "record_scope": "",
+                    "exact_argument_ids": {
+                      "order_numbers": [],
+                      "claim_ids": []
+                    },
+                    "requested_fields": [
+                      "action_result"
+                    ],
+                    "projection_fields": [],
+                    "expected_read_operations": [],
+                    "authored_operation_ids": [
+                      "workflows.save.prepare"
+                    ],
+                    "multi_operation_direct_plan": false,
+                    "missing_metric_requirements": [],
+                    "contextual_identity_bridge": {}
+                  },
+                  "verified_at": "2026-10-11T14:00:45.823049+00:00"
+                },
+                "conversation_context": {},
+                "dependency_bindings": {},
+                "attempt_count": 1,
+                "attempt_failures": [],
+                "replan_status": "superseded",
+                "replacement_step_ids": [
+                  "step_2"
+                ]
+              }
+            },
+            {
+              "index": 2,
+              "prompt": "Pilot Stok İncelemesi işini talimat metni, amaç şablonu, tek report_title parametresi (minLength 1, maxLength 80) ve kaynak/onay politikalarıyla kaydetmeye hazırla; kalıcı kayıt yalnız kullanıcı onayı sonrası.",
+              "step_id": "step_2",
+              "objective": "Pilot Stok İncelemesi işini talimat metni, amaç şablonu, tek report_title parametresi (minLength 1, maxLength 80) ve kaynak/onay politikalarıyla kaydetmeye hazırla; kalıcı kayıt yalnız kullanıcı onayı sonrası.",
+              "depends_on": [],
+              "operation_candidates": [
+                "workflows.save.prepare"
+              ],
+              "operation_domain": "workflows",
+              "arguments": {
+                "spec": {
+                  "schema_version": 1,
+                  "name": "Pilot Stok İncelemesi",
+                  "instructions": "Tüm aktif stok kayıtlarını güncel kaynaktan oku. Ürün, miktar, birim ve stok değerini göster; her para birimini ayrı tut. Mağaza bağlantısı kanıtı yoksa çıkarma. Excel dosyası oluşturmadan önce o çalışmanın tam raporunu onaya sun.",
+                  "objective_template": "Güncel stok için {{report_title}} başlıklı Excel raporunu hazırla ve kaydetmeden onayıma sun.",
+                  "parameter_schema": {
+                    "type": "object",
+                    "properties": {
+                      "report_title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                      }
+                    },
+                    "required": [
+                      "report_title"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "source_policy": {
+                    "description": "Her çalıştırmada güncel stok kaynağını yeniden oku.",
+                    "requires_current_sources": true
+                  },
+                  "effect_policy": {
+                    "description": "Her dosya oluşturma için o çalışmanın tam rapor teklifini onaya sun.",
+                    "requires_current_approval": true
+                  }
+                }
+              },
+              "expected_evidence": [
+                "workflow_id",
+                "revision_id",
+                "spec_hash",
+                "review",
+                "action"
+              ],
+              "status": "failed",
+              "tool_names": [],
+              "observation_ids": [
+                "8c4fa10d9e02dc6f716c2de56fd2f493"
+              ],
+              "verification_status": "superseded",
+              "attempt_count": 1,
+              "result_message": "Semantic verifier operation ile kullanici hedefini uyumlu bulmadi.",
+              "result_data": {
+                "mode": null,
+                "tool_names": [],
+                "answer": null,
+                "tool_result": null,
+                "tool": "workflows.save.prepare",
+                "retryable": false,
+                "argument_problems": [
+                  "configuration_schema_request_mismatch:/spec/parameter_schema"
+                ],
+                "semantic_verification": {
+                  "phase": "plan_step",
+                  "allowed": false,
+                  "step_id": "step_2",
+                  "operation_id": "workflows.save.prepare",
+                  "action_id": "",
+                  "reason_codes": [
+                    "configuration_schema_request_mismatch:/spec/parameter_schema"
+                  ],
+                  "evidence": {
+                    "mode": "act",
+                    "operation_domain": "workflows",
+                    "effectful": true,
+                    "deterministic_intent_alignment": false,
+                    "deterministic_intent_reason": "operation_has_no_deterministic_intent_policy",
+                    "model_verdict": {
+                      "verdict": "deny",
+                      "objective_aligned": true,
+                      "domain_aligned": true,
+                      "unwanted_effect": false,
+                      "reason": "Objective ve domain uyumlu; operation yalnızca hazırlık yapıyor ve kalıcı kayıt onaya bağlı. Ancak /spec/parameter_schema üzerinde eklenen kısıt var: Goal yalnızca 'Tek parametre report_title olsun: zorunlu metin, en fazla 80 karakter' diyor; bu required üyeliği ve maxLength=80 talep eder, minLength=1 talep etmez. Proposed şemada report_title için minLength:1 eklenmiş (requested: yok, proposed: 1). Eklenen kısıt deny gerektirir; minLength kaldırılarak şema yeniden sunulmalı.",
+                      "configuration_schema_reviews": [
+                        {
+                          "argument_path": "/spec/parameter_schema",
+                          "requested_schema_json": "{\"type\":\"object\",\"properties\":{\"report_title\":{\"type\":\"string\",\"maxLength\":80}},\"required\":[\"report_title\"],\"additionalProperties\":false}",
+                          "requirement_quotes": [
+                            "Tek parametre report_title olsun: zorunlu metin, en fazla 80 karakter.",
+                            "Başka parametre kabul etme."
+                          ]
+                        }
+                      ]
+                    },
+                    "config_schema_contract": {
+                      "schema_version": 1,
+                      "evaluated_arguments_sha256": "e611d51066760c830003d7594e64cfe66ccd5ffb873f84e8eaa68c970b8a3be8",
+                      "model_arguments_sha256": "e611d51066760c830003d7594e64cfe66ccd5ffb873f84e8eaa68c970b8a3be8",
+                      "evaluated_schema_fingerprint": "a2cd8e0585b7d6b220eb32c4cbcab072e4445f909c514de0c63759395bdffb21",
+                      "current_request_sha256": "5a790fb27d81269e3b20d7a4db62ad46a2d17357eb4adaf3fe08d3a0e8bcfb3b",
+                      "schema_count": 1
+                    },
+                    "configuration_schema_reviews": [
+                      {
+                        "argument_path": "/spec/parameter_schema",
+                        "requested_schema_sha256": "de5b23c92903f8f9350f0fc0a81d513c30254030537aac3b0d41968b162cf909",
+                        "proposed_schema_sha256": "b38afb1ac737c9cc74ea9fcf0ed2e4df99ce4e7321daf95c70c65effc8921120",
+                        "requirement_quotes": [
+                          "Tek parametre report_title olsun: zorunlu metin, en fazla 80 karakter.",
+                          "Başka parametre kabul etme."
+                        ],
+                        "requested_schema": {
+                          "type": "object",
+                          "properties": {
+                            "report_title": {
+                              "type": "string",
+                              "maxLength": 80
+                            }
+                          },
+                          "required": [
+                            "report_title"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "proposed_schema": {
+                          "type": "object",
+                          "properties": {
+                            "report_title": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 80
+                            }
+                          },
+                          "required": [
+                            "report_title"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    ],
+                    "semantic_contract": {
+                      "information_source": "unspecified"
+                    },
+                    "record_scope": "",
+                    "exact_argument_ids": {
+                      "order_numbers": [],
+                      "claim_ids": []
+                    },
+                    "requested_fields": [
+                      "action_result"
+                    ],
+                    "projection_fields": [],
+                    "expected_read_operations": [],
+                    "authored_operation_ids": [
+                      "workflows.save.prepare"
+                    ],
+                    "multi_operation_direct_plan": false,
+                    "missing_metric_requirements": [],
+                    "contextual_identity_bridge": {}
+                  },
+                  "verified_at": "2026-10-11T14:00:53.025740+00:00"
+                },
+                "conversation_context": {},
+                "dependency_bindings": {},
+                "attempt_count": 1,
+                "attempt_failures": [],
+                "replan_status": "superseded",
+                "replacement_step_ids": [
+                  "step_2_retry"
+                ]
+              }
+            },
+            {
+              "index": 3,
+              "prompt": "Pilot Stok İncelemesi işini talimat metni, amaç şablonu, tek report_title parametresi (maxLength 80, minLength olmadan) ve kaynak/onay politikalarıyla kaydetmeye hazırla; kalıcı kayıt yalnız kullanıcı onayı sonrası.",
+              "step_id": "step_2_retry",
+              "objective": "Pilot Stok İncelemesi işini talimat metni, amaç şablonu, tek report_title parametresi (maxLength 80, minLength olmadan) ve kaynak/onay politikalarıyla kaydetmeye hazırla; kalıcı kayıt yalnız kullanıcı onayı sonrası.",
+              "depends_on": [],
+              "operation_candidates": [
+                "workflows.save.prepare"
+              ],
+              "operation_domain": "workflows",
+              "arguments": {
+                "spec": {
+                  "schema_version": 1,
+                  "name": "Pilot Stok İncelemesi",
+                  "instructions": "Tüm aktif stok kayıtlarını güncel kaynaktan oku. Ürün, miktar, birim ve stok değerini göster; her para birimini ayrı tut. Mağaza bağlantısı kanıtı yoksa çıkarma. Excel dosyası oluşturmadan önce o çalışmanın tam raporunu onaya sun.",
+                  "objective_template": "Güncel stok için {{report_title}} başlıklı Excel raporunu hazırla ve kaydetmeden onayıma sun.",
+                  "parameter_schema": {
+                    "type": "object",
+                    "properties": {
+                      "report_title": {
+                        "type": "string",
+                        "maxLength": 80
+                      }
+                    },
+                    "required": [
+                      "report_title"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "source_policy": {
+                    "description": "Her çalıştırmada güncel stok kaynağını yeniden oku.",
+                    "requires_current_sources": true
+                  },
+                  "effect_policy": {
+                    "description": "Her dosya oluşturma için o çalışmanın tam rapor teklifini onaya sun.",
+                    "requires_current_approval": true
+                  }
+                }
+              },
+              "expected_evidence": [
+                "workflow_id",
+                "revision_id",
+                "spec_hash",
+                "review",
+                "action"
+              ],
+              "status": "failed",
+              "tool_names": [],
+              "observation_ids": [
+                "996685f0e36c196ff25426472ccf71d2"
+              ],
+              "verification_status": "superseded",
+              "attempt_count": 1,
+              "result_message": "Semantic verifier operation ile kullanici hedefini uyumlu bulmadi.",
+              "result_data": {
+                "mode": null,
+                "tool_names": [],
+                "answer": null,
+                "tool_result": null,
+                "tool": "workflows.save.prepare",
+                "retryable": false,
+                "argument_problems": [
+                  "configuration_schema_provenance_not_in_current_request"
+                ],
+                "semantic_verification": {
+                  "phase": "plan_step",
+                  "allowed": false,
+                  "step_id": "step_2_retry",
+                  "operation_id": "workflows.save.prepare",
+                  "action_id": "",
+                  "reason_codes": [
+                    "configuration_schema_provenance_not_in_current_request"
+                  ],
+                  "evidence": {
+                    "mode": "act",
+                    "operation_domain": "workflows",
+                    "effectful": true,
+                    "deterministic_intent_alignment": false,
+                    "deterministic_intent_reason": "operation_has_no_deterministic_intent_policy",
+                    "model_verdict": {
+                      "verdict": "allow",
+                      "objective_aligned": true,
+                      "domain_aligned": true,
+                      "unwanted_effect": false,
+                      "reason": "Operation workflows.save.prepare, kullanıcının 'şimdi çalıştırma, onayıma hazırla' talebiyle uyumlu: yalnız hazırlık yapar, approval_required=True ve kalıcı kayıt yalnız exact onay sonrası gerçekleşir. Tek parametre report_title zorunlu string, maxLength 80; proposed schema bunu birebir yansıtıyor (minLength, default, format veya ek kısıt yok). Talimat metni, amaç şablonu ve kaynak/onay politikaları objective ile tutarlı.",
+                      "configuration_schema_reviews": [
+                        {
+                          "argument_path": "/spec/parameter_schema",
+                          "requested_schema_json": "{\"type\":\"object\",\"properties\":{\"report_title\":{\"type\":\"string\",\"maxLength\":80}},\"required\":[\"report_title\"],\"additionalProperties\":false}",
+                          "requirement_quotes": [
+                            "Tek parametre report_title olsun: zorunlu metin, en fazla 80 karakter.",
+                            "Başka parametre kabul etme.",
+                            "İşi şimdi çalıştırma.",
+                            "Henüz kalıcı olarak kaydetme."
+                          ]
+                        }
+                      ]
+                    },
+                    "config_schema_contract": {
+                      "schema_version": 1,
+                      "evaluated_arguments_sha256": "64c55952a23a44943aafe92f41c8bc4549b137abf23402a6c99ef13e702306ab",
+                      "model_arguments_sha256": "64c55952a23a44943aafe92f41c8bc4549b137abf23402a6c99ef13e702306ab",
+                      "evaluated_schema_fingerprint": "1a20c151cb7b5e55313d335014dee2baf02d1a460de50012907f3d7117427196",
+                      "current_request_sha256": "5a790fb27d81269e3b20d7a4db62ad46a2d17357eb4adaf3fe08d3a0e8bcfb3b",
+                      "schema_count": 1
+                    },
+                    "configuration_schema_reviews": [],
+                    "semantic_contract": {
+                      "information_source": "unspecified"
+                    },
+                    "record_scope": "",
+                    "exact_argument_ids": {
+                      "order_numbers": [],
+                      "claim_ids": []
+                    },
+                    "requested_fields": [
+                      "action_result"
+                    ],
+                    "projection_fields": [],
+                    "expected_read_operations": [],
+                    "authored_operation_ids": [
+                      "workflows.save.prepare"
+                    ],
+                    "multi_operation_direct_plan": false,
+                    "missing_metric_requirements": [],
+                    "contextual_identity_bridge": {}
+                  },
+                  "verified_at": "2026-10-11T14:00:59.974663+00:00"
+                },
+                "conversation_context": {},
+                "dependency_bindings": {},
+                "attempt_count": 1,
+                "attempt_failures": [],
+                "replan_status": "superseded",
+                "replacement_step_ids": [
+                  "step_3_save_prepare"
+                ]
+              }
+            },
+            {
+              "index": 4,
+              "prompt": "Pilot Stok İncelemesi işini talimat metni, amaç şablonu, tek report_title parametresi (maxLength 80) ve kaynak/onay politikalarıyla güncel istek bağlamında kaydetmeye hazırla; kalıcı kayıt yalnız kullanıcı onayı sonrası.",
+              "step_id": "step_3_save_prepare",
+              "objective": "Pilot Stok İncelemesi işini talimat metni, amaç şablonu, tek report_title parametresi (maxLength 80) ve kaynak/onay politikalarıyla güncel istek bağlamında kaydetmeye hazırla; kalıcı kayıt yalnız kullanıcı onayı sonrası.",
+              "depends_on": [],
+              "operation_candidates": [
+                "workflows.save.prepare"
+              ],
+              "operation_domain": "workflows",
+              "arguments": {
+                "spec": {
+                  "schema_version": 1,
+                  "name": "Pilot Stok İncelemesi",
+                  "instructions": "Tüm aktif stok kayıtlarını güncel kaynaktan oku. Ürün, miktar, birim ve stok değerini göster; her para birimini ayrı tut. Mağaza bağlantısı kanıtı yoksa çıkarma. Excel dosyası oluşturmadan önce o çalışmanın tam raporunu onaya sun.",
+                  "objective_template": "Güncel stok için {{report_title}} başlıklı Excel raporunu hazırla ve kaydetmeden onayıma sun.",
+                  "parameter_schema": {
+                    "type": "object",
+                    "properties": {
+                      "report_title": {
+                        "type": "string",
+                        "maxLength": 80
+                      }
+                    },
+                    "required": [
+                      "report_title"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "source_policy": {
+                    "description": "Her çalıştırmada güncel stok kaynağını yeniden oku.",
+                    "requires_current_sources": true
+                  },
+                  "effect_policy": {
+                    "description": "Her dosya oluşturma için o çalışmanın tam rapor teklifini onaya sun.",
+                    "requires_current_approval": true
+                  }
+                }
+              },
+              "expected_evidence": [
+                "workflow_id",
+                "revision_id",
+                "spec_hash",
+                "review",
+                "action"
+              ],
+              "status": "completed",
+              "tool_names": [
+                "workflows.save.prepare"
+              ],
+              "observation_ids": [
+                "8c5cb4675a497ed74ba3c04791d5e32a"
+              ],
+              "verification_status": "observed",
+              "attempt_count": 1,
+              "result_message": "Onay gerekiyor: tam iş talimatları ve parametreleri kaydedilmeye hazır.",
+              "result_data": {
+                "mode": "tool",
+                "tool_names": [
+                  "workflows.save.prepare"
+                ],
+                "answer": "Onay gerekiyor: tam iş talimatları ve parametreleri kaydedilmeye hazır.",
+                "tool_result": {
+                  "approval_required": true,
+                  "api_call_performed": false,
+                  "db_write_performed": false,
+                  "tool": "workflows.save.prepare",
+                  "action": {
+                    "approval_required": true,
+                    "status": "pending_approval",
+                    "domain": "workflows",
+                    "action_type": "ai.action_save_workflow_spec",
+                    "title": "İş talimatlarını kaydetme onayı",
+                    "summary": "Pilot Stok İncelemesi\n\nTalimatlar:\nTüm aktif stok kayıtlarını güncel kaynaktan oku. Ürün, miktar, birim ve stok değerini göster; her para birimini ayrı tut. Mağaza bağlantısı kanıtı yoksa çıkarma. Excel dosyası oluşturmadan önce o çalışmanın tam raporunu onaya sun.\n\nAmaç:\nGüncel stok için {{report_title}} başlıklı Excel raporunu hazırla ve kaydetmeden onayıma sun.\n\nParametreler:\n- report_title: metin; zorunlu; en çok karakter: 80\nBaşka parametre kabul edilmez.\n\nKaynaklar:\nHer çalıştırmada güncel stok kaynağını yeniden oku.\nHer çalıştırmada güncel kaynak gerekir: evet.\n\nİşlem onayı:\nHer dosya oluşturma için o çalışmanın tam rapor teklifini onaya sun.\nHer işlem için güncel onay gerekir: evet.",
+                    "risk_level": "low",
+                    "tool": "workflows.save.prepare",
+                    "operation_metadata": {
+                      "name": "ai.action_save_workflow_spec",
+                      "version": "1.0",
+                      "owner_domain": "workflows",
+                      "effect_class": "local_effect",
+                      "input_schema": {
+                        "type": "object",
+                        "additionalProperties": true
+                      },
+                      "output_schema": {
+                        "type": "object",
+                        "additionalProperties": true
+                      },
+                      "record_ref_types": [],
+                      "environment_scope": [
+                        "local"
+                      ],
+                      "account_scope": "runtime_resolved",
+                      "risk_level": "R1",
+                      "approval_policy": "prepare_then_confirm",
+                      "idempotency": "operation_defined",
+                      "retry_behavior": "operation_defined",
+                      "supports_prepare": true,
+                      "supports_execute": true,
+                      "supports_verify": true,
+                      "timeout_seconds": 30,
+                      "supports_cancellation": true,
+                      "supports_progress": true,
+                      "sensitive_fields": [
+                        "credentials",
+                        "api_key",
+                        "api_secret",
+                        "token",
+                        "password"
+                      ],
+                      "required_capabilities": []
+                    },
+                    "arguments": {
+                      "payload": {
+                        "proposal": {
+                          "schema_version": 1,
+                          "action_type": "workflow.save_spec",
+                          "workflow_id": "wf_b552cab039b34b3ba8dcf81a4017eae7",
+                          "expected_revision_id": "",
+                          "revision_id": "wfr_0e6a89fca078a09b73c076a246cc56a2ee1e9ee3917454aaca0b159933ac4bd3",
+                          "spec": {
+                            "effect_policy": {
+                              "description": "Her dosya oluşturma için o çalışmanın tam rapor teklifini onaya sun.",
+                              "requires_current_approval": true
+                            },
+                            "instructions": "Tüm aktif stok kayıtlarını güncel kaynaktan oku. Ürün, miktar, birim ve stok değerini göster; her para birimini ayrı tut. Mağaza bağlantısı kanıtı yoksa çıkarma. Excel dosyası oluşturmadan önce o çalışmanın tam raporunu onaya sun.",
+                            "name": "Pilot Stok İncelemesi",
+                            "objective_template": "Güncel stok için {{report_title}} başlıklı Excel raporunu hazırla ve kaydetmeden onayıma sun.",
+                            "parameter_schema": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "report_title": {
+                                  "maxLength": 80,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "report_title"
+                              ],
+                              "type": "object"
+                            },
+                            "schema_version": 1,
+                            "source_policy": {
+                              "description": "Her çalıştırmada güncel stok kaynağını yeniden oku.",
+                              "requires_current_sources": true
+                            }
+                          },
+                          "spec_hash": "3ada4d780d5ea58ae20098c8c9e53fc4114af921a3dd5e62060c13a1df3396fb",
+                          "requires_current_approval": true,
+                          "action_hash": "090adb7fe1c831402a74370557df08b1a90c4df7e4ead645faf684ff11e6684b",
+                          "action_id": "wfa_090adb7fe1c831402a74370557df08b1a90c4df7e4ead645faf684ff11e6684b"
+                        }
+                      }
+                    },
+                    "rows": [
+                      {
+                        "workflow_id": "wf_b552cab039b34b3ba8dcf81a4017eae7",
+                        "revision_id": "wfr_0e6a89fca078a09b73c076a246cc56a2ee1e9ee3917454aaca0b159933ac4bd3",
+                        "spec_hash": "3ada4d780d5ea58ae20098c8c9e53fc4114af921a3dd5e62060c13a1df3396fb",
+                        "expected_revision_id": "",
+                        "name": "Pilot Stok İncelemesi",
+                        "review": "Pilot Stok İncelemesi\n\nTalimatlar:\nTüm aktif stok kayıtlarını güncel kaynaktan oku. Ürün, miktar, birim ve stok değerini göster; her para birimini ayrı tut. Mağaza bağlantısı kanıtı yoksa çıkarma. Excel dosyası oluşturmadan önce o çalışmanın tam raporunu onaya sun.\n\nAmaç:\nGüncel stok için {{report_title}} başlıklı Excel raporunu hazırla ve kaydetmeden onayıma sun.\n\nParametreler:\n- report_title: metin; zorunlu; en çok karakter: 80\nBaşka parametre kabul edilmez.\n\nKaynaklar:\nHer çalıştırmada güncel stok kaynağını yeniden oku.\nHer çalıştırmada güncel kaynak gerekir: evet.\n\nİşlem onayı:\nHer dosya oluşturma için o çalışmanın tam rapor teklifini onaya sun.\nHer işlem için güncel onay gerekir: evet."
+                      }
+                    ],
+                    "warnings": [],
+                    "execute_enabled": true,
+                    "api_call_performed": false,
+                    "db_write_performed": false,
+                    "external_write": false,
+                    "destructive": false,
+                    "next_step": "Kullanici onayi olmadan gercek API istegi veya DB yazimi yapilmaz.",
+                    "selection_id": "wfr_0e6a89fca078a09b73c076a246cc56a2ee1e9ee3917454aaca0b159933ac4bd3",
+                    "record_refs": [],
+                    "selected_record_count": 0,
+                    "preview_item_count": 0,
+                    "execute_input_count": 0,
+                    "action_id": "4864ccfb33979cacc24db89f5d0cfc88",
+                    "prepare_fingerprint": "4864ccfb33979cacc24db89f5d0cfc88",
+                    "semantic_verification": {
+                      "required": true,
+                      "status": "verified",
+                      "verifier_version": "1.0",
+                      "verified_at": "2026-10-11T14:01:11.192398+00:00",
+                      "mode": "act",
+                      "plan_id": "b8c97563e7ff4e7eb7e2d88d8f9f133c",
+                      "step_id": "step_3_save_prepare",
+                      "operation_id": "workflows.save.prepare",
+                      "action_type": "ai.action_save_workflow_spec",
+                      "prepare_fingerprint": "4864ccfb33979cacc24db89f5d0cfc88",
+                      "action_fingerprint": "4864ccfb33979cacc24db89f5d0cfc88",
+                      "objective_hash": "5da55f1ae1cf2a2a2a36e5eadeac952a",
+                      "record_count": 0,
+                      "configuration_schema_fingerprint": "1a20c151cb7b5e55313d335014dee2baf02d1a460de50012907f3d7117427196"
+                    }
+                  },
+                  "operation_result": {
+                    "operation_name": "ai.action_save_workflow_spec",
+                    "operation_version": "1.0",
+                    "success": true,
+                    "status": "pending_approval",
+                    "message": "Onay gerekiyor: tam iş talimatları ve parametreleri kaydedilmeye hazır.",
+                    "data": {
+                      "approval_required": true
+                    },
+                    "record_refs": [],
+                    "scope": {
+                      "domain": "workflows",
+                      "environment_scope": [
+                        "local"
+                      ],
+                      "account_scope": "runtime_resolved"
+                    },
+                    "selected_record_count": null,
+                    "preview_item_count": null,
+                    "execute_input_count": null,
+                    "retryable": false,
+                    "verification": {},
+                    "audit": {},
+                    "error_code": "",
+                    "invariant_problems": []
+                  },
+                  "valid": true,
+                  "workflow_id": "wf_b552cab039b34b3ba8dcf81a4017eae7",
+                  "revision_id": "wfr_0e6a89fca078a09b73c076a246cc56a2ee1e9ee3917454aaca0b159933ac4bd3",
+                  "spec_hash": "3ada4d780d5ea58ae20098c8c9e53fc4114af921a3dd5e62060c13a1df3396fb",
+                  "review": "Pilot Stok İncelemesi\n\nTalimatlar:\nTüm aktif stok kayıtlarını güncel kaynaktan oku. Ürün, miktar, birim ve stok değerini göster; her para birimini ayrı tut. Mağaza bağlantısı kanıtı yoksa çıkarma. Excel dosyası oluşturmadan önce o çalışmanın tam raporunu onaya sun.\n\nAmaç:\nGüncel stok için {{report_title}} başlıklı Excel raporunu hazırla ve kaydetmeden onayıma sun.\n\nParametreler:\n- report_title: metin; zorunlu; en çok karakter: 80\nBaşka parametre kabul edilmez.\n\nKaynaklar:\nHer çalıştırmada güncel stok kaynağını yeniden oku.\nHer çalıştırmada güncel kaynak gerekir: evet.\n\nİşlem onayı:\nHer dosya oluşturma için o çalışmanın tam rapor teklifini onaya sun.\nHer işlem için güncel onay gerekir: evet.",
+                  "saved_execution_authority": false
+                },
+                "conversation_context": {},
+                "dependency_bindings": {},
+                "attempt_count": 1,
+                "attempt_failures": []
+              }
+            }
+          ]
+        },
+        "turn_interpretation": {
+          "mode": "act",
+          "domain": "general",
+          "objective": "Pilot Stok İncelemesi adlı tekrar kullanılabilir iş yönergesini (talimat metni, amaç şablonu, report_title parametresi, kaynak ve onay politikaları) aynen koruyarak tam paketi onaya hazırla; işi şimdi çalıştırma ve kalıcı olarak kaydetme.",
+          "intent_kind": "action",
+          "request_shape": "action",
+          "explanation_topics": [],
+          "information_source": "unspecified",
+          "operation_policy": "allow_new_operations",
+          "comparison_policy": "not_requested",
+          "comparison_policy_source": "model_authored",
+          "calculation_grouping": "none",
+          "calculation_count": 0,
+          "requested_fields": [
+            "action_result"
+          ],
+          "direct_output_fields": [],
+          "identifier_display": "auto",
+          "reason": "Kullanıcı yeni bir iş yönergesi paketinin onaya sunulmasını istiyor; yönergenin çalıştırılması veya kaydedilmesi istenmiyor, bu bir eylem hazırlığıdır.",
+          "requires_clarification": false,
+          "clarification": "",
+          "missing_input": "none",
+          "population_basis": "entity_records",
+          "planner_invoked": true,
+          "valid": true,
+          "decision_path": "typed_model_turn_interpretation",
+          "semantic_corrections": [
+            "explicitly_prohibited_scope_projection_removed"
+          ],
+          "semantic_contract": {
+            "information_source": "unspecified"
+          },
+          "correction_target": {},
+          "intent_signal_observability": {
+            "normalized_message_sha256": "a278e0b1bd08ca73c4c67f221787f4f5d63fc46c4e94db5507bac57d953c472e",
+            "normalized_message_length": 902,
+            "item_sales_report": false,
+            "report_export": true,
+            "report_export_prohibited": false
+          },
+          "turn_contract_provenance": {
+            "initial": {
+              "mode": "act",
+              "domain": "general",
+              "intent_kind": "action",
+              "request_shape": "action",
+              "information_source": "unspecified",
+              "operation_policy": "allow_new_operations",
+              "missing_input": "none",
+              "population_basis": "entity_records",
+              "metric_population": "missing_or_invalid",
+              "requires_clarification": false,
+              "response_sha256": "66b6976fd561abe3811333ec89dbf6a9c50cfa42cf34acb099a53dfa62a1192f"
+            },
+            "accepted": {
+              "mode": "act",
+              "domain": "general",
+              "intent_kind": "action",
+              "request_shape": "action",
+              "information_source": "unspecified",
+              "operation_policy": "allow_new_operations",
+              "missing_input": "none",
+              "population_basis": "entity_records",
+              "metric_population": "missing_or_invalid",
+              "requires_clarification": false
+            },
+            "current_turn_business_observation": "not_read",
+            "input_sha256": "5a790fb27d81269e3b20d7a4db62ad46a2d17357eb4adaf3fe08d3a0e8bcfb3b",
+            "application_prompt_sha256": "a9e33b7566530da5a2ff2f8397e78e6fb7754570d0eab647dd0c8bc6de2cac53",
+            "population_alignment": {
+              "required": false
+            }
+          }
+        }
+      },
+      "actual_initial_model_response": {
+        "mode": "act",
+        "domain": "general",
+        "objective": "Pilot Stok İncelemesi adlı tekrar kullanılabilir iş yönergesini (talimat metni, amaç şablonu, report_title parametresi, kaynak ve onay politikaları) aynen koruyarak tam paketi onaya hazırla; işi şimdi çalıştırma ve kalıcı olarak kaydetme.",
+        "reason": "Kullanıcı yeni bir iş yönergesi paketinin onaya sunulmasını istiyor; yönergenin çalıştırılması veya kaydedilmesi istenmiyor, bu bir eylem hazırlığıdır.",
+        "calculation_grouping": "none",
+        "comparison_policy": "not_requested",
+        "status_codes": [],
+        "requires_clarification": false,
+        "missing_input": "none",
+        "population_basis": "entity_records",
+        "intent_kind": "action",
+        "request_shape": "action",
+        "entity": "none",
+        "metric": "action_result",
+        "metric_population": null,
+        "status_scope": "unspecified",
+        "record_scope": "unspecified",
+        "period": "unspecified",
+        "freshness": "unspecified",
+        "information_source": "unspecified",
+        "operation_policy": "allow_new_operations",
+        "identifier_display": "auto",
+        "explanation_topics": [],
+        "requested_fields": [
+          "action_result"
+        ],
+        "direct_output_fields": [],
+        "grouped_projection": null
+      }
+    },
+    {
+      "scenario_id": "workflow_save_pending",
+      "prompt": "Onay bekleyen yönergenin tam talimatı, amaç şablonu ve parametre sınırları neler? Henüz kaydedildi mi ve çalıştırıldı mı?",
+      "success": true,
+      "answer": "Kayıtlı iş listesi boş; 'Pilot Stok İncelemesi' henüz kaydedilmemiş, dolayısıyla çalıştırılmamış. Onay bekleyen yönergenin tam talimat metnini, amaç şablonunu ve parametre sınırlarını gösterebilmem için bu yönerge metnini paylaşır mısınız, ya da kaydedilmişse workflow_id bilgisini verir misiniz?",
+      "pending_action": {},
+      "action_proposal": {},
+      "tool_call": {
+        "tool": "operations.discover",
+        "arguments": {},
+        "decision_source": "task_runtime"
+      },
+      "tool_calls": [
+        {
+          "tool": "operations.discover",
+          "arguments": {},
+          "decision_source": "task_runtime"
+        },
+        {
+          "tool": "workflows.list",
+          "arguments": {},
+          "decision_source": "task_runtime"
+        }
+      ],
+      "execute": {
+        "success": null,
+        "message": "",
+        "data": {}
+      },
+      "runtime": {
+        "model_response_count": 4,
+        "actual_model": "z-ai/glm-5.3-flash",
+        "requested_model": "z-ai/glm-5.3-flash",
+        "fallback_used": false,
+        "decision_path": ""
+      },
+      "raw_turn_data": {
+        "state": {
+          "session_id": "c6ccfbe9b45e45bfa09d401f7afb5aca",
+          "status": "needs_clarification",
+          "goal": "Onay bekleyen yönergenin tam talimatı, amaç şablonu ve parametre sınırları neler? Henüz kaydedildi mi ve çalıştırıldı mı?",
+          "active_pending_action_id": "",
+          "pending_actions": [],
+          "action_history": [],
+          "completed_steps": [
+            {
+              "index": 1,
+              "prompt": "Onay bekleyen iş kaydı (workflows.save.prepare) aksiyonunun tam talimat, amaç şablonu ve parametre şemasını okuyabilecek salt okuma operasyonunu ve kaydedilme/çalıştırılma durumunu gösterebilecek kesif aracını katalogda bul.",
+              "step_id": "step_1",
+              "objective": "Onay bekleyen iş kaydı (workflows.save.prepare) aksiyonunun tam talimat, amaç şablonu ve parametre şemasını okuyabilecek salt okuma operasyonunu ve kaydedilme/çalıştırılma durumunu gösterebilecek kesif aracını katalogda bul.",
+              "depends_on": [],
+              "operation_candidates": [
+                "operations.discover"
+              ],
+              "operation_domain": "operations",
+              "arguments": {
+                "query": "workflow pending action read spec",
+                "domains": [
+                  "general"
+                ],
+                "limit": 32
+              },
+              "expected_evidence": [
+                "operations",
+                "returned_count",
+                "has_more"
+              ],
+              "status": "completed",
+              "tool_names": [
+                "operations.discover"
+              ],
+              "observation_ids": [
+                "93193b49f77648ec86c833bfec50f278"
+              ],
+              "verification_status": "observed",
+              "attempt_count": 1,
+              "result_message": "1 operasyonun giriş, çıktı ve etki sözleşmesi bulundu.",
+              "result_data": {
+                "mode": "tool",
+                "tool_names": [
+                  "operations.discover"
+                ],
+                "answer": "1 operasyonun giriş, çıktı ve etki sözleşmesi bulundu.",
+                "tool_result": {
+                  "tool": "operations.discover",
+                  "query": "workflow pending action read spec",
+                  "domains": [
+                    "general"
+                  ],
+                  "include_manual": false,
+                  "operations": [
+                    {
+                      "operation_id": "agent.delegate",
+                      "name": "agent.delegate",
+                      "description": "Bağımsız bir araştırma hedefini aynı seçili modelin sınırlı alt çalışmasına verir. Ana görevin adım ve plan değişikliği bütçesinden önceden ayrılır; aynı model süresi kullanılır. Alt çalışma yalnız mevcut hesap/kayıt/dosya kapsamını daraltabilen gerçek R0 okumalar yapar, işlem hazırlayamaz/çalıştıramaz/tekrar alt çalışma başlatamaz. Sonuç yalnız child_task_id, durum ve artifact_refs'tir; iş verisi için artifacts.read ile gerçek kaynağı oku. Tek başına bu makbuz ana işin tamamlandığına kanıt değildir.",
+                      "binding_kind": "agent_tool",
+                      "canonical_callable": "AI.processors.child_task_runtime.delegate_read_task",
+                      "exposed_tool_name": "agent.delegate",
+                      "operation_metadata": {
+                        "name": "agent.delegate",
+                        "version": "1.0",
+                        "owner_domain": "general",
+                        "effect_class": "read",
+                        "input_schema": {
+                          "type": "object",
+                          "properties": {
+                            "objective": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 4000
+                            },
+                            "max_steps": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 8
+                            },
+                            "max_replans": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 4
+                            }
+                          },
+                          "required": [
+                            "objective"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "output_schema": {
+                          "type": "object",
+                          "properties": {
+                            "child_task_id": {
+                              "type": "string"
+                            },
+                            "child_status": {
+                              "type": "string"
+                            },
+                            "artifact_refs": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "artifact_id": {
+                                    "type": "string"
+                                  },
+                                  "origin": {
+                                    "type": "object"
+                                  }
+                                }
+                              }
+                            },
+                            "requires_artifact_read": {
+                              "type": "boolean"
+                            }
+                          }
+                        },
+                        "record_ref_types": [],
+                        "environment_scope": [
+                          "local"
+                        ],
+                        "account_scope": "runtime_resolved",
+                        "risk_level": "R0",
+                        "approval_policy": "none",
+                        "idempotency": "safe",
+                        "retry_behavior": "safe",
+                        "supports_prepare": false,
+                        "supports_execute": true,
+                        "supports_verify": false,
+                        "timeout_seconds": 30,
+                        "supports_cancellation": true,
+                        "supports_progress": true,
+                        "sensitive_fields": [
+                          "credentials",
+                          "api_key",
+                          "api_secret",
+                          "token",
+                          "password"
+                        ],
+                        "required_capabilities": []
+                      },
+                      "input_source_requirements": []
+                    }
+                  ],
+                  "available_domains": [
+                    "analysis",
+                    "artifacts",
+                    "files",
+                    "finance",
+                    "general",
+                    "listing",
+                    "logistics",
+                    "marketplaces",
+                    "operations",
+                    "orders",
+                    "reports",
+                    "stock",
+                    "web",
+                    "workflows"
+                  ],
+                  "unknown_domains": [],
+                  "available_operation_count": 1,
+                  "returned_count": 1,
+                  "offset": 0,
+                  "next_offset": null,
+                  "has_more": false,
+                  "discovery_grants_execution_permission": false
+                },
+                "conversation_context": {},
+                "dependency_bindings": {},
+                "attempt_count": 1,
+                "attempt_failures": []
+              }
+            },
+            {
+              "index": 2,
+              "prompt": "Kayitli isler arasinda 'Pilot Stok İncelemesi' yonergesini bul ve kayit durumunu belirle.",
+              "step_id": "step_2",
+              "objective": "Kayitli isler arasinda 'Pilot Stok İncelemesi' yonergesini bul ve kayit durumunu belirle.",
+              "depends_on": [],
+              "operation_candidates": [
+                "workflows.list"
+              ],
+              "operation_domain": "workflows",
+              "arguments": {
+                "limit": 100
+              },
+              "expected_evidence": [
+                "workflows"
+              ],
+              "status": "completed",
+              "tool_names": [
+                "workflows.list"
+              ],
+              "observation_ids": [
+                "07ca698107b2ac82a9c6f7059741f0e0"
+              ],
+              "verification_status": "observed",
+              "attempt_count": 1,
+              "result_message": "Kayıtlı iş talimatları okundu.",
+              "result_data": {
+                "mode": "tool",
+                "tool_names": [
+                  "workflows.list"
+                ],
+                "answer": "Kayıtlı iş talimatları okundu.",
+                "tool_result": {
+                  "tool": "workflows.list",
+                  "workflows": [],
+                  "source_kind": "user_workflow_instructions",
+                  "saved_execution_authority": false
+                },
+                "conversation_context": {},
+                "dependency_bindings": {},
+                "attempt_count": 1,
+                "attempt_failures": []
+              }
+            }
+          ]
+        },
+        "turn_interpretation": {
+          "mode": "inspect",
+          "domain": "general",
+          "objective": "Onay bekleyen 'Pilot Stok İncelemesi' iş yönergesinin tam talimat metnini, amaç şablonunu ve parametre sınırlarını (report_title: zorunlu metin, en fazla 80 karakter) mevcut kayıtlardan göster; kaydedilip kaydedilmediğini ve çalıştırılıp çalıştırılmadığını belirt.",
+          "intent_kind": "data_read",
+          "request_shape": "record_detail",
+          "explanation_topics": [],
+          "information_source": "local_business_data",
+          "operation_policy": "allow_new_operations",
+          "comparison_policy": "not_requested",
+          "comparison_policy_source": "model_authored",
+          "calculation_grouping": "none",
+          "calculation_count": 0,
+          "requested_fields": [
+            "scope",
+            "action_result"
+          ],
+          "direct_output_fields": [],
+          "identifier_display": "auto",
+          "reason": "Kullanıcı, onaya sunulmuş bekleyen iş yönergesinin içeriğini ve durumunu soruyor; bu, mevcut workflows.save.prepare gözleminden inspect + existing_observations_only ile okunabilir. Yeni kayıt veya çalıştırma yapılmaz; henüz kayıt onay bekliyor ve çalıştırma onay sonrasına bırakılmıştı.",
+          "requires_clarification": false,
+          "clarification": "",
+          "missing_input": "none",
+          "population_basis": "entity_records",
+          "planner_invoked": true,
+          "valid": true,
+          "decision_path": "typed_model_turn_interpretation",
+          "semantic_corrections": [
+            "unrequested_existing_observations_only_to_allow_new_operations"
+          ],
+          "semantic_contract": {
+            "entity": "none",
+            "metric": "detail",
+            "period": "unspecified",
+            "record_scope": "active_selection",
+            "request_shape": "record_detail",
+            "projection": [
+              "scope",
+              "action_result"
+            ],
+            "scope_anchor": {
+              "entity": "none",
+              "owner_domain": ""
+            },
+            "information_source": "local_business_data"
+          },
+          "correction_target": {},
+          "intent_signal_observability": {
+            "normalized_message_sha256": "6c951310502909d55d000041cb6dbbaf0a37dc14a6a5061ebfe8dbd9e113dd95",
+            "normalized_message_length": 121,
+            "item_sales_report": false,
+            "report_export": false,
+            "report_export_prohibited": false
+          },
+          "turn_contract_provenance": {
+            "initial": {
+              "mode": "inspect",
+              "domain": "general",
+              "intent_kind": "data_read",
+              "request_shape": "record_detail",
+              "information_source": "local_business_data",
+              "operation_policy": "existing_observations_only",
+              "missing_input": "none",
+              "population_basis": "entity_records",
+              "metric_population": "missing_or_invalid",
+              "requires_clarification": false,
+              "response_sha256": "938d6744540a512e6eef2afab0d5a5e11ce6bbfeb077c16d6e5477aaf9fd1f91"
+            },
+            "accepted": {
+              "mode": "inspect",
+              "domain": "general",
+              "intent_kind": "data_read",
+              "request_shape": "record_detail",
+              "information_source": "local_business_data",
+              "operation_policy": "allow_new_operations",
+              "missing_input": "none",
+              "population_basis": "entity_records",
+              "metric_population": "missing_or_invalid",
+              "requires_clarification": false
+            },
+            "current_turn_business_observation": "not_read",
+            "input_sha256": "f69a06a9605e55c889f0f5b0aa443d53af8cc1119f22e04f7ee9f13766c4d8da",
+            "application_prompt_sha256": "f08b2c2ffe6508687c1816a7f5fa5332927ded32ad4eb46dd97744eb309fd33c",
+            "population_alignment": {
+              "required": false
+            }
+          }
+        }
+      },
+      "actual_initial_model_response": {
+        "mode": "inspect",
+        "domain": "general",
+        "objective": "Onay bekleyen 'Pilot Stok İncelemesi' iş yönergesinin tam talimat metnini, amaç şablonunu ve parametre sınırlarını (report_title: zorunlu metin, en fazla 80 karakter) mevcut kayıtlardan göster; kaydedilip kaydedilmediğini ve çalıştırılıp çalıştırılmadığını belirt.",
+        "calculation_grouping": "none",
+        "comparison_policy": "not_requested",
+        "status_codes": [],
+        "requires_clarification": false,
+        "missing_input": "none",
+        "population_basis": "entity_records",
+        "intent_kind": "data_read",
+        "request_shape": "record_detail",
+        "entity": "none",
+        "metric": "detail",
+        "record_scope": "active_selection",
+        "operation_policy": "existing_observations_only",
+        "information_source": "local_business_data",
+        "freshness": "unspecified",
+        "period": "unspecified",
+        "status_scope": "unspecified",
+        "identifier_display": "auto",
+        "requested_fields": [
+          "scope",
+          "action_result"
+        ],
+        "reason": "Kullanıcı, onaya sunulmuş bekleyen iş yönergesinin içeriğini ve durumunu soruyor; bu, mevcut workflows.save.prepare gözleminden inspect + existing_observations_only ile okunabilir. Yeni kayıt veya çalıştırma yapılmaz; henüz kayıt onay bekliyor ve çalıştırma onay sonrasına bırakılmıştı.",
+        "explanation_topics": []
+      }
+    },
+    {
+      "scenario_id": "workflow_save_approve",
+      "prompt": "Onaylıyorum.",
+      "success": true,
+      "answer": "Onaylanacak aktif bir işlem yok.",
+      "pending_action": {},
+      "action_proposal": {},
+      "tool_call": {},
+      "tool_calls": [],
+      "execute": {
+        "success": null,
+        "message": "",
+        "data": {}
+      },
+      "runtime": {
+        "model_response_count": 1,
+        "actual_model": "z-ai/glm-5.3-flash",
+        "requested_model": "z-ai/glm-5.3-flash",
+        "fallback_used": false,
+        "decision_path": "typed_control_no_pending_action"
+      },
+      "raw_turn_data": {
+        "state": {
+          "session_id": "c6ccfbe9b45e45bfa09d401f7afb5aca",
+          "status": "needs_clarification",
+          "goal": "Onay bekleyen yönergenin tam talimatı, amaç şablonu ve parametre sınırları neler? Henüz kaydedildi mi ve çalıştırıldı mı?",
+          "active_pending_action_id": "",
+          "pending_actions": [],
+          "action_history": [],
+          "completed_steps": [
+            {
+              "index": 1,
+              "prompt": "Onay bekleyen iş kaydı (workflows.save.prepare) aksiyonunun tam talimat, amaç şablonu ve parametre şemasını okuyabilecek salt okuma operasyonunu ve kaydedilme/çalıştırılma durumunu gösterebilecek kesif aracını katalogda bul.",
+              "step_id": "step_1",
+              "objective": "Onay bekleyen iş kaydı (workflows.save.prepare) aksiyonunun tam talimat, amaç şablonu ve parametre şemasını okuyabilecek salt okuma operasyonunu ve kaydedilme/çalıştırılma durumunu gösterebilecek kesif aracını katalogda bul.",
+              "depends_on": [],
+              "operation_candidates": [
+                "operations.discover"
+              ],
+              "operation_domain": "operations",
+              "arguments": {
+                "query": "workflow pending action read spec",
+                "domains": [
+                  "general"
+                ],
+                "limit": 32
+              },
+              "expected_evidence": [
+                "operations",
+                "returned_count",
+                "has_more"
+              ],
+              "status": "completed",
+              "tool_names": [
+                "operations.discover"
+              ],
+              "observation_ids": [
+                "93193b49f77648ec86c833bfec50f278"
+              ],
+              "verification_status": "observed",
+              "attempt_count": 1,
+              "result_message": "1 operasyonun giriş, çıktı ve etki sözleşmesi bulundu.",
+              "result_data": {
+                "mode": "tool",
+                "tool_names": [
+                  "operations.discover"
+                ],
+                "answer": "1 operasyonun giriş, çıktı ve etki sözleşmesi bulundu.",
+                "tool_result": {
+                  "tool": "operations.discover",
+                  "query": "workflow pending action read spec",
+                  "domains": [
+                    "general"
+                  ],
+                  "include_manual": false,
+                  "operations": [
+                    {
+                      "operation_id": "agent.delegate",
+                      "name": "agent.delegate",
+                      "description": "Bağımsız bir araştırma hedefini aynı seçili modelin sınırlı alt çalışmasına verir. Ana görevin adım ve plan değişikliği bütçesinden önceden ayrılır; aynı model süresi kullanılır. Alt çalışma yalnız mevcut hesap/kayıt/dosya kapsamını daraltabilen gerçek R0 okumalar yapar, işlem hazırlayamaz/çalıştıramaz/tekrar alt çalışma başlatamaz. Sonuç yalnız child_task_id, durum ve artifact_refs'tir; iş verisi için artifacts.read ile gerçek kaynağı oku. Tek başına bu makbuz ana işin tamamlandığına kanıt değildir.",
+                      "binding_kind": "agent_tool",
+                      "canonical_callable": "AI.processors.child_task_runtime.delegate_read_task",
+                      "exposed_tool_name": "agent.delegate",
+                      "operation_metadata": {
+                        "name": "agent.delegate",
+                        "version": "1.0",
+                        "owner_domain": "general",
+                        "effect_class": "read",
+                        "input_schema": {
+                          "type": "object",
+                          "properties": {
+                            "objective": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 4000
+                            },
+                            "max_steps": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 8
+                            },
+                            "max_replans": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 4
+                            }
+                          },
+                          "required": [
+                            "objective"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "output_schema": {
+                          "type": "object",
+                          "properties": {
+                            "child_task_id": {
+                              "type": "string"
+                            },
+                            "child_status": {
+                              "type": "string"
+                            },
+                            "artifact_refs": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "artifact_id": {
+                                    "type": "string"
+                                  },
+                                  "origin": {
+                                    "type": "object"
+                                  }
+                                }
+                              }
+                            },
+                            "requires_artifact_read": {
+                              "type": "boolean"
+                            }
+                          }
+                        },
+                        "record_ref_types": [],
+                        "environment_scope": [
+                          "local"
+                        ],
+                        "account_scope": "runtime_resolved",
+                        "risk_level": "R0",
+                        "approval_policy": "none",
+                        "idempotency": "safe",
+                        "retry_behavior": "safe",
+                        "supports_prepare": false,
+                        "supports_execute": true,
+                        "supports_verify": false,
+                        "timeout_seconds": 30,
+                        "supports_cancellation": true,
+                        "supports_progress": true,
+                        "sensitive_fields": [
+                          "credentials",
+                          "api_key",
+                          "api_secret",
+                          "token",
+                          "password"
+                        ],
+                        "required_capabilities": []
+                      },
+                      "input_source_requirements": []
+                    }
+                  ],
+                  "available_domains": [
+                    "analysis",
+                    "artifacts",
+                    "files",
+                    "finance",
+                    "general",
+                    "listing",
+                    "logistics",
+                    "marketplaces",
+                    "operations",
+                    "orders",
+                    "reports",
+                    "stock",
+                    "web",
+                    "workflows"
+                  ],
+                  "unknown_domains": [],
+                  "available_operation_count": 1,
+                  "returned_count": 1,
+                  "offset": 0,
+                  "next_offset": null,
+                  "has_more": false,
+                  "discovery_grants_execution_permission": false
+                },
+                "conversation_context": {},
+                "dependency_bindings": {},
+                "attempt_count": 1,
+                "attempt_failures": []
+              }
+            },
+            {
+              "index": 2,
+              "prompt": "Kayitli isler arasinda 'Pilot Stok İncelemesi' yonergesini bul ve kayit durumunu belirle.",
+              "step_id": "step_2",
+              "objective": "Kayitli isler arasinda 'Pilot Stok İncelemesi' yonergesini bul ve kayit durumunu belirle.",
+              "depends_on": [],
+              "operation_candidates": [
+                "workflows.list"
+              ],
+              "operation_domain": "workflows",
+              "arguments": {
+                "limit": 100
+              },
+              "expected_evidence": [
+                "workflows"
+              ],
+              "status": "completed",
+              "tool_names": [
+                "workflows.list"
+              ],
+              "observation_ids": [
+                "07ca698107b2ac82a9c6f7059741f0e0"
+              ],
+              "verification_status": "observed",
+              "attempt_count": 1,
+              "result_message": "Kayıtlı iş talimatları okundu.",
+              "result_data": {
+                "mode": "tool",
+                "tool_names": [
+                  "workflows.list"
+                ],
+                "answer": "Kayıtlı iş talimatları okundu.",
+                "tool_result": {
+                  "tool": "workflows.list",
+                  "workflows": [],
+                  "source_kind": "user_workflow_instructions",
+                  "saved_execution_authority": false
+                },
+                "conversation_context": {},
+                "dependency_bindings": {},
+                "attempt_count": 1,
+                "attempt_failures": []
+              }
+            }
+          ]
+        },
+        "turn_interpretation": {
+          "mode": "approve",
+          "domain": "general",
+          "objective": "Pilot Stok İncelemesi adlı onay bekleyen yeniden kullanılabilir iş yönergesini (talimat metni, amaç şablonu ve report_title parametresiyle) kaydetmeyi onayla; işi şimdi çalıştırma",
+          "intent_kind": "approval_control",
+          "request_shape": "action",
+          "explanation_topics": [],
+          "information_source": "local_business_data",
+          "operation_policy": "allow_new_operations",
+          "comparison_policy": "not_requested",
+          "comparison_policy_source": "model_authored",
+          "calculation_grouping": "none",
+          "calculation_count": 0,
+          "requested_fields": [
+            "action_result",
+            "scope"
+          ],
+          "direct_output_fields": [],
+          "identifier_display": "auto",
+          "reason": "Kullanıcı onay bekleyen iş talimatı paketini açıkça onayladı; onay sonrası kayıt işlemi gerçekleştirilir, çalıştırma istenmedi",
+          "requires_clarification": false,
+          "clarification": "",
+          "missing_input": "none",
+          "population_basis": "entity_records",
+          "planner_invoked": true,
+          "valid": true,
+          "decision_path": "typed_model_turn_interpretation",
+          "semantic_corrections": [],
+          "semantic_contract": {
+            "information_source": "local_business_data"
+          },
+          "correction_target": {},
+          "intent_signal_observability": {
+            "normalized_message_sha256": "44a261f0c9ae466825063eda852a2243e909afc67d0520ffea66d6157d11b098",
+            "normalized_message_length": 12,
+            "item_sales_report": false,
+            "report_export": false,
+            "report_export_prohibited": false
+          },
+          "turn_contract_provenance": {
+            "initial": {
+              "mode": "approve",
+              "domain": "general",
+              "intent_kind": "approval_control",
+              "request_shape": "action",
+              "information_source": "local_business_data",
+              "operation_policy": "allow_new_operations",
+              "missing_input": "none",
+              "population_basis": "entity_records",
+              "metric_population": "missing_or_invalid",
+              "requires_clarification": false,
+              "response_sha256": "9155b7341c462ce5b31a36ad3635fd4419be216dd459605a6a6741444a0e9880"
+            },
+            "accepted": {
+              "mode": "approve",
+              "domain": "general",
+              "intent_kind": "approval_control",
+              "request_shape": "action",
+              "information_source": "local_business_data",
+              "operation_policy": "allow_new_operations",
+              "missing_input": "none",
+              "population_basis": "entity_records",
+              "metric_population": "missing_or_invalid",
+              "requires_clarification": false
+            },
+            "current_turn_business_observation": "not_read",
+            "input_sha256": "50b09f8bd94518f2e97e09b90c2231ca862c004f16ceb23f1d220b836894f54b",
+            "application_prompt_sha256": "ee11cc8edd286576e60706287f1dbee4ebac2226c635f673fa290c9239958b26",
+            "population_alignment": {
+              "required": false
+            }
+          }
+        }
+      },
+      "actual_initial_model_response": {
+        "mode": "approve",
+        "domain": "general",
+        "objective": "Pilot Stok İncelemesi adlı onay bekleyen yeniden kullanılabilir iş yönergesini (talimat metni, amaç şablonu ve report_title parametresiyle) kaydetmeyi onayla; işi şimdi çalıştırma",
+        "reason": "Kullanıcı onay bekleyen iş talimatı paketini açıkça onayladı; onay sonrası kayıt işlemi gerçekleştirilir, çalıştırma istenmedi",
+        "calculation_grouping": "none",
+        "comparison_policy": "not_requested",
+        "status_codes": [],
+        "requires_clarification": false,
+        "missing_input": "none",
+        "population_basis": "entity_records",
+        "intent_kind": "approval_control",
+        "request_shape": "action",
+        "entity": "none",
+        "metric": "action_result",
+        "status_scope": "unspecified",
+        "record_scope": "active_selection",
+        "period": "unspecified",
+        "freshness": "unspecified",
+        "information_source": "local_business_data",
+        "operation_policy": "allow_new_operations",
+        "requested_fields": [
+          "action_result",
+          "scope"
+        ],
+        "direct_output_fields": [],
+        "explanation_topics": [],
+        "identifier_display": "auto",
+        "metric_population": null,
+        "grouped_projection": null
+      }
+    }
+  ]
+}

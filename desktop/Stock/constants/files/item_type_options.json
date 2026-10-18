@@ -1,0 +1,18 @@
+[
+  {
+    "label": "Fiziki \u00dcr\u00fcn",
+    "value": "physical"
+  },
+  {
+    "label": "Hizmet",
+    "value": "service"
+  },
+  {
+    "label": "Dijital \u00dcr\u00fcn",
+    "value": "digital"
+  },
+  {
+    "label": "Di\u011fer",
+    "value": "other"
+  }
+]

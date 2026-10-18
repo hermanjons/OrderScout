@@ -1,0 +1,11 @@
+[
+  {
+    "code": "TRENDYOL",
+    "label": "Trendyol",
+    "description": "Varsayilan Trendyol pazaryeri entegrasyonu.",
+    "logoPath": "images/marketplaces-icon.png",
+    "source_id": 1,
+    "isActive": true
+  }
+
+]

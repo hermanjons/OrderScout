@@ -1,0 +1,67 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environment
+venv/
+.venv/
+
+# IDE specific files
+.idea/
+.vscode/
+
+# Local package/test caches
+.uv-cache*/
+
+# Local runtime output
+*.log
+*.tmp
+databases/
+
+# Local AI runtime binaries are installed/generated on the developer machine.
+desktop/AI/runtime/*
+!desktop/AI/runtime/*.py
+
+# Live acceptance evidence is generated from local/provider/marketplace sessions.
+# Keep the executable harnesses and human-readable contracts in Git; keep raw
+# transcripts, Stage snapshots and regenerated closure reports on the machine
+# that produced them.
+desktop/AI/docs/live_llm_transcripts/
+desktop/AI/docs/stage-acceptance/
+desktop/AI/docs/agentic_control_plane_*.json
+desktop/AI/docs/current_acceptance_manifest.json
+desktop/AI/docs/orders_goal_closure_latest_report.json
+
+# Credentials, databases, local exports and publication reviews
+.env
+.env.*
+!.env.example
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+*.pem
+*.key
+*.pfx
+*.p12
+credentials*.json
+secrets*.json
+*.bundle
+/output/
+/tmp/
+/dist/
+/build/
+/docs/marketing/
+/docs/reports/
+
+# Private working notes; publish only maintained domain contracts.
+/perf_fixes_total.md
+desktop/*/docs/*
+!desktop/*/docs/goals.md
+!desktop/Core/docs/domain_goals_contract.md
+!desktop/AI/docs/*_agentic_parity_matrix.md
+!desktop/AI/docs/orders_agentic_goal_closure_checklist.json

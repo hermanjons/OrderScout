@@ -1,0 +1,132 @@
+[
+  {
+    "label": "Turkiye",
+    "dialCode": "+90",
+    "cities": ["Istanbul", "Ankara", "Izmir", "Bursa", "Antalya", "Konya", "Kocaeli", "Adana", "Gaziantep", "Mersin", "Kayseri"]
+  },
+  {
+    "label": "Almanya",
+    "dialCode": "+49",
+    "cities": ["Berlin", "Hamburg", "Munih", "Koln", "Frankfurt"]
+  },
+  {
+    "label": "Fransa",
+    "dialCode": "+33",
+    "cities": ["Paris", "Lyon", "Marsilya", "Nice", "Toulouse"]
+  },
+  {
+    "label": "Italya",
+    "dialCode": "+39",
+    "cities": ["Roma", "Milano", "Torino", "Napoli", "Floransa"]
+  },
+  {
+    "label": "Ispanya",
+    "dialCode": "+34",
+    "cities": ["Madrid", "Barselona", "Valensiya", "Sevilla", "Bilbao"]
+  },
+  {
+    "label": "Birlesik Krallik",
+    "dialCode": "+44",
+    "cities": ["Londra", "Manchester", "Liverpool", "Birmingham", "Leeds"]
+  },
+  {
+    "label": "Amerika Birlesik Devletleri",
+    "dialCode": "+1",
+    "cities": ["New York", "Los Angeles", "Chicago", "Houston", "Miami"]
+  },
+  {
+    "label": "Hollanda",
+    "dialCode": "+31",
+    "cities": ["Amsterdam", "Rotterdam", "Utrecht", "Eindhoven", "Groningen"]
+  },
+  {
+    "label": "Belcika",
+    "dialCode": "+32",
+    "cities": ["Bruksel", "Anvers", "Gent", "Brugge", "Liege"]
+  },
+  {
+    "label": "Avusturya",
+    "dialCode": "+43",
+    "cities": ["Viyana", "Graz", "Linz", "Salzburg", "Innsbruck"]
+  },
+  {
+    "label": "Polonya",
+    "dialCode": "+48",
+    "cities": ["Varsova", "Krakow", "Gdansk", "Wroclaw", "Poznan"]
+  },
+  {
+    "label": "Romanya",
+    "dialCode": "+40",
+    "cities": ["Bucuresti", "Cluj-Napoca", "Iasi", "Timisoara", "Constanta"]
+  },
+  {
+    "label": "Bulgaristan",
+    "dialCode": "+359",
+    "cities": ["Sofya", "Plovdiv", "Varna", "Burgaz", "Ruse"]
+  },
+  {
+    "label": "Yunanistan",
+    "dialCode": "+30",
+    "cities": ["Atina", "Selanik", "Patra", "Larisa", "Kandiye"]
+  },
+  {
+    "label": "Portekiz",
+    "dialCode": "+351",
+    "cities": ["Lizbon", "Porto", "Braga", "Coimbra", "Faro"]
+  },
+  {
+    "label": "Kanada",
+    "dialCode": "+1",
+    "cities": ["Toronto", "Vancouver", "Montreal", "Calgary", "Ottawa"]
+  },
+  {
+    "label": "Meksika",
+    "dialCode": "+52",
+    "cities": ["Mexico City", "Guadalajara", "Monterrey", "Puebla", "Tijuana"]
+  },
+  {
+    "label": "Brezilya",
+    "dialCode": "+55",
+    "cities": ["Sao Paulo", "Rio de Janeiro", "Brasilia", "Belo Horizonte", "Curitiba"]
+  },
+  {
+    "label": "Birlesik Arap Emirlikleri",
+    "dialCode": "+971",
+    "cities": ["Dubai", "Abu Dhabi", "Sharjah", "Ajman", "Ras Al Khaimah"]
+  },
+  {
+    "label": "Suudi Arabistan",
+    "dialCode": "+966",
+    "cities": ["Riyad", "Cidde", "Mekke", "Medine", "Dammam"]
+  },
+  {
+    "label": "Rusya",
+    "dialCode": "+7",
+    "cities": ["Moskova", "St Petersburg", "Kazan", "Novosibirsk", "Yekaterinburg"]
+  },
+  {
+    "label": "Hindistan",
+    "dialCode": "+91",
+    "cities": ["Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai"]
+  },
+  {
+    "label": "Cin",
+    "dialCode": "+86",
+    "cities": ["Pekin", "Sanghay", "Shenzhen", "Guangzhou", "Chengdu"]
+  },
+  {
+    "label": "Japonya",
+    "dialCode": "+81",
+    "cities": ["Tokyo", "Osaka", "Kyoto", "Nagoya", "Fukuoka"]
+  },
+  {
+    "label": "Guney Kore",
+    "dialCode": "+82",
+    "cities": ["Seoul", "Busan", "Incheon", "Daegu", "Daejeon"]
+  },
+  {
+    "label": "Azerbaycan",
+    "dialCode": "+994",
+    "cities": ["Baku", "Gence", "Sumgayit", "Lenkeran", "Nakhchivan"]
+  }
+]

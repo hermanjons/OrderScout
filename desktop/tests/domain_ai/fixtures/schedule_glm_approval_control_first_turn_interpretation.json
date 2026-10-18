@@ -1,0 +1,53 @@
+{
+  "source_artifact": "output/agentic-2026-10-11/schedule-glm-candidate-4.json",
+  "source_artifact_sha256": "a2cce388e7a99c9a6cb68efa8411ca73f6d827023190dda3c4f43cbcf99d4f89",
+  "source_snapshot_fingerprint": "bfca5901dcc31d7e4c6d438b81c4670c982b219fd8404d8591e8f3d83ace9d4b",
+  "scenario_id": "workflow_save_prepare",
+  "requested_model": "z-ai/glm-5.3-flash",
+  "actual_model": "z-ai/glm-5.3-flash",
+  "fallback_used": false,
+  "method": "invoke_structured",
+  "prompt": "Şu tekrar kullanılabilir iş yönergesini kaydetmek için tam paketi onayıma hazırla; işi şimdi çalıştırma. Adı: Pilot Stok İncelemesi. Talimat metnini aynen koru: «Tüm aktif stok kayıtlarını güncel kaynaktan oku. Ürün, miktar, birim ve stok değerini göster; her para birimini ayrı tut. Mağaza bağlantısı kanıtı yoksa çıkarma. Excel dosyası oluşturmadan önce o çalışmanın tam raporunu onaya sun.» Amaç şablonunu aynen koru: «Güncel stok için {{report_title}} başlıklı Excel raporunu hazırla ve kaydetmeden onayıma sun.» Tek parametre report_title olsun: zorunlu metin, en fazla 80 karakter. Başka parametre kabul etme. Kaynak politikası aynen: «Her çalıştırmada güncel stok kaynağını yeniden oku.» İşlem onayı politikası aynen: «Her dosya oluşturma için o çalışmanın tam rapor teklifini onaya sun.» Her çalıştırma güncel kaynak ve her dosya oluşturma güncel onay gerektirsin. Henüz kalıcı olarak kaydetme.",
+  "response": {
+    "mode": "act",
+    "domain": "general",
+    "objective": "Pilot Stok İncelemesi adlı, report_title (zorunlu metin, ≤80 karakter) tek parametreli tekrar kullanılabilir iş yönergesini talimat metni, amaç şablonu, kaynak politikası ve işlem onayı politikası aynen korunarak tam paket olarak hazırla ve kalıcı kayıttan önce onayıma sun; işi şimdi çalıştırma.",
+    "reason": "Kullanıcı yeni bir iş yönergesi paketinin hazırlanmasını ve kayıttan önce onaya sunulmasını istiyor; yürütmeyi açıkça yasakladı. Stok, dosya ve onay adımlarını kapsayan özel iş akışı olduğu için domain=general; kalıcı kayıt yok, yalnızca onaya sunulacak paket hazırlanıyor.",
+    "intent_kind": "approval_control",
+    "request_shape": "action",
+    "entity": "none",
+    "metric": "action_result",
+    "metric_population": null,
+    "status_scope": "unspecified",
+    "status_codes": [],
+    "record_scope": "unspecified",
+    "period": "unspecified",
+    "freshness": "unspecified",
+    "information_source": "unspecified",
+    "operation_policy": "allow_new_operations",
+    "comparison_policy": "not_requested",
+    "calculation_grouping": "none",
+    "calculation_count": 0,
+    "requires_clarification": false,
+    "missing_input": "none",
+    "population_basis": "entity_records",
+    "identifier_display": "auto",
+    "explanation_topics": [],
+    "requested_fields": [
+      "action_result"
+    ],
+    "direct_output_fields": [],
+    "grouped_projection": null
+  },
+  "original_compiler_failure": {
+    "mode": "act",
+    "domain": "orders",
+    "intent_kind": "action",
+    "semantic_corrections": [
+      "explicit_contextual_report_export_intent_to_action",
+      "order_item_quantity_dimension_added",
+      "explicitly_prohibited_scope_projection_removed"
+    ]
+  },
+  "replay_limit": "Interpretation is the original received GLM response. Any deterministic test plan/verifier response is labeled synthetic and is not original live model evidence."
+}

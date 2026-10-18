@@ -1,0 +1,70 @@
+from __future__ import annotations
+
+
+ERROR_SUPPRESSION_WINDOW_SECONDS = 2.0
+MESSAGE_TITLE_OK = "Basarili"
+MESSAGE_TITLE_FAIL = "Hata"
+
+SQL_NOT_NULL_CONSTRAINT_MARKER = "NOT NULL CONSTRAINT FAILED"
+SQL_FOREIGN_KEY_CONSTRAINT_MARKER = "FOREIGN KEY CONSTRAINT FAILED"
+SQL_UNIQUE_CONSTRAINT_MARKER = "UNIQUE CONSTRAINT FAILED"
+
+ERROR_REQUIRED_FIELD_TEMPLATE = "Zorunlu alan eksik: {field}."
+ERROR_REQUIRED_FIELD_MESSAGE = "Zorunlu alan eksik."
+ERROR_RELATED_RECORD_NOT_FOUND = "İlişkili kayıt bulunamadı."
+ERROR_DUPLICATE_RECORD = "Ayni kayit zaten mevcut."
+ERROR_DB_OPERATION_FAILED = "Veritabani islemi yapilamadi."
+ERROR_SQL_QUERY_FAILED = "SQL sorgu hatasi olustu."
+ERROR_DATABASE_GENERIC = "Veritabani hatasi olustu."
+ERROR_SERVER_CONNECTION_FAILED = "Sunucuya baglanilamadi."
+ERROR_TIMEOUT = "Islem zaman asimina ugradi."
+ERROR_HTTP_STATUS_TEMPLATE = "HTTP istegi basarisiz (HTTP {status_code})."
+ERROR_HTTP_FAILED = "HTTP istegi basarisiz."
+ERROR_HTTP_TIMEOUT = "HTTP istegi zaman asimina ugradi."
+ERROR_HTTP_CONNECTION = "HTTP baglanti hatasi olustu."
+ERROR_NETWORK_CONNECTION = "Ag baglanti hatasi olustu."
+ERROR_FILE_NOT_FOUND = "Gerekli dosya bulunamadi."
+ERROR_PERMISSION_DENIED = "Dosya/klasor erisim izni yok."
+ERROR_DIRECTORY_GIVEN = "Dosya beklenirken klasor verildi."
+ERROR_OS_FILE = "Sistem dosya hatasi olustu."
+ERROR_JSON_INVALID = "JSON formati gecersiz."
+ERROR_VALUE_INVALID = "Gecersiz deger."
+ERROR_TYPE_UNEXPECTED = "Beklenmeyen veri tipi."
+ERROR_KEY_MISSING = "Beklenen alan bulunamadi."
+ERROR_INDEX_INVALID = "Liste indis hatasi olustu."
+ERROR_RUNTIME = "Uygulama hatasi olustu."
+ERROR_UNKNOWN_TEMPLATE = "Bilinmeyen hata ({error_type}): {error}"
+
+__all__ = [
+    "ERROR_DATABASE_GENERIC",
+    "ERROR_DB_OPERATION_FAILED",
+    "ERROR_DIRECTORY_GIVEN",
+    "ERROR_DUPLICATE_RECORD",
+    "ERROR_FILE_NOT_FOUND",
+    "ERROR_HTTP_CONNECTION",
+    "ERROR_HTTP_FAILED",
+    "ERROR_HTTP_STATUS_TEMPLATE",
+    "ERROR_HTTP_TIMEOUT",
+    "ERROR_INDEX_INVALID",
+    "ERROR_JSON_INVALID",
+    "ERROR_KEY_MISSING",
+    "ERROR_NETWORK_CONNECTION",
+    "ERROR_OS_FILE",
+    "ERROR_PERMISSION_DENIED",
+    "ERROR_RELATED_RECORD_NOT_FOUND",
+    "ERROR_REQUIRED_FIELD_MESSAGE",
+    "ERROR_REQUIRED_FIELD_TEMPLATE",
+    "ERROR_RUNTIME",
+    "ERROR_SERVER_CONNECTION_FAILED",
+    "ERROR_SQL_QUERY_FAILED",
+    "ERROR_TIMEOUT",
+    "ERROR_TYPE_UNEXPECTED",
+    "ERROR_UNKNOWN_TEMPLATE",
+    "ERROR_VALUE_INVALID",
+    "ERROR_SUPPRESSION_WINDOW_SECONDS",
+    "MESSAGE_TITLE_FAIL",
+    "MESSAGE_TITLE_OK",
+    "SQL_FOREIGN_KEY_CONSTRAINT_MARKER",
+    "SQL_NOT_NULL_CONSTRAINT_MARKER",
+    "SQL_UNIQUE_CONSTRAINT_MARKER",
+]

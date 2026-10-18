@@ -1,0 +1,38 @@
+{
+  "source_artifact": "output/agentic-2026-10-11/schedule-glm-candidate-1.json",
+  "scenario_id": "workflow_save_prepare",
+  "requested_model": "z-ai/glm-5.3-flash",
+  "actual_model": "z-ai/glm-5.3-flash",
+  "fallback_used": false,
+  "prompt": "Şu tekrar kullanılabilir iş yönergesini kaydetmek için tam paketi onayıma hazırla; işi şimdi çalıştırma. Adı: Pilot Stok İncelemesi. Talimat metnini aynen koru: «Tüm aktif stok kayıtlarını güncel kaynaktan oku. Ürün, miktar, birim ve stok değerini göster; her para birimini ayrı tut. Mağaza bağlantısı kanıtı yoksa çıkarma. Excel dosyası oluşturmadan önce o çalışmanın tam raporunu onaya sun.» Amaç şablonunu aynen koru: «Güncel stok için {{report_title}} başlıklı Excel raporunu hazırla ve kaydetmeden onayıma sun.» Tek parametre report_title olsun: zorunlu metin, en fazla 80 karakter. Başka parametre kabul etme. Kaynak politikası aynen: «Her çalıştırmada güncel stok kaynağını yeniden oku.» İşlem onayı politikası aynen: «Her dosya oluşturma için o çalışmanın tam rapor teklifini onaya sun.» Her çalıştırma güncel kaynak ve her dosya oluşturma güncel onay gerektirsin. Henüz kalıcı olarak kaydetme.",
+  "response": {
+    "mode": "act",
+    "domain": "general",
+    "objective": "Pilot Stok İncelemesi adlı, report_title (zorunlu metin, en fazla 80 karakter) tek parametreli tekrar kullanılabilir iş yönergesini tam paket olarak onaya hazırla; talimat, amaç şablonu, kaynak politikası ve işlem onayı politikası metinlerini aynen koru, işi şimdi çalıştırma ve kalıcı kaydetme yapma",
+    "calculation_grouping": "none",
+    "comparison_policy": "not_requested",
+    "status_codes": [],
+    "requires_clarification": false,
+    "missing_input": "none",
+    "population_basis": "entity_records",
+    "intent_kind": "action",
+    "request_shape": "action",
+    "entity": "none",
+    "metric": "action_result",
+    "status_scope": "unspecified",
+    "record_scope": "unspecified",
+    "period": "unspecified",
+    "freshness": "unspecified",
+    "information_source": "unspecified",
+    "operation_policy": "allow_new_operations",
+    "explanation_topics": [],
+    "requested_fields": [
+      "action_result"
+    ],
+    "direct_output_fields": [],
+    "identifier_display": "auto",
+    "metric_population": null,
+    "grouped_projection": null,
+    "reason": "Kullanıcı yeni bir kaydedilebilir iş yönergesi paketinin onaya sunulmasını istiyor; çalıştırma ve kalıcı kaydetme açıkça yasak, bu yüzden act + action ile paket hazırlanır"
+  }
+}

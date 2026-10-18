@@ -1,0 +1,407 @@
+{
+  "baseUrls": {
+    "production": "https://apigw.trendyol.com",
+    "stage": "https://stageapigw.trendyol.com"
+  },
+  "commonStatusMessages": {
+    "200": "İstek başarıyla tamamlandı.",
+    "400": "İstek parametreleri geçersiz veya eksik.",
+    "401": "API kimlik bilgileri doğrulanamadı.",
+    "403": "Bu işlem için yetkiniz bulunmuyor.",
+    "404": "İstenen servis veya kayıt bulunamadı.",
+    "405": "Bu endpoint bu HTTP metodunu kabul etmiyor.",
+    "409": "İstek mevcut kaynak durumu ile çakıştı.",
+    "415": "Gönderilen içerik tipi desteklenmiyor.",
+    "429": "İstek limiti aşıldı. Kısa süre sonra tekrar deneyin.",
+    "500": "Platform sunucusu beklenmeyen bir hata döndürdü.",
+    "502": "Platform ağ geçidi hatası döndürdü.",
+    "503": "Platform servisi geçici olarak kullanılamıyor.",
+    "504": "Platform ağ geçidi zaman aşımı verdi.",
+    "*": "İstek başarısız oldu."
+  },
+  "account": {
+    "authStrategy": "api_key_secret",
+    "enabledFields": [
+      "seller_id",
+      "comp_name",
+      "api_key",
+      "api_secret",
+      "extra_config"
+    ],
+    "fieldLabels": {
+      "seller_id": "Satıcı ID",
+      "account_id": "Satıcı ID",
+      "comp_name": "Şirket Adı",
+      "api_key": "API Key",
+      "api_secret": "API Secret",
+      "integration_code": "Entegrasyon Kodu",
+      "token": "Token",
+      "extra_config": "Extra Config (JSON)"
+    }
+  },
+  "healthCheck": {
+    "method": "GET",
+    "baseUrl": "https://apigw.trendyol.com",
+    "path": "/integration/product/sellers/{account_id}/products/approved",
+    "queryDefaults": {
+      "page": 0,
+      "size": 1
+    },
+    "headers": {
+      "User-Agent": "{account_id}-SelfIntegration",
+      "Accept": "application/json"
+    },
+    "successStatusCodes": [
+      200
+    ],
+    "requiredCredentials": [
+      "account_id",
+      "api_key",
+      "api_secret"
+    ],
+    "authStrategy": "basic_api_key_secret",
+    "statusMessages": {
+      "200": "API bağlantı kontrolü başarılı.",
+      "400": "Trendyol isteği reddetti. Satıcı ID veya istek parametreleri geçersiz olabilir.",
+      "401": "Trendyol API Key veya API Secret bilgileri geçersiz.",
+      "403": "Trendyol hesabı bu endpoint için yetkili değil.",
+      "404": "Trendyol sağlık kontrol endpointi bulunamadı.",
+      "429": "Trendyol istek limiti aşıldı, kısa süre sonra tekrar deneyin.",
+      "500": "Trendyol sunucusu hata döndürdü.",
+      "*": "API bağlantı kontrolü başarısız."
+    }
+  },
+  "scopes": {
+    "orders": {
+      "baseUrl": "https://apigw.trendyol.com",
+      "commonStatusMessages": {
+        "400": "Trendyol isteği reddetti. Parametreleri kontrol edin.",
+        "401": "Trendyol API Key veya API Secret bilgileri geçersiz.",
+        "403": "Trendyol hesabı bu işlem için yetkili değil.",
+        "404": "Trendyol sipariş servisi veya ilgili kayıt bulunamadı.",
+        "429": "Trendyol istek limiti aşıldı. Kısa süre sonra tekrar deneyin.",
+        "500": "Trendyol sipariş servisi hata döndürdü."
+      },
+      "supportedStatuses": [
+        "Created",
+        "Picking",
+        "Invoiced",
+        "Shipped",
+        "AtCollectionPoint",
+        "Cancelled",
+        "UnPacked",
+        "Repack",
+        "Delivered",
+        "UnDelivered",
+        "Returned",
+        "UnSupplied"
+      ],
+      "statusLabels": {
+        "Awaiting": "Askıda",
+        "Created": "Kargoya Hazır",
+        "Picking": "Hazırlanıyor",
+        "Invoiced": "Faturalandı",
+        "Shipped": "Kargoda",
+        "AtCollectionPoint": "Teslimat Noktasında",
+        "Cancelled": "İptal Edildi",
+        "UnPacked": "Paket Bölündü",
+        "Delivered": "Teslim Edildi",
+        "UnDelivered": "Teslim Edilemedi",
+        "Returned": "İade Edildi",
+        "ReadyToShip": "Kargoya Hazır",
+        "UnSupplied": "İptal Edildi"
+      },
+      "operations": {
+        "list_orders": {
+          "label": "Sipariş paketlerini çekme",
+          "method": "GET",
+          "path": "/integration/order/sellers/{sellerId}/orders",
+          "successStatusCodes": [
+            200
+          ],
+          "successMessage": "Siparişler başarıyla alındı.",
+          "request": {
+            "query": [
+              { "source": "status", "target": "status", "transform": "strip" },
+              { "source": "start_date", "target": "startDate", "transform": "int" },
+              { "source": "end_date", "target": "endDate", "transform": "int" },
+              { "source": "page", "target": "page", "transform": "int" },
+              { "source": "size", "target": "size", "transform": "int" }
+            ]
+          },
+          "queryDefaults": {
+            "orderByField": "PackageLastModifiedDate",
+            "orderByDirection": "DESC"
+          }
+        },
+        "get_order_by_number": {
+          "label": "Siparişi sipariş numarasıyla çekme",
+          "method": "GET",
+          "path": "/integration/order/sellers/{sellerId}/orders",
+          "successStatusCodes": [
+            200
+          ],
+          "request": {
+            "query": [
+              { "source": "order_number", "target": "orderNumber", "transform": "strip" },
+              { "source": "page", "target": "page", "transform": "int" },
+              { "source": "size", "target": "size", "transform": "int" }
+            ]
+          }
+        },
+        "list_claims": {
+          "label": "İadeleri çekme",
+          "method": "GET",
+          "path": "/integration/order/sellers/{sellerId}/claims",
+          "successStatusCodes": [
+            200
+          ],
+          "successMessage": "İadeler başarıyla alındı.",
+          "request": {
+            "query": [
+              { "source": "start_date", "target": "startDate", "transform": "int" },
+              { "source": "end_date", "target": "endDate", "transform": "int" },
+              { "source": "page", "target": "page", "transform": "int" },
+              { "source": "size", "target": "size", "transform": "int" },
+              { "source": "claim_item_status", "target": "claimItemStatus", "transform": "strip" },
+              { "source": "order_shipment_package_id", "target": "orderShipmentPackageId", "transform": "strip" },
+              { "source": "claim_ids", "target": "claimIds", "transform": "csv_string_list" },
+              { "source": "order_number", "target": "orderNumber", "transform": "strip" }
+            ]
+          }
+        },
+        "approve_claim_line_items": {
+          "label": "İade onayı gönderme",
+          "method": "PUT",
+          "path": "/integration/order/sellers/{sellerId}/claims/{claimId}/items/approve",
+          "successStatusCodes": [
+            200
+          ],
+          "successMessage": "İade onayı gönderildi.",
+          "request": {
+            "path": [
+              { "source": "claim_id", "target": "claimId", "transform": "strip" }
+            ],
+            "json": [
+              { "source": "claim_line_item_ids", "target": "claimLineItemIdList", "transform": "string_list" }
+            ]
+          }
+        },
+        "change_cargo_provider": {
+          "label": "Kargo firması değiştirme",
+          "method": "PUT",
+          "path": "/integration/order/sellers/{sellerId}/shipment-packages/{packageId}/cargo-providers",
+          "successStatusCodes": [
+            200
+          ],
+          "successMessage": "Kargo sağlayıcı güncellendi.",
+          "request": {
+            "path": [
+              { "source": "package_id", "target": "packageId", "transform": "strip" }
+            ],
+            "json": [
+              { "source": "cargo_provider", "target": "cargoProvider", "transform": "upper" }
+            ]
+          },
+          "errorCodeMessages": {
+            "CPE001": "Seçilen kargo firması sistemde kayıtlı değil.",
+            "CPE002": "Bu sipariş için kargo firması değiştirilemez.",
+            "CPE003": "Kargo firması değişikliği yalnızca pazaryeri siparişlerinde yapılabilir.",
+            "CPE004": "Seçilen kargo firması sipariş teslimat bölgesine hizmet vermiyor.",
+            "CPE005": "Seçilen kargo firması sistemde aktif değil.",
+            "CPE006": "Seçilen kargo firması değiştirilemiyor. Destek ile görüşün.",
+            "CPE007": "Sipariş seçilen kargo firmasıyla gönderime uygun değil.",
+            "RTE003": "Aynı pakette yakın zamanda kargo firması değişikliği yapıldı. 5 dakika sonra tekrar deneyin."
+          }
+        }
+      }
+    },
+    "finance": {
+      "baseUrl": "https://apigw.trendyol.com",
+      "maxRangeDays": 15,
+      "safeRangeDays": 14,
+      "defaultFetchDays": 14,
+      "defaultPageSize": 500,
+      "maxPageSize": 1000,
+      "defaultMaxPages": 20,
+      "services": {
+        "settlements": {
+          "label": "Uzlaşma Hareketleri",
+          "transactionTypes": [
+            "Sale",
+            "Return",
+            "Coupon",
+            "CouponCancel",
+            "Discount",
+            "DiscountCancel",
+            "ProvisionPositive",
+            "ProvisionNegative"
+          ]
+        },
+        "otherfinancials": {
+          "label": "Diğer Finansal Hareketler",
+          "transactionTypes": [
+            "PaymentOrder",
+            "DeductionInvoices",
+            "CommissionAgreementInvoice",
+            "ReturnInvoice",
+            "FinancialItem",
+            "WireTransfer",
+            "IncomingTransfer",
+            "CashAdvance",
+            "Stoppage"
+          ]
+        },
+        "cargo_invoice_items": {
+          "label": "Kargo Fatura Kalemleri",
+          "transactionTypes": []
+        }
+      },
+      "commonStatusMessages": {
+        "400": "Trendyol finans isteği reddetti. Parametreleri kontrol edin.",
+        "401": "Trendyol API Key veya API Secret bilgileri geçersiz.",
+        "403": "Trendyol hesabı bu finans işlemi için yetkili değil.",
+        "404": "Trendyol finans servisi veya ilgili kayıt bulunamadı.",
+        "429": "Trendyol finans istek limiti aşıldı. Kısa süre sonra tekrar deneyin.",
+        "500": "Trendyol finans servisi hata döndürdü."
+      },
+      "operations": {
+        "list_settlements": {
+          "label": "Uzlaşma hareketlerini çekme",
+          "method": "GET",
+          "path": "/integration/finance/che/sellers/{sellerId}/settlements",
+          "successStatusCodes": [
+            200
+          ],
+          "successMessage": "Uzlaşma hareketleri alındı.",
+          "request": {
+            "query": [
+              { "source": "transaction_date_start", "target": "startDate", "transform": "int" },
+              { "source": "transaction_date_end", "target": "endDate", "transform": "int" },
+              { "source": "page", "target": "page", "transform": "int" },
+              { "source": "size", "target": "size", "transform": "int" },
+              { "source": "transaction_type", "target": "transactionType", "transform": "strip" }
+            ]
+          },
+          "queryDefaults": {
+            "page": 0,
+            "size": 500
+          }
+        },
+        "list_other_financials": {
+          "label": "Diğer finansal hareketleri çekme",
+          "method": "GET",
+          "path": "/integration/finance/che/sellers/{sellerId}/otherfinancials",
+          "successStatusCodes": [
+            200
+          ],
+          "successMessage": "Diğer finansal hareketler alındı.",
+          "request": {
+            "query": [
+              { "source": "transaction_date_start", "target": "startDate", "transform": "int" },
+              { "source": "transaction_date_end", "target": "endDate", "transform": "int" },
+              { "source": "page", "target": "page", "transform": "int" },
+              { "source": "size", "target": "size", "transform": "int" },
+              { "source": "transaction_type", "target": "transactionType", "transform": "strip" }
+            ]
+          },
+          "queryDefaults": {
+            "page": 0,
+            "size": 500
+          }
+        },
+        "list_cargo_invoice_items": {
+          "label": "Kargo fatura kalemlerini çekme",
+          "method": "GET",
+          "path": "/integration/finance/che/sellers/{sellerId}/cargo-invoice/{invoiceSerialNumber}/items",
+          "successStatusCodes": [
+            200
+          ],
+          "successMessage": "Kargo fatura kalemleri alındı.",
+          "request": {
+            "path": [
+              { "source": "invoice_serial_number", "target": "invoiceSerialNumber", "transform": "strip" }
+            ],
+            "query": [
+              { "source": "page", "target": "page", "transform": "int" },
+              { "source": "size", "target": "size", "transform": "int" }
+            ]
+          },
+          "queryDefaults": {
+            "page": 0,
+            "size": 500
+          }
+        }
+      }
+    },
+    "listing": {
+      "baseUrl": "https://apigw.trendyol.com/integration",
+      "baseUrls": {
+        "production": "https://apigw.trendyol.com/integration",
+        "stage": "https://stageapigw.trendyol.com/integration"
+      },
+      "defaultPageSize": 50,
+      "approvedMaxPageSize": 100,
+      "unapprovedMaxPageSize": 1000,
+      "commonStatusMessages": {
+        "400": "Trendyol ürün isteği reddetti. Parametreleri kontrol edin.",
+        "401": "Trendyol API Key veya API Secret bilgileri geçersiz.",
+        "403": "Trendyol hesabı bu ürün işlemi için yetkili değil.",
+        "404": "Trendyol ürün servisi veya ilgili kayıt bulunamadı.",
+        "429": "Trendyol ürün istek limiti aşıldı. Kısa süre sonra tekrar deneyin.",
+        "500": "Trendyol ürün servisi hata döndürdü."
+      },
+      "operations": {
+        "list_approved_products": {
+          "label": "Onaylı ürünleri çekme",
+          "method": "GET",
+          "path": "/product/sellers/{supplier_id}/products/approved",
+          "successStatusCodes": [
+            200
+          ],
+          "successMessage": "Onaylı ürünler alındı."
+        },
+        "list_unapproved_products": {
+          "label": "Onaysız ürünleri çekme",
+          "method": "GET",
+          "path": "/product/sellers/{supplier_id}/products/unapproved",
+          "successStatusCodes": [
+            200
+          ],
+          "successMessage": "Onaysız ürünler alındı."
+        },
+        "update_price_and_inventory": {
+          "label": "Fiyat ve stok güncelleme",
+          "method": "POST",
+          "path": "/inventory/sellers/{supplier_id}/products/price-and-inventory",
+          "successStatusCodes": [
+            200,
+            201,
+            202
+          ],
+          "successMessage": "Stok ve fiyat güncelleme isteği gönderildi."
+        },
+        "update_approved_content": {
+          "label": "Onaylı ürün içeriği güncelleme",
+          "method": "POST",
+          "path": "/product/sellers/{supplier_id}/products/content-bulk-update",
+          "successStatusCodes": [
+            200,
+            201,
+            202
+          ],
+          "successMessage": "Onaylı ürün içerik güncelleme isteği gönderildi."
+        },
+        "get_batch_request_result": {
+          "label": "Batch sonucu sorgulama",
+          "method": "GET",
+          "path": "/product/sellers/{seller_id}/products/batch-requests/{batch_request_id}",
+          "successStatusCodes": [
+            200
+          ],
+          "successMessage": "Batch request sonucu alındı."
+        }
+      }
+    }
+  }
+}

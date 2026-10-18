@@ -1,0 +1,44 @@
+{
+  "prompt": "Sohbete eklediğim pilot-sales.json dosyasını incele ve benim için bir Excel raporu hazırla. Her kaydın sku, quantity, unit, revenue, currency ve discount alanlarını kaynak değerleriyle tek tabloda koru; sayıları metne, boş discount değerlerini sıfıra çevirme. TRY ve USD'yi toplamadan kısa bir değerlendirme yap; varsa yorumlarını kaynak tablosundan ayrı tut. Rapor düzenini ihtiyaca göre seç. Dosyayı henüz kaydetme, raporu onayıma sun.",
+  "response": {
+    "calculation_grouping": "none",
+    "comparison_policy": "not_requested",
+    "direct_output_fields": [
+      "artifact",
+      "item_sales_rows"
+    ],
+    "domain": "general",
+    "entity": "none",
+    "freshness": "unspecified",
+    "grouped_projection": null,
+    "identifier_display": "auto",
+    "information_source": "local_business_data",
+    "intent_kind": "action",
+    "metric": "action_result",
+    "metric_population": null,
+    "missing_input": "none",
+    "mode": "act",
+    "objective": "Kullanıcının sohbete eklediği pilot-sales.json dosyasını inceleyip sku, quantity, unit, revenue, currency ve discount alanlarını kaynak değerleriyle koruyan tek tabloluk bir Excel raporu hazırlamak; TRY ve USD'yi toplamadan kısa bir değerlendirme yapmak, yorumları kaynak tablosundan ayrı tutmak ve dosyayı kaydetmeden onaya sunmak.",
+    "operation_policy": "allow_new_operations",
+    "period": "unspecified",
+    "population_basis": "entity_records",
+    "reason": "Kullanıcı ekli bir dosyadan yeni bir rapor artefaktı üretilmesini ve onaya sunulmasını istiyor; dosya henüz kaydedilmeyecek, bu yüzden yeni okuma/üretim operasyonu gerekli ama teslim onay bekliyor.",
+    "record_scope": "all_matching",
+    "request_shape": "artifact_report",
+    "requested_fields": [
+      "artifact",
+      "item_sales_rows",
+      "sku",
+      "quantity",
+      "amount",
+      "currency",
+      "calculation"
+    ],
+    "requires_clarification": false,
+    "status_codes": [],
+    "status_scope": "unspecified"
+  },
+  "source_artifact": "output/agentic-2026-10-15/attachment-deepseek-4.json",
+  "source_artifact_sha256": "8cfa1f4647bb0ea5785278e59f09142b743bf431e981882271fcdc2a60adbff3",
+  "replay_limit": "Original synthetic source-UI interpretation; constructed controls do not grant live acceptance."
+}

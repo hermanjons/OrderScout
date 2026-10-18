@@ -1,0 +1,119 @@
+{
+  "records": [
+    {
+      "costKey": "komisyon",
+      "name": "Komisyon bedeli",
+      "description": "Satış fiyatı üzerinden yüzdesel komisyon kesintisidir.",
+      "valueType": "percentage",
+      "defaultMatchMode": "manual",
+      "supportedPlatformSourceIds": [
+        1
+      ],
+      "supportedSourceTypes": [
+        "manual_value"
+      ],
+      "defaultSourceType": "manual_value",
+      "defaultSourceConfig": null,
+      "editableFields": [
+        "name",
+        "description",
+        "defaultAmount",
+        "isVatIncluded",
+        "isActive"
+      ],
+      "defaultAmount": null,
+      "currency": "TRY",
+      "isVatIncluded": true,
+      "vatRate": 20,
+      "isActive": true,
+      "source_id": 1
+    },
+    {
+      "costKey": "kargo",
+      "name": "Kargo",
+      "description": "Kargo tarifelerine göre otomatik hesaplanan kargo maliyeti.",
+      "valueType": "numeric",
+      "defaultMatchMode": "automatic",
+      "supportedPlatformSourceIds": [
+        1
+      ],
+      "supportedSourceTypes": [
+        "manual_value",
+        "builtin_resolver"
+      ],
+      "defaultSourceType": "builtin_resolver",
+      "defaultSourceConfig": {
+        "ruleKey": "cargo_amount_matcher"
+      },
+      "editableFields": [
+        "name",
+        "description",
+        "defaultAmount",
+        "isVatIncluded",
+        "isActive"
+      ],
+      "defaultAmount": null,
+      "currency": "TRY",
+      "isVatIncluded": true,
+      "vatRate": 20,
+      "isActive": true,
+      "source_id": 2
+    },
+    {
+      "costKey": "platform-hizmet-bedeli",
+      "name": "Platform Hizmet Bedeli",
+      "description": "Sabit platform hizmet bedeli. Varsayılan 10.99 TL + KDV.",
+      "valueType": "numeric",
+      "defaultMatchMode": "manual",
+      "supportedPlatformSourceIds": [
+        1
+      ],
+      "supportedSourceTypes": [
+        "manual_value"
+      ],
+      "defaultSourceType": "manual_value",
+      "defaultSourceConfig": null,
+      "editableFields": [
+        "name",
+        "description",
+        "defaultAmount",
+        "isVatIncluded",
+        "isActive"
+      ],
+      "defaultAmount": 10.99,
+      "currency": "TRY",
+      "isVatIncluded": false,
+      "vatRate": 20,
+      "isActive": true,
+      "source_id": 3
+    },
+    {
+      "costKey": "paketleme",
+      "name": "Paketleme",
+      "description": "Siparis paketleme surecinde olusan sabit maliyet kartidir.",
+      "valueType": "numeric",
+      "defaultMatchMode": "manual",
+      "supportedPlatformSourceIds": [
+        1
+      ],
+      "supportedSourceTypes": [
+        "manual_value"
+      ],
+      "defaultSourceType": "manual_value",
+      "defaultSourceConfig": null,
+      "editableFields": [
+        "name",
+        "description",
+        "defaultAmount",
+        "isVatIncluded",
+        "isActive"
+      ],
+      "defaultAmount": null,
+      "currency": "TRY",
+      "isVatIncluded": true,
+      "vatRate": 20,
+      "isActive": true,
+      "source_id": 4
+    }
+  ]
+}

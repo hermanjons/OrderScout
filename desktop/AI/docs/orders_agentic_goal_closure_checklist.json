@@ -1,0 +1,495 @@
+{
+  "acceptance_manifest_validation": {
+    "manifest": "current_acceptance_manifest.json",
+    "require_closure_ready": true,
+    "required": true
+  },
+  "atomic_dry_validation": {
+    "files": [
+      "processors/tools.py",
+      "processors/operation_runtime.py"
+    ],
+    "required": true
+  },
+  "blocking_items": [],
+  "broader_ai_goal_status": "open",
+  "current_focus": "orders_only",
+  "current_orders_scope_required_items": [
+    "agentic_control_plane_latest_real_user_regression",
+    "phase_8a_pending_read_live_revalidation",
+    "phase_8a_approval_execute_readback_live_revalidation",
+    "phase_8a_correction_supersession_live_revalidation",
+    "phase_8a_provider_provenance_v5",
+    "phase_8a_quota_scope_provenance_v6",
+    "current_acceptance_manifest",
+    "atomic_dry_boundary",
+    "current_production_r0_r1_acceptance",
+    "stage_bulk_cargo_acceptance"
+  ],
+  "domain_runtime_source_app_validation": {
+    "required": false
+  },
+  "goals_section_audit": [
+    {
+      "evidence": [
+        "AI/docs/goals.md",
+        "AI/docs/orders_agentic_goal_closure_checklist.json"
+      ],
+      "section": 1,
+      "status": "proven_for_orders_scope",
+      "title": "Bu Belgenin Görevi"
+    },
+    {
+      "evidence": [
+        "AI/docs/orders_agentic_completion_audit.md"
+      ],
+      "section": 2,
+      "status": "open",
+      "title": "Ürün Vizyonu: E-Ticaret İçin Codex"
+    },
+    {
+      "evidence": [
+        "AI/docs/live_llm_transcripts/source-ui/orders-agentic-control-plane-real-user-regression-2026-07-19.json",
+        "AI/docs/live_llm_transcripts/source-ui/orders-phase8a-pending-state-provider-provenance-regression-2026-07-27.json",
+        "AI/docs/live_llm_transcripts/source-ui/orders-phase8a-typed-correction-action-identity-regression-2026-07-27.json"
+      ],
+      "section": 3,
+      "status": "proven_for_orders_scope",
+      "title": "Güncel Kök Teşhis ve Yön Değişikliği"
+    },
+    {
+      "evidence": [
+        "AI/docs/current_acceptance_manifest.json",
+        "tests/domain_ai/test_orders_goal_closure_latest_regression.py"
+      ],
+      "section": 4,
+      "status": "proven_for_orders_scope",
+      "title": "Değişmez Ürün İlkeleri"
+    },
+    {
+      "evidence": [
+        "%LOCALAPPDATA%/OrderScout/stage-acceptance/architecture/core-dry-full-audit-r1.json",
+        "atomic_dry_boundary"
+      ],
+      "section": 5,
+      "status": "proven_for_orders_scope",
+      "title": "Mimari Sahiplik"
+    },
+    {
+      "evidence": [
+        "AI/docs/agentic_control_plane_phase3_unified_loop_2026-07-21.json",
+        "tests/domain_ai/test_orders_agentic_task_runtime.py"
+      ],
+      "section": 6,
+      "status": "proven_for_orders_scope",
+      "title": "Gerçek Agent Runtime Sözleşmesi"
+    },
+    {
+      "evidence": [
+        "AI/docs/agentic_control_plane_phase2_operation_catalog_2026-07-20.json",
+        "atomic_dry_boundary"
+      ],
+      "section": 7,
+      "status": "proven_for_orders_scope",
+      "title": "Atomic Tool ve Operation Sözleşmesi"
+    },
+    {
+      "evidence": [
+        "AI/docs/agentic_control_plane_phase1_typed_state_2026-07-20.json",
+        "tests/domain_ai/test_conversation_runtime.py"
+      ],
+      "section": 8,
+      "status": "proven_for_orders_scope",
+      "title": "Typed State ve Event Modeli"
+    },
+    {
+      "evidence": [
+        "AI/docs/agentic_control_plane_phase4_semantic_verifier_2026-07-21.json",
+        "tests/domain_ai/test_orders_agentic_task_runtime.py"
+      ],
+      "section": 9,
+      "status": "proven_for_orders_scope",
+      "title": "Semantic Verifier ve Response Grounding"
+    },
+    {
+      "evidence": [
+        "phase_8a_approval_execute_readback_live_revalidation",
+        "phase_8a_correction_supersession_live_revalidation"
+      ],
+      "section": 10,
+      "status": "open",
+      "title": "Risk, Approval ve Execution Sözleşmesi"
+    },
+    {
+      "evidence": [
+        "AI/docs/agentic_control_plane_phase6_provider_acceptance_2026-07-21.json",
+        "phase_8a_provider_provenance_v5",
+        "phase_8a_quota_scope_provenance_v6",
+        "live_llm_transcripts/source-ui/orders-phase8a-gemini-3.1-flash-lite-count-list-label-pending-v6-r9-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-openrouter-nemotron-ultra-count-list-label-pending-v6-r14-2026-07-27.json"
+      ],
+      "section": 11,
+      "status": "bounded_and_live_quota_proven_current_source_acceptance_open",
+      "title": "Provider ve Model Bağımsızlığı"
+    },
+    {
+      "evidence": [
+        "AI/docs/agentic_control_plane_phase7_web_report_acceptance_2026-07-21.json",
+        "AI/docs/orders_agentic_completion_audit.md"
+      ],
+      "section": 12,
+      "status": "open",
+      "title": "Web Search Yeteneği"
+    },
+    {
+      "evidence": [
+        "staging_marketplace_guard",
+        "current_production_r0_r1_acceptance",
+        "stage_bulk_cargo_acceptance"
+      ],
+      "section": 13,
+      "status": "proven_with_deferred_external",
+      "title": "Trendyol Production ve Stage Politikası"
+    },
+    {
+      "evidence": [
+        "agentic_control_plane_latest_real_user_regression",
+        "phase_8a_pending_read_live_revalidation"
+      ],
+      "section": 14,
+      "status": "open",
+      "title": "İlk Tam Referans: Orders"
+    },
+    {
+      "evidence": [
+        "AI/docs/live_llm_transcripts/source-ui/orders-agentic-control-plane-real-user-regression-2026-07-19.json",
+        "AI/docs/live_llm_transcripts/source-ui/orders-phase8a-pending-state-provider-provenance-regression-2026-07-27.json",
+        "AI/docs/live_llm_transcripts/source-ui/orders-phase8a-typed-correction-action-identity-regression-2026-07-27.json"
+      ],
+      "section": 15,
+      "status": "open",
+      "title": "Bağlayıcı Gerçek Kullanıcı Regresyonları"
+    },
+    {
+      "evidence": [
+        "AI/docs/orders_agentic_completion_audit.md",
+        "%LOCALAPPDATA%/OrderScout/stage-acceptance/ui-v3-2026-07-16-r3/ui-acceptance-component-tree-1800x1100.json"
+      ],
+      "section": 16,
+      "status": "open",
+      "title": "AI Chat ve Model Hub UI Sözleşmesi"
+    },
+    {
+      "evidence": [
+        "AI/docs/current_acceptance_manifest.json",
+        "AI/docs/orders_goal_closure_latest_report.json"
+      ],
+      "section": 17,
+      "status": "open",
+      "title": "Test ve Kanıt Stratejisi"
+    },
+    {
+      "evidence": [
+        "AI/docs/current_acceptance_manifest.json",
+        "AI/docs/orders_agentic_completion_audit.md"
+      ],
+      "section": 18,
+      "status": "honored_post_orders_scope",
+      "title": "Güncel Gerçek Durum"
+    },
+    {
+      "evidence": [
+        "AI/docs/goals.md",
+        "phase_8a_pending_read_live_revalidation"
+      ],
+      "section": 19,
+      "status": "open",
+      "title": "Yeni Hedef Açıldığında Zorunlu Uygulama Sırası"
+    },
+    {
+      "evidence": [
+        "AI/docs/orders_agentic_goal_closure_checklist.json",
+        "AI/docs/orders_goal_closure_latest_report.json"
+      ],
+      "section": 20,
+      "status": "open",
+      "title": "Orders Tamamlanma Tanımı"
+    },
+    {
+      "evidence": [
+        "AI/docs/goals.md",
+        "AI/docs/orders_agentic_completion_audit.md"
+      ],
+      "section": 21,
+      "status": "open",
+      "title": "AI Domaininin Nihai Tamamlanma Tanımı"
+    },
+    {
+      "evidence": [
+        "AI/docs/current_acceptance_manifest.json",
+        "tests/domain_ai/test_orders_goal_closure_latest_regression.py"
+      ],
+      "section": 22,
+      "status": "honored_post_orders_scope",
+      "title": "Bu Hedefte Çalışacak Codex İçin Bağlayıcı Disiplin"
+    }
+  ],
+  "goals_section_audit_required": true,
+  "name": "orders-agentic-current-closure",
+  "next_evidence_needed": [],
+  "overall_status": "open",
+  "real_user_regression_validation": {
+    "artifacts": [
+      "live_llm_transcripts/source-ui/orders-agentic-control-plane-real-user-regression-2026-07-19.json",
+      "live_llm_transcripts/source-ui/orders-phase8a-pending-state-provider-provenance-regression-2026-07-27.json",
+      "live_llm_transcripts/source-ui/orders-phase8a-typed-correction-action-identity-regression-2026-07-27.json"
+    ],
+    "require_invariant_resolution_contract": true,
+    "required": true
+  },
+  "required_items": [
+    {
+      "evidence": [
+        "live_llm_transcripts/source-ui/orders-agentic-control-plane-real-user-regression-2026-07-19.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-pending-state-provider-provenance-regression-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-typed-correction-action-identity-regression-2026-07-27.json"
+      ],
+      "id": "agentic_control_plane_latest_real_user_regression",
+      "missing_to_complete": "The latest typed-correction and action-identity regression has an explicit owner/test/live-gate contract. Current Gemini R27 proves the full seven-turn chain including effects-free rejection of the explicitly submitted superseded ID and current-ID-only 12/12 DOCX execution. It remains open until OpenRouter passes the equivalent current-source chain after account quota reopens and Phase 8B reaccepts the organic Orders capability cases.",
+      "status": "open"
+    },
+    {
+      "evidence": [
+        "agentic_control_plane_inventory_2026-07-20.json"
+      ],
+      "id": "agentic_control_plane_architecture_inventory",
+      "status": "proven"
+    },
+    {
+      "evidence": [
+        "agentic_control_plane_phase1_typed_state_2026-07-20.json"
+      ],
+      "id": "agentic_control_plane_typed_state_foundation",
+      "status": "proven"
+    },
+    {
+      "evidence": [
+        "current_acceptance_manifest.json"
+      ],
+      "id": "current_acceptance_manifest",
+      "missing_to_complete": "The manifest now binds the current Gemini R27 proven slice and OpenRouter R22 account-quota diagnostic to the same current source fingerprint; R23-R26 and R20-R21 are historical. It remains closure_ready=false because the current OpenRouter equivalent chain and Phase 8B organic regressions are open.",
+      "status": "open"
+    },
+    {
+      "evidence": [
+        "live_llm_transcripts/source-ui/orders-phase8a-gemini-3-flash-preview-count-list-label-pending-r1-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-gemini-3-flash-preview-count-list-label-pending-r2-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-gemini-3-flash-preview-count-list-label-pending-r3-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-gemini-3-flash-preview-count-list-label-pending-r4-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-openrouter-nemotron-ultra-count-list-label-pending-r10-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-gemini-3-flash-preview-quota-scope-v6-r6-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-gemini-3.5-flash-count-list-label-pending-v6-r7-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-gemini-2.5-pro-count-list-label-pending-v6-r8-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-gemini-3.1-flash-lite-count-list-label-pending-v6-r9-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-openrouter-nemotron-ultra-count-list-label-pending-v6-r14-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-gemini-3.1-flash-lite-approval-execute-readback-v6-r10-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-openrouter-nemotron-ultra-approval-execute-readback-v6-r15-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-gemini-3.1-flash-lite-approval-execute-readback-v6-r11-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-gemini-3.1-flash-lite-approval-execute-readback-v6-r12-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-openrouter-nemotron-ultra-approval-execute-readback-v6-r16-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-gemini-3.1-flash-lite-correction-supersession-v6-r25-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-openrouter-nemotron-ultra-count-list-label-pending-v6-r20-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-gemini-3.1-flash-lite-correction-supersession-v6-r27-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-openrouter-nemotron-ultra-count-list-label-pending-v6-r22-2026-07-27.json"
+      ],
+      "id": "phase_8a_pending_read_live_revalidation",
+      "minimum_evidence_contract_version": 6,
+      "minimum_turns": 4,
+      "missing_to_complete": "Current-source Gemini R27 proves dynamic count 12, exact list continuity, TANEX 2610 replacement and a provider-free pending read that preserves the immutable current action after stale-ID rejection. OpenRouter R22 stopped before planning on account-scoped 429, so the required second-provider current-source artifact remains open; stale older passes are not substituted.",
+      "require_fresh_execute": false,
+      "status": "open"
+    },
+    {
+      "evidence": [
+        "live_llm_transcripts/source-ui/orders-phase8a-gemini-3.1-flash-lite-approval-execute-readback-v6-r10-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-openrouter-nemotron-ultra-approval-execute-readback-v6-r15-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-gemini-3.1-flash-lite-approval-execute-readback-v6-r11-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-gemini-3.1-flash-lite-approval-execute-readback-v6-r12-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-openrouter-nemotron-ultra-approval-execute-readback-v6-r16-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-gemini-3.1-flash-lite-correction-supersession-v6-r25-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-openrouter-nemotron-ultra-count-list-label-pending-v6-r20-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-gemini-3.1-flash-lite-correction-supersession-v6-r27-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-openrouter-nemotron-ultra-count-list-label-pending-v6-r22-2026-07-27.json"
+      ],
+      "id": "phase_8a_approval_execute_readback_live_revalidation",
+      "minimum_evidence_contract_version": 6,
+      "minimum_turns": 5,
+      "missing_to_complete": "Current-source Gemini R27 rejected the explicit old ID effects-free, approved only the corrected replacement, created a local DOCX and verified the exact 12-record payload-and-content read-back. The equivalent current OpenRouter execute chain is still blocked by account quota and must pass later without treating the quota diagnostic as model evidence.",
+      "require_fresh_execute": true,
+      "status": "open"
+    },
+    {
+      "evidence": [
+        "live_llm_transcripts/source-ui/orders-phase8a-gemini-3.1-flash-lite-correction-supersession-v6-r23-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-gemini-3.1-flash-lite-correction-supersession-v6-r24-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-gemini-3.1-flash-lite-correction-supersession-v6-r25-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-openrouter-nemotron-ultra-count-list-label-pending-v6-r20-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-gemini-3.1-flash-lite-correction-supersession-v6-r27-2026-07-27.json",
+        "live_llm_transcripts/source-ui/orders-phase8a-openrouter-nemotron-ultra-count-list-label-pending-v6-r22-2026-07-27.json"
+      ],
+      "id": "phase_8a_correction_supersession_live_revalidation",
+      "minimum_evidence_contract_version": 6,
+      "minimum_turns": 7,
+      "missing_to_complete": "Gemini R27 proves keyword-free 2736 -> 2610 correction, different immutable replacement identity, persisted superseded identity/fingerprint, provider-free pending read, explicit old-ID effects-free stale rejection and exact replacement-only DOCX read-back. The full OpenRouter equivalent remains open behind account quota, and Phase 8B must reaccept organic keyword-free corrections.",
+      "require_fresh_execute": true,
+      "status": "open"
+    },
+    {
+      "evidence": [
+        "AI.processors.cloud_runtime.provider_invocation_provenance",
+        "AI.processors.cloud_runtime.provider_invocation_turn_plan",
+        "tests/domain_ai/test_provider_adapters.py::test_gemini_multi_invocation_provenance_keeps_prior_success_after_final_429",
+        "tests/domain_ai/test_provider_adapters.py::test_provider_turn_plan_reports_only_new_invocations_from_shared_client",
+        "tests/domain_ai/test_orders_agentic_live_eval.py::TestSourceUiAcceptanceArtifact"
+      ],
+      "id": "phase_8a_provider_provenance_v5",
+      "status": "proven"
+    },
+    {
+      "evidence": [
+        "AI.processors.provider_adapters.normalize_provider_error",
+        "AI.processors.cloud_runtime.provider_invocation_provenance",
+        "AI.processors.cloud_runtime.provider_invocation_turn_plan",
+        "AI.processors.acceptance_manifest.validate_turn_model_provenance",
+        "AI.processors.orders_source_ui_human_recheck_cli._capture_turn",
+        "tests/domain_ai/test_provider_adapters.py::test_gemini_per_project_per_model_quota_is_model_scope_with_safe_retry_delay",
+        "tests/domain_ai/test_provider_adapters.py::test_unknown_429_fails_closed_instead_of_starting_model_roulette",
+        "tests/domain_ai/test_provider_adapters.py::test_openrouter_model_quota_falls_through_same_state_route_and_keeps_error_evidence",
+        "tests/domain_ai/test_provider_adapters.py::test_openrouter_unknown_quota_stops_before_sibling_model",
+        "tests/domain_ai/test_orders_phase8a_acceptance_semantics.py::test_v6_quota_provenance_accepts_model_and_project_scope_contracts",
+        "tests/domain_ai/test_orders_phase8a_acceptance_semantics.py::test_v6_quota_provenance_rejects_unsafe_or_permissive_provider_scope"
+      ],
+      "id": "phase_8a_quota_scope_provenance_v6",
+      "status": "proven"
+    },
+    {
+      "evidence": [
+        "AI.processors.provider_catalog_policy.provider_free_model_quality_prior",
+        "AI.processors.model_routing.build_free_model_test_route",
+        "AI.processors.pipeline.list_provider_models",
+        "AI.processors.orders_model_acceptance_catalog_cli.build_catalog",
+        "tests/domain_ai/test_provider_catalog_policy.py::ProviderCatalogPolicyTests::test_user_selected_free_model_quality_policy_is_central_and_fail_open_for_unknowns",
+        "tests/domain_ai/test_model_routing.py::test_explicit_quality_tier_keeps_best_model_first_even_with_guarded_text_contract",
+        "tests/domain_ai/test_model_routing.py::test_live_openrouter_catalog_applies_central_free_quality_order_before_capability_score",
+        "tests/domain_ai/test_model_routing.py::test_live_gemini_catalog_applies_central_free_quality_order",
+        "tests/domain_ai/test_model_routing.py::test_acceptance_catalog_preserves_live_quality_route_order_without_secrets"
+      ],
+      "id": "provider_free_model_quality_route",
+      "status": "proven"
+    },
+    {
+      "evidence": [
+        "current_acceptance_manifest.json#orders_label_scope_delivered_privacy_environment_2026_07_18",
+        "current_acceptance_manifest.json#orders_direct_count_to_deictic_2610_prepare_2026_07_18",
+        "current_acceptance_manifest.json#orders_direct_count_label_deepseek_v4_pro_r8"
+      ],
+      "id": "latest_user_regression_guard",
+      "status": "proven"
+    },
+    {
+      "evidence": [
+        "current_acceptance_manifest.json#orders_label_scope_deepseek_v4_pro_r4",
+        "current_acceptance_manifest.json#orders_label_scope_openrouter_free_r2",
+        "current_acceptance_manifest.json#orders_label_scope_gemini_free_r2",
+        "current_acceptance_manifest.json#orders_label_scope_local_r4_review"
+      ],
+      "id": "latest_real_user_exact_and_alternative_reacceptance",
+      "status": "proven"
+    },
+    {
+      "evidence": [
+        "current_acceptance_manifest.json#orders_label_scope_deepseek_v4_pro_r4",
+        "current_acceptance_manifest.json#orders_direct_count_label_deepseek_v4_pro_r8"
+      ],
+      "id": "current_paid_deepseek_recheck",
+      "status": "proven"
+    },
+    {
+      "evidence": [
+        "current_acceptance_manifest.json#orders_production_fresh_sync_gemini_3_1_flash_lite_r3",
+        "Orders.processors.trendyol.pipeline.build_orders_sync_observability",
+        "AI.processors.operation_runtime.verify_orders_sync_from_result",
+        "AI.processors.task_runtime._format_execute_evidence_lines",
+        "tests/domain_orders/test_orders_pipeline.py::TestOrdersPipeline::test_sync_observability_reports_exact_account_counts_and_db_readback",
+        "tests/domain_orders/test_orders_pipeline.py::TestOrdersPipeline::test_sync_observability_fails_readback_for_unpersisted_remote_snapshot",
+        "tests/domain_ai/test_orders_agentic_task_runtime.py::TestOrdersAgenticTaskRuntime::test_orders_task_runtime_fetch_executes_and_verifies_saved_orders"
+      ],
+      "id": "current_fresh_sync_visible_readback",
+      "implementation_status": "verified",
+      "live_source_app_status": "verified",
+      "status": "proven"
+    },
+    {
+      "evidence": [
+        "AI.processors.architecture_boundary"
+      ],
+      "id": "atomic_dry_boundary",
+      "status": "proven"
+    },
+    {
+      "evidence": [
+        "current_acceptance_manifest.json#orders_label_scope_local_r4_review",
+        "tests/domain_ai/test_orders_behavioral_e2e.py"
+      ],
+      "id": "current_local_source_app_acceptance",
+      "status": "proven"
+    },
+    {
+      "evidence": [
+        "current_acceptance_manifest.json#production_orders_read_sync"
+      ],
+      "id": "current_production_r0_r1_acceptance",
+      "status": "proven"
+    },
+    {
+      "evidence": [
+        "current_acceptance_manifest.json#stage_bulk_cargo_mutation",
+        "verified staging evidence (orders.change_order_cargo_provider): AI\\docs\\stage-acceptance\\r2-bulk-cargo-2026-07-29\\stage-single-cargo-1785328157951472500.json",
+        "verified staging manifest (orders.change_order_cargo_provider): AI\\docs\\stage-acceptance\\r2-bulk-cargo-2026-07-29\\stage-single-cargo-1785328157951472500.manifest.json",
+        "verified staging evidence (orders.change_orders_cargo_provider_bulk): AI\\docs\\stage-acceptance\\r2-bulk-cargo-2026-07-29\\stage-bulk-cargo-1785327794321939000.json",
+        "verified staging manifest (orders.change_orders_cargo_provider_bulk): AI\\docs\\stage-acceptance\\r2-bulk-cargo-2026-07-29\\stage-bulk-cargo-1785327794321939000.manifest.json",
+        "verified staging evidence (orders.approve_return_claim): AI\\docs\\stage-acceptance\\r2-bulk-cargo-2026-07-29\\stage-return-approval-1785328172636440000.json",
+        "verified staging manifest (orders.approve_return_claim): AI\\docs\\stage-acceptance\\r2-bulk-cargo-2026-07-29\\stage-return-approval-1785328172636440000.manifest.json",
+        "AI.processors.staging_marketplace_evidence_cli --mode verify-manifest",
+        "AI.processors.orders_goal_closure_cli --apply-verified-staging-evidence",
+        "AI.processors.orders_goal_closure_cli --require-complete"
+      ],
+      "id": "stage_bulk_cargo_acceptance",
+      "status": "proven",
+      "verified_action_types": [
+        "orders.change_order_cargo_provider",
+        "orders.change_orders_cargo_provider_bulk",
+        "orders.approve_return_claim"
+      ]
+    }
+  ],
+  "schema_version": 3,
+  "source_ui_acceptance_validation": {
+    "item_ids": [
+      "phase_8a_pending_read_live_revalidation",
+      "phase_8a_approval_execute_readback_live_revalidation",
+      "phase_8a_correction_supersession_live_revalidation"
+    ],
+    "minimum_distinct_models_per_item": 2,
+    "minimum_valid_artifacts_per_item": 2,
+    "require_current_runtime_source": true,
+    "required": true,
+    "required_models": [],
+    "required_provider_codes": [
+      "gemini",
+      "openrouter"
+    ]
+  },
+  "updated": "2026-07-29",
+  "workstream": "agentic_control_plane_architectural_reset"
+}

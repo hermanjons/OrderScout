@@ -1,0 +1,38 @@
+﻿{
+  "enabled": true,
+  "channel": "stable",
+  "check_on_startup": true,
+  "startup_delay_ms": 3000,
+  "provider": "github",
+  "github": {
+    "owner": "hermanjons",
+    "repo": "OrderScout-releases",
+    "api_base": "https://api.github.com",
+    "include_prerelease": false
+  },
+  "request": {
+    "timeout_sec": 20,
+    "retry_count": 3,
+    "retry_backoff_sec": 1.0,
+    "check_cooldown_sec": 10
+  },
+  "dev": {
+    "allow_non_frozen_apply": true
+  },
+  "integrity": {
+    "require_sha256": true
+  },
+  "asset": {
+    "prefer_extensions": [
+      ".exe"
+    ],
+    "name_contains": [
+      "orderscout"
+    ],
+    "exclude_contains": [
+      ".blockmap",
+      ".sig",
+      ".sha256"
+    ]
+  }
+}

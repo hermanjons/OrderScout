@@ -1,0 +1,11 @@
+{
+  "form": {
+    "visibleFields": [
+      "cargoProvider",
+      "desiRange",
+      "salePriceRange",
+      "amount",
+      "vatRate"
+    ]
+  }
+}

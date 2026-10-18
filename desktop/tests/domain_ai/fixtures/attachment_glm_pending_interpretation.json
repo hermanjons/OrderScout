@@ -1,0 +1,81 @@
+{
+  "source_artifact": "output/agentic-2026-10-11/attachment-glm-candidate-5.json",
+  "source_artifact_sha256": "5fe7af7a64856263baf4459a4b9a01bd59bd6334a680b67f9cce172ef4d17a11",
+  "source_snapshot_fingerprint": "bfca5901dcc31d7e4c6d438b81c4670c982b219fd8404d8591e8f3d83ace9d4b",
+  "scenario_id": "attachment_pending",
+  "prompt": "Onay bekleyen dosya raporunda hangi ek dosya, sütunlar, kayıtlar ve dövizler bulunuyor? Kaynakta boş discount değerleri nasıl korunacak? Dosya henüz oluştu mu?",
+  "requested_model": "z-ai/glm-5.3-flash",
+  "actual_model": "z-ai/glm-5.3-flash",
+  "fallback_used": false,
+  "original_problems": [
+    "pending_current_immutable_proposal_lost_or_changed",
+    "pending_current_task_owner_lost_or_changed",
+    "pending_canonical_active_approval_state_missing_or_changed"
+  ],
+  "replay_limit": "Captured original live synthetic evidence. Deterministic replay responses are not new live model evidence.",
+  "response": {
+    "mode": "inspect",
+    "domain": "files",
+    "intent_kind": "data_read",
+    "request_shape": "record_detail",
+    "entity": "none",
+    "metric": "detail",
+    "objective": "Onay bekleyen Pilot Sales Raporu taslaginin icerigini acikla: sayfalar, sutunlar, kayit sayilari, dovizler, bos discount hucrelerinin korunmasi ve dosyanin henuz olusturulmadigi gercegi; yeni islem yapmadan mevcut kayitlardan",
+    "reason": "Soru onay bekleyen rapor taslaginin kayitli icerigi hakkinda; verified_report_preparations ve verified_pending_action mevcut gozlemlerden inspect+existing_observations_only ile cevaplanir. Taslak dosyanin olusturuldugunu kanitlamaz; yeni okuma veya rapor uretimi gerekmez.",
+    "calculation_grouping": "none",
+    "comparison_policy": "not_requested",
+    "status_codes": [],
+    "requires_clarification": false,
+    "missing_input": "none",
+    "population_basis": "entity_records",
+    "operation_policy": "existing_observations_only",
+    "information_source": "local_business_data",
+    "freshness": "local_snapshot",
+    "period": "unspecified",
+    "record_scope": "active_selection",
+    "status_scope": "unspecified",
+    "requested_fields": [
+      "artifact",
+      "count",
+      "currency",
+      "scope"
+    ],
+    "direct_output_fields": [],
+    "explanation_topics": [],
+    "identifier_display": "auto"
+  },
+  "compiled_interpretation": {
+    "mode": "chat",
+    "domain": "general",
+    "objective": "Onay bekleyen dosya raporunda hangi ek dosya, sütunlar, kayıtlar ve dövizler bulunuyor? Kaynakta boş discount değerleri nasıl korunacak? Dosya henüz oluştu mu?",
+    "intent_kind": "conversation",
+    "request_shape": "conversation",
+    "explanation_topics": [],
+    "information_source": "unspecified",
+    "operation_policy": "existing_observations_only",
+    "calculation_grouping": "none",
+    "calculation_count": 0,
+    "requested_fields": [],
+    "direct_output_fields": [],
+    "identifier_display": "auto",
+    "reason": "future_or_meta_statement_without_current_execution_predicate",
+    "requires_clarification": false,
+    "clarification": "",
+    "planner_invoked": true,
+    "valid": true,
+    "decision_path": "typed_model_turn_interpretation_non_executable_future_guarded",
+    "semantic_corrections": [
+      "future_coordination_without_execution_mode_to_chat",
+      "future_coordination_without_execution_domain_to_general",
+      "future_coordination_without_execution_intent_to_conversation"
+    ],
+    "semantic_contract": {},
+    "correction_target": {},
+    "intent_signal_observability": {
+      "normalized_message_sha256": "20c754605f86e8c14f0f94450ace0b58f76450902e13f5de1113100e1e21d864",
+      "normalized_message_length": 159,
+      "future_coordination_without_current_operation": true
+    }
+  },
+  "visible_answer": "Onay bekleyen taslakta üç sayfa var:\n\n- **Satis Verisi:** 3 kayıt; sütunlar SKU, Miktar, Birim, Gelir, Para Birimi, Indirim.\n- **Model Notları:** 3 kayıt; Tür, Model notu, Dayanak kaynakları, Kanıt sınırı.\n- **Kaynak Kanıtı:** 1 kayıt; Kaynak, Gözlem adımı, Operasyon, Kaynak sonucu SHA256.\n\nDövizler: TRY ve USD ayrı sütunda duruyor, toplanmadı.\n\nBoş discount değerleri: kaynakta boş olan 3 hücre boş korunuyor, sıfıra çevrilmiyor.\n\nDosya henüz oluşmadı; taslak hazırlandı ve kaydetme onayını bekliyor. Onay vermeden dosya üretilmeyecek."
+}
