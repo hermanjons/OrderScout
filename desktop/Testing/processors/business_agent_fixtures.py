@@ -39,9 +39,9 @@ def seed_business_fixture(
         if session.exec(select(ApiAccount)).first() is not None:
             raise ValueError("Acceptance fixture requires an empty database.")
         session.add_all([
-            ApiAccount(pk=101, account_id="2738", comp_name="Pilot Ana", platform="TRENDYOL",
+            ApiAccount(pk=101, sourceId=101, account_id="2738", comp_name="Pilot Ana", platform="TRENDYOL",
                        extra_config={"environment": "stage"}, api_key="", api_secret=""),
-            ApiAccount(pk=102, account_id="2738", comp_name="Pilot Yan", platform="TRENDYOL",
+            ApiAccount(pk=102, sourceId=102, account_id="2738", comp_name="Pilot Yan", platform="TRENDYOL",
                        extra_config={"environment": "stage"}, api_key="", api_secret=""),
             Company(pk=201, name="Pilot Sentetik İşletme"),
             Warehouse(pk=301, name="Pilot Sentetik Depo", code="PILOT"),

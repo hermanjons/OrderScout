@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import ExitStack
+from datetime import datetime, timedelta, timezone
+import hashlib
 import json
 import os
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -13,8 +17,9 @@ from PIL import Image, ImageChops, ImageFilter, ImageStat
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ.setdefault("QT_SCALE_FACTOR", "1")
 
-from PyQt6.QtCore import QCoreApplication, QEvent, QPoint, QSignalBlocker, Qt
+from PyQt6.QtCore import QCoreApplication, QEvent, QPoint, QSignalBlocker, Qt, QUrl
 from PyQt6.QtGui import QFont, QFontDatabase, QPainter, QPixmap
+from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication, QAbstractButton, QLabel, QListWidgetItem, QWidget
 
 from AI.views.ai_manager_dialog import AIManagerDialog
@@ -24,6 +29,8 @@ from Main_interface.views.views import MainInterface
 
 
 VIEWPORT = (1800, 1100)
+CHAT_DESIGN_DIR = Path(__file__).resolve().parents[2] / "tests" / "domain_ai" / "fixtures" / "conversation_layout"
+CHAT_DESIGN_REFERENCES = ("conversation-layout.html", "layout-conversations.png", "layout-model-menu.png")
 
 
 def _process_events(app: QApplication, *, rounds: int = 6) -> None:
@@ -70,12 +77,13 @@ def _component_tree(root: QWidget) -> list[dict[str, Any]]:
         text = _widget_text(widget)
         if not name and not text:
             continue
-        point = widget.mapTo(root, QPoint(0, 0)) if widget is not root else QPoint(0, 0)
+        point = root.mapFromGlobal(widget.mapToGlobal(QPoint(0, 0))) if widget is not root else QPoint(0, 0)
         geometry = widget.geometry()
         records.append(
             {
                 "class": type(widget).__name__,
                 "object_name": name,
+                "accessible_name": widget.accessibleName(),
                 "text": text,
                 "visible": bool(widget.isVisibleTo(root)),
                 "enabled": bool(widget.isEnabled()),
@@ -145,12 +153,14 @@ def _geometry_check(
 
 def _acceptance_checks(output_dir: Path, surfaces: list[dict[str, Any]]) -> dict[str, Any]:
     by_name = {str(surface.get("surface") or ""): surface for surface in surfaces}
+    # The approved conversation layout supersedes the old left-model-panel
+    # screenshots. Qt lives inside MainInterface's chrome, unlike the HTML
+    # preview, so chat acceptance checks its specified hierarchy and dimensions;
+    # it does not invent a new pixel golden from the implementation under test.
     references = {
-        "chat_cloud": "ai-chat-cloud-workspace-concept-v3-scaffold-faithful.png",
-        "chat_local": "ai-chat-local-workspace-concept-v3-scaffold-faithful.png",
         "model_hub": "ai-model-hub-concept-v3-scaffold-faithful.png",
     }
-    thresholds = {"chat_cloud": 0.96, "chat_local": 0.96, "model_hub": 0.975}
+    thresholds = {"model_hub": 0.975}
     visual: list[dict[str, Any]] = []
     for name, reference_name in references.items():
         surface = by_name[name]
@@ -172,22 +182,8 @@ def _acceptance_checks(output_dir: Path, surfaces: list[dict[str, Any]]) -> dict
             by_name["chat_cloud"],
             label="chat control band",
             object_name="AiControlBand",
-            expected={"x": 10, "y": 194, "width": 1780, "height": 78},
-            tolerance=8,
-        ),
-        _geometry_check(
-            by_name["chat_cloud"],
-            label="cloud model panel list",
-            object_name="ModelList",
-            expected={"x": 117, "y": 514, "width": 402, "height": 413},
-            tolerance=24,
-        ),
-        _geometry_check(
-            by_name["chat_local"],
-            label="local model panel list",
-            object_name="ModelList",
-            expected={"x": 117, "y": 460, "width": 402, "height": 250},
-            tolerance=20,
+            expected={"height": 55},
+            tolerance=0,
         ),
         _geometry_check(
             by_name["model_hub"],
@@ -204,24 +200,71 @@ def _acceptance_checks(output_dir: Path, surfaces: list[dict[str, Any]]) -> dict
             tolerance=20,
         ),
     ]
-    overlay_expected = {"x": 546, "y": 380, "width": 420, "height": 592}
     overlay_actual = dict(by_name["chat_local"].get("overlay_geometry") or {})
-    overlay_deltas = {
-        key: abs(int(overlay_actual.get(key, -100_000)) - value)
-        for key, value in overlay_expected.items()
-    }
+    local_components = list(by_name["chat_local"].get("components") or [])
+    picker = next((row["geometry"] for row in local_components if row.get("object_name") == "AiModelPicker"), {})
     geometry.append(
         {
-            "label": "local advanced settings popup",
-            "passed": bool(overlay_actual) and all(delta <= 8 for delta in overlay_deltas.values()),
-            "expected": overlay_expected,
+            "label": "local advanced settings popup above composer and within viewport",
+            "passed": bool(overlay_actual) and bool(picker)
+            and abs(overlay_actual["width"] - 420) <= 8
+            and 0 <= overlay_actual["x"] <= VIEWPORT[0] - overlay_actual["width"]
+            and 0 <= overlay_actual["y"]
+            and overlay_actual["y"] + overlay_actual["height"] <= picker.get("y", -1),
+            "expected": {"width": 420, "anchor": "above composer model picker", "contained_in": "viewport"},
             "actual": overlay_actual,
-            "tolerance": 8,
-            "deltas": overlay_deltas,
+            "width_tolerance": 8,
         }
     )
-    passed = all(row["passed"] for row in visual) and all(row["passed"] for row in geometry)
-    return {"passed": passed, "visual": visual, "geometry": geometry}
+    chat_contracts = {name: _chat_design_checks(by_name[name]) for name in ("chat_cloud", "chat_local")}
+    approved_references = [{"reference": str(CHAT_DESIGN_DIR / name),
+                            "sha256": hashlib.sha256((CHAT_DESIGN_DIR / name).read_bytes()).hexdigest()}
+                           for name in CHAT_DESIGN_REFERENCES]
+    passed = (all(row["passed"] for row in visual) and all(row["passed"] for row in geometry)
+              and all(all(checks.values()) for checks in chat_contracts.values()))
+    return {"passed": passed, "visual": visual, "geometry": geometry, "chat_contracts": chat_contracts,
+            "reference_transition": {
+                "chat_contract": "Approved conversation layout, 2026-10-20",
+                "validation": "semantic, accessibility and relative geometry; no chat pixel golden",
+                "approved_references": approved_references,
+                "retired_chat_references": ["ai-chat-cloud-workspace-concept-v3-scaffold-faithful.png",
+                                            "ai-chat-local-workspace-concept-v3-scaffold-faithful.png"],
+                "model_hub_reference_unchanged": True,
+            }}
+
+
+def _chat_design_checks(surface: dict[str, Any]) -> dict[str, bool]:
+    """Enforce the approved sidebar/workspace/composer relationship without chrome coordinates."""
+    components = {row["object_name"]: row for row in surface.get("components", [])
+                  if row.get("object_name") and row.get("visible")}
+    def bounds(name):
+        return dict(components.get(name, {}).get("geometry") or {})
+    def contained(inner, outer):
+        return bool(inner and outer and inner["x"] >= outer["x"] and inner["y"] >= outer["y"]
+                    and inner["x"] + inner["width"] <= outer["x"] + outer["width"]
+                    and inner["y"] + inner["height"] <= outer["y"] + outer["height"])
+    sidebar = bounds("conversationSidebar")
+    workspace = bounds("AiChatSurface")
+    composer = bounds("AiComposerShell")
+    transcript = bounds("AiTranscript")
+    picker = bounds("AiModelPicker")
+    effort = bounds("AiConversationReasoning")
+    send = bounds("AiSendButton")
+    viewport = {"x": 0, "y": 0, **surface["viewport"]}
+    return {
+        **dict(surface.get("interaction_contract") or {}),
+        "sidebar_nominal_242px": bool(sidebar) and abs(sidebar["width"] - 242) <= 8,
+        "history_left_of_workspace": bool(sidebar and workspace) and sidebar["x"] + sidebar["width"] <= workspace["x"],
+        "history_within_viewport": contained(sidebar, viewport),
+        "composer_within_workspace": contained(composer, workspace),
+        "transcript_above_composer": bool(transcript and composer) and transcript["y"] + transcript["height"] <= composer["y"],
+        "model_picker_in_composer": contained(picker, composer),
+        "effort_picker_in_composer": contained(effort, composer),
+        "footer_controls_ordered": bool(picker and effort and send)
+        and picker["x"] + picker["width"] <= effort["x"] and effort["x"] + effort["width"] <= send["x"],
+        "named_primary_controls": all(bool(components.get(name, {}).get("accessible_name")) for name in (
+            "conversationSidebar", "conversationSearchField", "AiModelPicker", "AiConversationReasoning", "AiSendButton")),
+    }
 
 
 def _save_widget(
@@ -262,6 +305,9 @@ def _state_snapshot(
     overlay: QWidget | None = None,
     base_pixmap: QPixmap | None = None,
 ) -> dict[str, Any]:
+    if overlay is None:
+        overlay = next((candidate for candidate in widget.findChildren(QWidget)
+                        if candidate.objectName() == "AiModelPopup" and candidate.isVisible()), None)
     image_name = f"ui-state-{state}-{widget.width()}x{widget.height()}.png"
     _save_widget(
         widget,
@@ -458,7 +504,7 @@ def _set_cloud_fixture_state(
         with QSignalBlocker(button):
             button.setChecked(key == price_filter)
     tab._cloud_collapsed_provider_keys = set(collapsed or set())
-    tab._populate_cloud_model_list(_cloud_groups_for_price(price_filter))
+    tab._populate_cloud_model_list(_cloud_catalog_groups())
     tab._on_model_selection_changed()
 
 
@@ -478,6 +524,8 @@ def _prepare_chat_shell(app: QApplication, *, source: str) -> tuple[MainInterfac
     if not isinstance(tab, AITab):
         raise RuntimeError("AI tab source widget yuklenemedi.")
     tab._models_bootstrapped = True
+    tab._schedule_timer.stop()
+    tab._reset_chat()
     window.tabs.setCurrentIndex(window.tabs.indexOf(host))
 
     source_index = tab.source_combo.findData(source)
@@ -521,6 +569,7 @@ def _prepare_chat_shell(app: QApplication, *, source: str) -> tuple[MainInterfac
     tab._known_local_model_count = 3
     tab._update_resource_summary()
     tab._on_model_selection_changed()
+    tab._persist_chat_session()
     window.resize(*VIEWPORT)
     window.show()
     _process_events(app)
@@ -542,6 +591,18 @@ def _render_chat(app: QApplication, output_dir: Path, *, source: str) -> dict[st
         "image": image_name,
         "viewport": {"width": window.width(), "height": window.height()},
         "components": _component_tree(window),
+        "interaction_contract": {
+            "left_pane_is_conversations": tab._tab_splitter.widget(0) is tab.conversation_sidebar,
+            "model_choices_in_popup": tab._model_popup.isAncestorOf(tab.model_list)
+            and bool(tab._model_popup.windowFlags() & Qt.WindowType.Popup),
+            "source_and_price_controls_in_popup": all(tab._model_popup.isAncestorOf(widget) for widget in (
+                tab.btn_source_cloud, tab.btn_source_local, tab.cloud_filter_shell)),
+            "reasoning_outside_model_popup": not tab._model_popup.isAncestorOf(tab.reasoning_combo),
+            "model_menu_closed_at_rest": not tab._model_popup.isVisible(),
+            "history_search_and_new_chat_named": bool(tab.conversation_sidebar.search_field.accessibleName())
+            and bool(tab.conversation_sidebar.new_chat_button.accessibleName()),
+            "history_contains_synthetic_sessions": tab.conversation_sidebar.session_list.count() > 0,
+        },
     }
     if overlay is not None:
         record["overlay_components"] = _component_tree(overlay)
@@ -561,6 +622,8 @@ def _render_chat(app: QApplication, output_dir: Path, *, source: str) -> dict[st
 def _chat_model_payloads(tab: AITab) -> list[dict[str, Any]]:
     payloads: list[dict[str, Any]] = []
     for index in range(tab.model_list.count()):
+        if tab.model_list.item(index).isHidden():
+            continue
         payload = tab.model_list.item(index).data(Qt.ItemDataRole.UserRole)
         if isinstance(payload, dict):
             payloads.append(dict(payload))
@@ -570,8 +633,15 @@ def _chat_model_payloads(tab: AITab) -> list[dict[str, Any]]:
 def _render_chat_cloud_state_matrix(app: QApplication, output_dir: Path) -> list[dict[str, Any]]:
     window, tab = _prepare_chat_shell(app, source="cloud")
     cases: list[dict[str, Any]] = []
+    tab._toggle_model_picker()
+    _process_events(app)
 
-    _set_cloud_fixture_state(tab, price_filter="free", collapsed={"201"})
+    _set_cloud_fixture_state(tab, price_filter="free")
+    _process_events(app)
+    provider_header = next(tab.model_list.item(index) for index in range(tab.model_list.count())
+                           if (tab.model_list.item(index).data(Qt.ItemDataRole.UserRole) or {}).get("_provider_key") == "201")
+    QTest.mouseClick(tab.model_list.viewport(), Qt.MouseButton.LeftButton,
+                     pos=tab.model_list.visualItemRect(provider_header).center())
     _process_events(app)
     collapsed_payloads = _chat_model_payloads(tab)
     cases.append(
@@ -581,7 +651,8 @@ def _render_chat_cloud_state_matrix(app: QApplication, output_dir: Path) -> list
             state="chat-cloud-provider-collapsed",
             checks={
                 "provider_collapsed": any(bool(row.get("_collapsed")) for row in collapsed_payloads),
-                "other_provider_remains_expanded": tab.model_list.count() == 5,
+                "other_provider_remains_expanded": len(collapsed_payloads) == 5,
+                "model_menu_visible": tab._model_popup.isVisible(),
             },
             facts={"model_list_rows": tab.model_list.count()},
         )
@@ -609,10 +680,27 @@ def _render_chat_cloud_state_matrix(app: QApplication, output_dir: Path) -> list
                     "segment_selected": selected,
                     "model_count": len(model_payloads) == expected_models,
                     "pricing_matches": pricing_matches,
+                    "filter_visible_in_model_menu": tab.cloud_filter_shell.isVisibleTo(tab._model_popup)
+                    and tab._model_popup.isVisible(),
                 },
                 facts={"visible_models": len(model_payloads), "price_filter": price_filter},
             )
         )
+
+    first_model = next(tab.model_list.item(index) for index in range(tab.model_list.count())
+                       if (tab.model_list.item(index).data(Qt.ItemDataRole.UserRole) or {}).get("_source_kind") == "cloud_model")
+    expected_name = (first_model.data(Qt.ItemDataRole.UserRole).get("model_metadata") or {}).get("name")
+    tab.model_list.scrollToItem(first_model)
+    _process_events(app)
+    QTest.mouseClick(tab.model_list.viewport(), Qt.MouseButton.LeftButton,
+                     pos=tab.model_list.visualItemRect(first_model).center())
+    _process_events(app)
+    cases.append(_state_snapshot(window, output_dir, state="chat-model-selected-from-popup", checks={
+        "model_selected": tab.model_list.currentItem() is first_model,
+        "menu_closed_after_selection": not tab._model_popup.isVisible(),
+        "composer_shows_selection": bool(expected_name) and expected_name in tab.btn_model_picker.text(),
+        "reasoning_remains_visible": tab.reasoning_combo.isVisibleTo(window),
+    }))
 
     tab._reset_chat()
     _process_events(app)
@@ -644,13 +732,15 @@ def _render_chat_cloud_state_matrix(app: QApplication, output_dir: Path) -> list
 
     tab.model_list.clear()
     tab._on_model_selection_changed()
+    tab._toggle_model_picker()
     _process_events(app)
     cases.append(
         _state_snapshot(
             window,
             output_dir,
             state="chat-cloud-empty",
-            checks={"model_list_empty": tab.model_list.count() == 0},
+            checks={"model_list_empty": tab.model_list.count() == 0,
+                    "model_menu_visible": tab._model_popup.isVisible()},
         )
     )
 
@@ -672,9 +762,10 @@ def _render_chat_cloud_state_matrix(app: QApplication, output_dir: Path) -> list
         )
     )
 
-    tab._set_chat_progress(46, "orders.query çalışıyor", percent_text="46%")
-    tab.chat_progress_shell.show()
-    tab._append_chat_activity("Tool çalışıyor · orders.query · salt-okuma")
+    tab._model_popup.hide()
+    token = tab._begin_chat_response(object())
+    tab._start_chat_progress()
+    tab._on_task_progress(46, "orders.query çalışıyor · salt-okuma")
     _process_events(app)
     cases.append(
         _state_snapshot(
@@ -682,12 +773,38 @@ def _render_chat_cloud_state_matrix(app: QApplication, output_dir: Path) -> list
             output_dir,
             state="chat-tool-running",
             checks={
-                "progress_visible": tab.chat_progress_shell.isVisibleTo(window),
-                "tool_event_visible": "orders.query" in tab.transcript.toPlainText(),
+                "observed_status_visible": "İşlem yürütülüyor" in tab.transcript.toPlainText(),
+                "details_link_visible": "İşlem ayrıntıları" in tab.transcript.toPlainText(),
+                "no_invented_percentage": "%" not in tab.transcript.toPlainText(),
+                "tool_observation_recorded": "orders.query" in " ".join(tab._activity_runs[tab._activity_run_id]["messages"]),
+                "details_closed_by_default": not tab.run_activity_panel.isVisible(),
             },
         )
     )
-    tab.chat_progress_shell.hide()
+    tab._on_transcript_anchor_clicked(QUrl("orderscout://activity/" + tab._activity_run_id))
+    _process_events(app)
+    cases.append(_state_snapshot(window, output_dir, state="chat-run-details", checks={
+        "details_visible": tab.run_activity_panel.isVisibleTo(window),
+        "selected_run": tab.run_activity_panel.run_id == tab._activity_run_id,
+        "observed_tool_in_details": any("orders.query" in message for message in tab.run_activity_panel._messages),
+        "plain_observations": all(label.textFormat() == Qt.TextFormat.PlainText
+                                  for label in tab.run_activity_panel._records.findChildren(QLabel)),
+    }))
+    tab.run_activity_panel.close_button.click()
+    with patch.object(tab, "_worker_is_running", return_value=True):
+        tab._update_chat_controls()
+        tab.btn_model_picker.click()
+        cases.append(_state_snapshot(window, output_dir, state="chat-busy-navigation-locked", checks={
+            "model_picker_disabled": not tab.btn_model_picker.isEnabled(),
+            "reasoning_disabled": not tab.reasoning_combo.isEnabled(),
+            "history_disabled": not tab.conversation_sidebar.session_list.isEnabled(),
+            "new_chat_disabled": not tab.conversation_sidebar.new_chat_button.isEnabled(),
+            "history_search_enabled": tab.conversation_sidebar.search_field.isEnabled(),
+            "menu_stays_closed": not tab._model_popup.isVisible(),
+        }))
+    tab._complete_chat_response(token)
+    tab._finish_chat_progress()
+    tab._update_chat_controls()
 
     action = {
         "title": "Sipariş etiketi oluşturma onayı",
@@ -750,14 +867,17 @@ def _render_chat_cloud_state_matrix(app: QApplication, output_dir: Path) -> list
 
     window.resize(1280, 800)
     _process_events(app, rounds=12)
+    tab._toggle_model_picker()
+    _process_events(app)
     cases.append(
         _state_snapshot(
             window,
             output_dir,
             state="chat-cloud-narrow-resize",
             checks={
-                "source_hierarchy_visible": tab.cloud_filter_shell.isVisibleTo(window),
-                "model_panel_visible": tab.model_list.isVisibleTo(window),
+                "source_hierarchy_visible": tab._model_popup.isVisible() and tab.cloud_filter_shell.isVisible(),
+                "model_choices_visible_in_popup": tab.model_list.isVisibleTo(tab._model_popup),
+                "history_visible": tab.conversation_sidebar.isVisibleTo(window),
                 "composer_visible": tab.composer.isVisibleTo(window),
                 "viewport_applied": window.width() == 1280 and window.height() == 800,
             },
@@ -787,6 +907,7 @@ def _render_chat_local_state_matrix(app: QApplication, output_dir: Path) -> list
     _add_local_record(tab, limited)
     tab.model_list.setCurrentRow(0)
     tab._on_model_selection_changed()
+    tab._toggle_model_picker()
     _process_events(app)
     cases.append(
         _state_snapshot(
@@ -794,7 +915,9 @@ def _render_chat_local_state_matrix(app: QApplication, output_dir: Path) -> list
             output_dir,
             state="chat-local-limited",
             checks={
-                "limited_status_visible": "bloke" in tab.composer_meta.text().casefold(),
+                "limited_reason_visible": tab._model_popup.isVisible() and tab.selected_local_plan.isVisible()
+                and "OS koruma rezervi" in tab.selected_local_plan.text(),
+                "limited_reason_in_picker_tooltip": "OS koruma rezervi" in tab.btn_model_picker.toolTip(),
                 "send_disabled": not tab.btn_send.isEnabled(),
             },
             facts={"composer_meta": tab.composer_meta.text()},
@@ -913,14 +1036,17 @@ def _render_chat_local_state_matrix(app: QApplication, output_dir: Path) -> list
 
     window.resize(1280, 800)
     _process_events(app, rounds=12)
+    tab._toggle_model_picker()
+    _process_events(app)
     cases.append(
         _state_snapshot(
             window,
             output_dir,
             state="chat-local-narrow-resize",
             checks={
-                "source_hierarchy_visible": tab.btn_source_local.isVisibleTo(window),
-                "model_panel_visible": tab.model_list.isVisibleTo(window),
+                "source_hierarchy_visible": tab._model_popup.isVisible() and tab.btn_source_local.isVisible(),
+                "model_choices_visible_in_popup": tab.model_list.isVisibleTo(tab._model_popup),
+                "history_visible": tab.conversation_sidebar.isVisibleTo(window),
                 "composer_visible": tab.composer.isVisibleTo(window),
                 "viewport_applied": window.width() == 1280 and window.height() == 800,
             },
@@ -1165,6 +1291,7 @@ def _render_model_hub_state_matrix(app: QApplication, output_dir: Path) -> list[
         )
 
         dialog._fill_installed_local_list(_local_records())
+        dialog.local_library_tabs.setCurrentIndex(1)
         dialog.installed_local_list.setCurrentRow(0)
         editor_scrollbar = dialog._workspace.editor_scroll.verticalScrollBar()
         editor_scrollbar.setValue(editor_scrollbar.maximum())
@@ -1201,7 +1328,7 @@ def _state_matrix_evidence(cases: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def run(output_dir: Path) -> Path:
+def _render_acceptance(output_dir: Path) -> Path:
     app = QApplication.instance() or QApplication([])
     font_family = _install_offscreen_font(app)
     surfaces = [
@@ -1215,7 +1342,7 @@ def run(output_dir: Path) -> Path:
         *_render_model_hub_state_matrix(app, output_dir),
     ]
     evidence = {
-        "contract": "AI UI v3 scaffold-faithful acceptance",
+        "contract": "Conversation layout 2026-10-20 + unchanged Model Hub v3 acceptance",
         "render_mode": os.environ.get("QT_QPA_PLATFORM", ""),
         "viewport": {"width": VIEWPORT[0], "height": VIEWPORT[1]},
         "logical_dpi": float(app.primaryScreen().logicalDotsPerInch()) if app.primaryScreen() else None,
@@ -1227,6 +1354,44 @@ def run(output_dir: Path) -> Path:
     evidence_path = output_dir / "ui-acceptance-component-tree-1800x1100.json"
     evidence_path.write_text(json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
     return evidence_path
+
+
+def run(output_dir: Path) -> Path:
+    """Render synthetic UI states without reading or writing the user's chats."""
+    from AI.processors import chat_session_store, task_store
+    from AI.processors.session_state import AgentSessionState
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="orderscout-ui-fixtures-") as fixture_dir, ExitStack() as stack:
+        fixture_root = Path(fixture_dir)
+        active_path = fixture_root / "active_chat.json"
+        stack.enter_context(patch.object(chat_session_store, "ACTIVE_CHAT_FILE", active_path))
+        stack.enter_context(patch.object(task_store, "TASK_STORE_DIR", fixture_root / "tasks"))
+        stack.enter_context(patch.object(task_store, "ensure_ai_paths"))
+        stack.enter_context(patch.object(AITab, "_refresh_current_source"))
+        stack.enter_context(patch.object(AITab, "_poll_scheduled_workflows"))
+        model_guard = stack.enter_context(patch("AI.views.chat_tab._run_chat_turn_with_runtime",
+                                               side_effect=AssertionError("UI acceptance must not call a model")))
+        now = datetime.now(timezone.utc)
+        for index, (title, status, days) in enumerate((
+            ("Son 12 ayın siparişleri", "complete", 0),
+            ("İlan fiyatlarını kontrol et", "pending_approval", 1),
+            ("Kargo maliyetlerini incele", "paused", 3),
+        )):
+            state = AgentSessionState(goal=title, session_id=f"acceptance-history-{index}", status=status)
+            state.updated_at = (now - timedelta(days=days)).isoformat()
+            chat_session_store.save_active_chat_session(state.to_dict(), [{"role": "user", "content": title}])
+        evidence_path = _render_acceptance(output_dir)
+        evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+        evidence["fixture_isolation"] = {
+            "active_chat_isolated": chat_session_store.ACTIVE_CHAT_FILE == active_path,
+            "conversation_library_derived_from_active_path": chat_session_store._chat_library_root() == fixture_root / "conversations",
+            "task_store_isolated": task_store.TASK_STORE_DIR == fixture_root / "tasks",
+            "saved_synthetic_conversations": len(list((fixture_root / "conversations").glob("*.json"))),
+            "live_model_calls": model_guard.call_count,
+        }
+        evidence_path.write_text(json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
+        return evidence_path
 
 
 def main() -> int:

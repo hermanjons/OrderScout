@@ -19,6 +19,11 @@ from Listing.processors.pipeline import (
     sync_listing_cost_snapshots_for_item,
     update_listing_price_inventory_cache,
 )
+from Listing.processors.catalog_queries import (
+    read_listing_attention,
+    read_listing_search,
+    read_listing_summary,
+)
 from Finance.views.actions import load_finance_cost_items
 from Logistics.views.actions import load_logistics_cargo_providers, load_logistics_cargo_tariffs
 
@@ -163,6 +168,18 @@ def action_get_listings_from_db(**kwargs) -> Result:
     return get_listings_from_db(**kwargs)
 
 
+def action_search_listing_catalog(**kwargs) -> Result:
+    return read_listing_search(**kwargs)
+
+
+def action_read_listing_summary(**kwargs) -> Result:
+    return read_listing_summary(**kwargs)
+
+
+def action_read_listing_attention(**kwargs) -> Result:
+    return read_listing_attention(**kwargs)
+
+
 def action_get_listing_brands_from_db(**kwargs) -> Result:
     return get_listing_brands_from_db(**kwargs)
 
@@ -173,6 +190,9 @@ def action_set_listing_stock_items(
     product_id: str,
     stock_items: list[dict],
     db_name: str = "",
+    listing_id: Optional[int] = None,
+    expected_binding_state: Optional[str] = None,
+    expected_stock_state: Optional[str] = None,
 ) -> Result:
     kwargs: Dict[str, Any] = {}
     if db_name:
@@ -181,6 +201,9 @@ def action_set_listing_stock_items(
         api_account_id=api_account_id,
         product_id=product_id,
         stock_items=stock_items,
+        listing_id=listing_id,
+        expected_binding_state=expected_binding_state,
+        expected_stock_state=expected_stock_state,
         **kwargs,
     )
 

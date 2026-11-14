@@ -46,6 +46,25 @@ class _Response:
             )
 
 
+@pytest.mark.parametrize("choice_supported", [False, True])
+def test_native_tools_do_not_require_optional_unadvertised_tool_choice(choice_supported):
+    parameters = ["tools", "max_tokens"] + (["tool_choice"] if choice_supported else [])
+    response = _Response({"choices": [{"finish_reason": "tool_calls", "message": {
+        "content": None, "tool_calls": [{"id": "actual-call", "type": "function", "function": {
+            "name": "example_read", "arguments": "{}"}}]}}]})
+    with patch.object(cloud_runtime.requests, "post", return_value=response) as post:
+        client = cloud_runtime.build_provider_chat_client({"provider_code": "openrouter",
+            "default_model": "test/tools", "api_key": "test-only", "is_enabled": True,
+            "allow_model_fallback": False, "model_metadata": {"supported_parameters": parameters}})
+        decision = json.loads(client.invoke_tools("Read one existing value", tools=[{
+            "name": "example.read", "description": "Read one value", "parameters": {
+                "type": "object", "properties": {}, "additionalProperties": False}}]))
+    assert post.call_count == 1
+    assert ("tool_choice" in post.call_args.kwargs["json"]) == choice_supported
+    assert decision["tool"] == "example.read"
+    assert post.call_args.kwargs["json"]["tools"][0]["function"]["name"] == "example_read"
+
+
 @pytest.mark.parametrize("provider", ["openrouter", "gemini"])
 def test_native_structured_recovery_sends_schema_in_text(provider):
     schema = {"type": "object", "properties": {"requires_clarification": {"type": "boolean"}},

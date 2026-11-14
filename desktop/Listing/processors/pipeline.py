@@ -24,6 +24,7 @@ from Finance.processors.pipeline import (
 )
 from Logistics.processors.cargo_amount_matcher import match_cargo_amount
 from Listing.constants.platform_constants import canonical_platform_code
+from Listing.processors.catalog_queries import read_listing_products
 from Listing.models import (
     ListingProduct,
     ListingProductStockSnapshot,
@@ -455,8 +456,8 @@ def _normalize_listing_item(item: dict) -> Optional[dict]:
         "archived": archived,
         "on_sale": on_sale,
 
-        "list_price": _to_float(item.get("listPrice") or price_block.get("listPrice")),
-        "sale_price": _to_float(item.get("salePrice") or price_block.get("salePrice")),
+        "list_price": _to_float(item.get("listPrice") if item.get("listPrice") not in (None, "") else price_block.get("listPrice")),
+        "sale_price": _to_float(item.get("salePrice") if item.get("salePrice") not in (None, "") else price_block.get("salePrice")),
         "vat_rate": _to_float(item.get("vatRate")),
         "dimensional_weight": _to_float(item.get("dimensionalWeight")),
         "location_based_delivery": item.get("locationBasedDelivery"),
@@ -2722,57 +2723,23 @@ def get_listings_from_db(
     brand: Optional[str | list[str]] = None,
     product_id: Optional[str] = None,
     search: Optional[str] = None,
+    quantity_bounds: tuple[float | None, float | None] | None = None,
+    price_bounds: tuple[float | None, float | None] | None = None,
     db_name: str = DB_NAME,
 ) -> Result:
     try:
+        source = read_listing_products(
+            db_name=db_name, api_account_ids=api_account_ids,
+            listing_status=listing_status, active_listings=active_listings,
+            approved=approved, barcode=barcode, stock_code=stock_code,
+            brand=brand, product_id=product_id, search=search,
+            quantity_bounds=quantity_bounds, price_bounds=price_bounds,
+        )
+        if not source.success:
+            return source
+        rows = source.data.get("records") or []
         engine = _engine(db_name)
         with Session(engine) as session:
-            stmt = select(ListingProduct)
-            if api_account_ids:
-                stmt = stmt.where(ListingProduct.api_account_id.in_(api_account_ids))
-            if approved is not None:
-                stmt = stmt.where(ListingProduct.approved == bool(approved))
-            if barcode:
-                stmt = stmt.where(ListingProduct.barcode.like(f"%{barcode}%"))
-            if stock_code:
-                stmt = stmt.where(ListingProduct.stock_code.like(f"%{stock_code}%"))
-            if brand:
-                if isinstance(brand, (list, tuple, set)):
-                    brands = [str(b) for b in brand if str(b)]
-                    if brands:
-                        stmt = stmt.where(ListingProduct.brand.in_(brands))
-                else:
-                    stmt = stmt.where(ListingProduct.brand.like(f"%{brand}%"))
-            if product_id:
-                stmt = stmt.where(ListingProduct.product_id.like(f"%{product_id}%"))
-            if search:
-                q = f"%{search}%"
-                stmt = stmt.where(
-                    or_(
-                        ListingProduct.title.like(q),
-                        ListingProduct.barcode.like(q),
-                        ListingProduct.stock_code.like(q),
-                        ListingProduct.brand.like(q),
-                        ListingProduct.product_id.like(q),
-                    )
-                )
-
-            status = (listing_status or "").strip().lower() if listing_status else None
-            if status is None and active_listings is True:
-                status = "active"
-
-            if status == "active":
-                stmt = stmt.where(ListingProduct.on_sale.is_(True))
-                stmt = stmt.where(or_(ListingProduct.archived.is_(None), ListingProduct.archived.is_(False)))
-            elif status == "archived":
-                stmt = stmt.where(ListingProduct.archived.is_(True))
-            elif status == "out_of_stock":
-                stmt = stmt.where(or_(ListingProduct.quantity.is_(None), ListingProduct.quantity <= 0))
-                stmt = stmt.where(or_(ListingProduct.archived.is_(None), ListingProduct.archived.is_(False)))
-
-            stmt = stmt.order_by(ListingProduct.updated_at.desc())
-            rows = session.exec(stmt).all() or []
-
             latest_stock_snapshot_rows: dict[tuple[int, int], ListingProductStockSnapshot] = {}
             latest_cost_snapshot_rows: dict[tuple[int, str], ListingProductCostSnapshot] = {}
             if rows:
@@ -2780,14 +2747,12 @@ def get_listings_from_db(
                 latest_stock_snapshot_rows = _latest_stock_snapshot_rows_by_listing(session, listing_ids=listing_ids)
                 latest_cost_snapshot_rows = _latest_snapshot_rows_by_listing(session, listing_ids=listing_ids)
 
-        items_map: dict[int, list[dict]] = {}
+        from Listing.processors.stock_bindings import effective_listing_stock_bindings
+        stock_history_by_listing: dict[int, list[ListingProductStockSnapshot]] = {}
         for (listing_id, _stock_item_id), snapshot_row in latest_stock_snapshot_rows.items():
-            if _snapshot_removed(snapshot_row):
-                continue
-            binding_payload = _stock_binding_payload_from_snapshot(snapshot_row)
-            if binding_payload is None:
-                continue
-            items_map.setdefault(listing_id, []).append(binding_payload)
+            stock_history_by_listing.setdefault(listing_id, []).append(snapshot_row)
+        items_map = {int(row.pk): effective_listing_stock_bindings(row, stock_history_by_listing.get(int(row.pk), []))
+                     for row in rows if row.pk is not None}
 
         provider_rows_by_id: dict[int, LogisticsCargoProvider] = {}
         requested_provider_ids = {
@@ -2987,36 +2952,36 @@ def set_listing_stock_items(
     product_id: str,
     stock_items: list[dict],
     db_name: str = DB_NAME,
+    listing_id: Optional[int] = None,
+    expected_binding_state: Optional[str] = None,
+    expected_stock_state: Optional[str] = None,
 ) -> Result:
     try:
+        # An explicit empty list clears the mapping. Invalid nonempty input
+        # must never normalize to an empty replacement and erase old links.
+        if not isinstance(stock_items, list):
+            return Result.fail("Eşleştirme stok listesi geçersiz.", close_dialog=False)
+        for item in stock_items:
+            if not isinstance(item, dict):
+                return Result.fail("Eşleştirme stok satırı geçersiz.", close_dialog=False)
+            raw_id = item.get("stock_item_id") if "stock_item_id" in item else item.get("id")
+            if (isinstance(raw_id, bool) or not isinstance(raw_id, (int, str))
+                    or not str(raw_id).strip().isdigit() or int(raw_id) <= 0):
+                return Result.fail("Eşleştirme stok kimliği geçersiz.", close_dialog=False)
+            raw_qty = item.get("qty") if "qty" in item else item.get("quantity")
+            try:
+                quantity = float(raw_qty)
+            except (TypeError, ValueError, OverflowError):
+                return Result.fail("Eşleştirme miktarı geçersiz.", close_dialog=False)
+            if isinstance(raw_qty, bool) or not math.isfinite(quantity) or quantity < 0:
+                return Result.fail("Eşleştirme miktarı sonlu ve pozitif olmalı.", close_dialog=False)
         normalized = _normalize_stock_items(stock_items)
+        if stock_items and not normalized:
+            return Result.fail("Eşleştirme miktarı pozitif olmalı; temizlemek için boş liste kullanın.", close_dialog=False)
         engine = _engine(db_name)
         normalized_valid = list(normalized or [])
-        invalid_ids: list[int] = []
-        if normalized_valid:
-            with Session(engine) as session:
-                has_any_stock_cards = session.exec(select(StockItem.pk).limit(1)).first() is not None
-                if has_any_stock_cards:
-                    requested_ids = sorted(
-                        {
-                            int(it.get("stock_item_id"))
-                            for it in normalized_valid
-                            if it.get("stock_item_id") is not None
-                        }
-                    )
-                    valid_ids: set[int] = set()
-                    if requested_ids:
-                        stock_stmt = select(StockItem.pk).where(StockItem.pk.in_(requested_ids))
-                        for stock_id_row in (session.exec(stock_stmt).all() or []):
-                            try:
-                                valid_ids.add(int(stock_id_row))
-                            except Exception:
-                                continue
-                    invalid_ids = [sid for sid in requested_ids if sid not in valid_ids]
-                    normalized_valid = [
-                        it for it in normalized_valid
-                        if int(it.get("stock_item_id")) in valid_ids
-                    ]
+        if any(not math.isfinite(float(it["qty"])) for it in normalized_valid):
+            return Result.fail("Eşleştirme miktarı sonlu ve pozitif olmalı.", close_dialog=False)
         with Session(engine) as session:
             with session.begin():
                 batch_now = _utcnow_naive()
@@ -3027,11 +2992,30 @@ def set_listing_stock_items(
                 )
                 if resolved_listing_id is None:
                     return Result.fail("Urun eslesmesi icin ilan kaydi bulunamadi.", close_dialog=False)
+                if listing_id is not None and (
+                    isinstance(listing_id, bool) or not isinstance(listing_id, int)
+                    or listing_id != resolved_listing_id
+                ):
+                    return Result.fail("İlan kimliği ve hesap/ürün anahtarı eşleşmiyor.", close_dialog=False,
+                                       data={"reason": "listing_identity_mismatch"})
+
+                requested_ids = [int(item["stock_item_id"]) for item in normalized_valid]
+                stock_rows = list(session.exec(select(StockItem).where(StockItem.pk.in_(requested_ids))).all()) if requested_ids else []
+                invalid_ids = sorted(set(requested_ids) - {int(row.pk) for row in stock_rows})
+                if invalid_ids:
+                    return Result.fail("Eşleştirmedeki stok kartları bulunamadı.", close_dialog=False,
+                        data={"reason": "stock_item_not_found", "invalid_stock_item_ids": invalid_ids})
 
                 latest_stock_snapshot_rows = _latest_stock_snapshot_rows_by_listing(
                     session,
                     listing_ids=[int(resolved_listing_id)],
                 )
+                listing_row = session.get(ListingProduct, resolved_listing_id)
+                from Listing.processors.stock_bindings import _binding_state, _stock_state
+                if ((expected_binding_state is not None and expected_binding_state != _binding_state(listing_row, latest_stock_snapshot_rows))
+                        or (expected_stock_state is not None and expected_stock_state != _stock_state(stock_rows))):
+                    return Result.fail("Eşleştirme onayından sonra ilan veya stok verisi değişti; yeniden hazırlayın.",
+                        close_dialog=False, data={"reason": "listing_stock_state_changed", "db_write_performed": False})
                 current_snapshot_by_stock_id: dict[int, ListingProductStockSnapshot] = {}
                 for (listing_key, stock_item_key), snapshot_row in latest_stock_snapshot_rows.items():
                     if listing_key == int(resolved_listing_id):
@@ -3088,22 +3072,16 @@ def set_listing_stock_items(
                     )
                     changed = True
 
-        if not changed and not invalid_ids:
+                primary_stock_item_id = int(normalized_valid[0]["stock_item_id"]) if normalized_valid else None
+                if listing_row.stock_item_id != primary_stock_item_id:
+                    listing_row.stock_item_id = primary_stock_item_id
+                    changed = True
+                if changed:
+                    listing_row.updated_at = batch_now
+                    session.add(listing_row)
+
+        if not changed:
             return Result.ok("Urun eslesmesi zaten guncel.", close_dialog=False)
-
-        primary_stock_item_id: Optional[int] = None
-        if normalized_valid:
-            try:
-                primary_stock_item_id = int(normalized_valid[0].get("stock_item_id"))
-            except Exception:
-                primary_stock_item_id = None
-
-        update_records(
-            ListingProduct,
-            filters={"api_account_id": int(api_account_id), "product_id": str(product_id)},
-            update_data={"updated_at": _utcnow_naive(), "stock_item_id": primary_stock_item_id},
-            db_name=db_name,
-        )
         _emit_listing_signal(
             "stock_matches_changed",
             {
@@ -3118,12 +3096,6 @@ def set_listing_stock_items(
                 "invalid_stock_item_ids": list(invalid_ids),
             },
         )
-
-        if invalid_ids:
-            return Result.ok(
-                f"Urun eslesmesi guncellendi. Gecersiz stok kartlari atlandi: {', '.join(str(v) for v in invalid_ids)}",
-                close_dialog=False,
-            )
 
         return Result.ok("Ürün eşleşmesi güncellendi.", close_dialog=False)
 

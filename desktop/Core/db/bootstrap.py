@@ -322,60 +322,27 @@ def _backfill_sync_columns(conn) -> None:
         if not pk_name:
             continue
 
-        if "sync_updated_at" in cols:
-            if "created_at" in cols:
-                conn.exec_driver_sql(
-                    f"""
-                    UPDATE {table_name}
-                    SET sync_updated_at = COALESCE(sync_updated_at, created_at, ?)
-                    WHERE sync_updated_at IS NULL
-                    """,
-                    (now_iso,),
-                )
-            else:
-                conn.exec_driver_sql(
-                    f"""
-                    UPDATE {table_name}
-                    SET sync_updated_at = COALESCE(sync_updated_at, ?)
-                    WHERE sync_updated_at IS NULL
-                    """,
-                    (now_iso,),
-                )
-
-        if "sync_source_device" in cols:
-            conn.exec_driver_sql(
-                f"""
-                UPDATE {table_name}
-                SET sync_source_device = COALESCE(sync_source_device, ?)
-                WHERE sync_source_device IS NULL OR sync_source_device = ''
-                """,
-                (default_source,),
-            )
-
-        if "sync_version" in cols:
-            conn.exec_driver_sql(
-                f"""
-                UPDATE {table_name}
-                SET sync_version = COALESCE(sync_version, 1)
-                WHERE sync_version IS NULL
-                """
-            )
-
-        assignments = ["sync_uuid = lower(hex(randomblob(16)))"]
+        missing_uuid = "(sync_uuid IS NULL OR sync_uuid = '')"
+        assignments = [f"sync_uuid = CASE WHEN {missing_uuid} THEN lower(hex(randomblob(16))) ELSE sync_uuid END"]
+        missing = [missing_uuid]
         params: list[object] = []
         if "sync_updated_at" in cols:
-            assignments.append("sync_updated_at = COALESCE(sync_updated_at, ?)")
+            timestamps = "sync_updated_at, created_at, ?" if "created_at" in cols else "sync_updated_at, ?"
+            assignments.append(f"sync_updated_at = COALESCE({timestamps})")
+            missing.append("sync_updated_at IS NULL")
             params.append(now_iso)
         if "sync_source_device" in cols:
             assignments.append("sync_source_device = COALESCE(sync_source_device, ?)")
+            missing.append("sync_source_device IS NULL")
             params.append(default_source)
         if "sync_version" in cols:
             assignments.append("sync_version = COALESCE(sync_version, 1)")
+            missing.append("sync_version IS NULL")
         conn.exec_driver_sql(
             f"""
             UPDATE {table_name}
             SET {', '.join(assignments)}
-            WHERE sync_uuid IS NULL OR sync_uuid = ''
+            WHERE {' OR '.join(missing)}
             """,
             tuple(params),
         )

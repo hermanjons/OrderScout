@@ -555,6 +555,8 @@ def verify_report_snapshot_xlsx(
         "size_bytes": path.stat().st_size,
         "file_sha256": _file_sha256(path),
         "sheet_count": len(snapshot.sheets),
+        "row_count": sum(sheet["row_count"] for sheet in readback_sheets),
+        "row_count_includes": "report_sheets_without_headers_or_internal_metadata",
         "sheets": readback_sheets,
         "problems": problems,
     }

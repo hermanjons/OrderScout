@@ -122,8 +122,8 @@ def _projection_error(
         "source_shape": _structural_shape(source["result"]),
         "projection_shape": _structural_shape(selected),
         "path_guidance": {
-            "rows_path": "relative_to_bound_source_result; empty_string_selects_source_root",
-            "source_path": "relative_to_selected_row",
+            "rows_path": "relative_to_bound_source_result; empty_string_or_dot_selects_source_root",
+            "source_path": "relative_to_selected_row; dotted: field.child OR JSON_pointer: /field/child; do_not_mix /field.child",
             "shape_paths": "JSON_pointer; scalar_values_are_omitted",
         },
     })
@@ -137,10 +137,13 @@ def report_builder_parameters() -> dict[str, Any]:
             "sources": {"type": "array", "minItems": 1, "maxItems": 64, "items": {
                 "type": "object",
                 "properties": {
-                    "source_id": {"type": "string", "minLength": 1},
-                    "source_step_id": {"type": "string", "minLength": 1},
+                    "source_id": {"type": "string", "minLength": 1,
+                        "description": "A unique alias for this source, reused by sheets[].source_id and notes[].source_ids."},
+                    "source_step_id": {"type": "string", "minLength": 1,
+                        "description": "The actual completed host step_id, identical to result.$from_step."},
                     "operation_id": {"type": "string", "minLength": 1},
-                    "result": {"type": "object"},
+                    "result": {"type": "object", "description": "Host-resolved complete source. The model supplies "
+                        "a {$from_step: existing_step_id, path: tool_result} binding, never literal result rows."},
                 },
                 "required": ["source_id", "source_step_id", "operation_id", "result"],
                 "additionalProperties": False,
@@ -152,7 +155,7 @@ def report_builder_parameters() -> dict[str, Any]:
                     "source_id": {"type": "string", "minLength": 1},
                     "rows_path": {"type": "string", "description": (
                         "Path relative to the bound sources[].result, without another tool_result prefix. "
-                        "Use an empty string to select the source root as one row; arrays select their record rows."
+                        "Use an empty string or a single dot (.) to select the source root as one row; arrays select their record rows."
                     )},
                     "rows_mode": {"type": "string", "enum": ["records", "object_entries"], "description": (
                         "Default records selects one object or an array of records. object_entries converts "
@@ -165,7 +168,8 @@ def report_builder_parameters() -> dict[str, Any]:
                             "key": {"type": "string", "minLength": 1},
                             "label": {"type": "string", "minLength": 1},
                             "source_path": {"type": "string", "minLength": 1, "description": (
-                                "Exact observed field path relative to each selected row, not to the full tool result."
+                                "Exact observed field path relative to each selected row, not to the full tool result. "
+                                "Use dotted field.child OR JSON Pointer /field/child. Do not mix them as /field.child."
                             )},
                             "data_type": {"type": "string", "enum": ["string", "integer", "number", "boolean", "date", "datetime"]},
                             "number_format": {"type": "string"},
@@ -183,7 +187,9 @@ def report_builder_parameters() -> dict[str, Any]:
                 "properties": {
                     "text": {"type": "string", "minLength": 1},
                     "kind": {"type": "string", "enum": ["hypothesis", "assumption", "recommendation"]},
-                    "source_ids": {"type": "array", "items": {"type": "string"}},
+                    "source_ids": {"type": "array", "items": {"type": "string"},
+                        "description": "References to sources[].source_id aliases, not source_step_id values. "
+                                       "For source_id=profit and source_step_id=call_50, use [profit], not [call_50]."},
                 },
                 "required": ["text", "kind", "source_ids"],
                 "additionalProperties": False,
@@ -312,14 +318,18 @@ def build_observation_report_snapshot(
     note_rows = []
     if len(notes or []) > 100:
         raise ValueError("report_note_limit_exceeded")
-    for note in notes or []:
+    for note_index, note in enumerate(notes or []):
         kind = str(note.get("kind") or "").strip()
         text = str(note.get("text") or "").strip()
         source_ids = note.get("source_ids")
         if kind not in {"hypothesis", "assumption", "recommendation"} or not text:
             raise ValueError("report_note_kind_and_text_required")
         if not isinstance(source_ids, list) or any(source_id not in sources_by_id for source_id in source_ids):
-            raise ValueError("report_note_source_not_bound")
+            raise ReportProjectionError("report_note_source_not_bound", {
+                "version": 1, "reason_code": "report_note_source_not_bound", "note_index": note_index,
+                "available_source_ids": [str(value)[:128] for value in sources_by_id][:64],
+                "reference_guidance": "notes[].source_ids must reference sources[].source_id aliases, not host step IDs.",
+            })
         note_rows.append({"kind": kind, "text": text, "sources": ", ".join(source_ids),
                           "basis": "Model inference; not a verified source fact"})
     if note_rows:

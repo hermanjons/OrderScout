@@ -11,8 +11,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Callable, Optional
 
-from PyQt6.QtCore import QPoint, QSize, Qt, QTimer, QUrl
-from PyQt6.QtGui import QDesktopServices, QTextCursor
+from PyQt6.QtCore import QEvent, QPersistentModelIndex, QPoint, QSignalBlocker, QSize, Qt, QTimer, QUrl
+from PyQt6.QtGui import QDesktopServices, QIcon, QPainter, QPixmap, QTextCursor
+from PyQt6.QtSvg import QSvgRenderer
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QButtonGroup,
@@ -28,7 +29,6 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
-    QProgressBar,
     QPushButton,
     QScrollArea,
     QSizePolicy,
@@ -41,8 +41,12 @@ from PyQt6.QtWidgets import (
 
 from settings import DB_NAME
 from AI.processors.turn_service import approval_reply_protocol, run_interpreted_turn, resume_reply_interpretation
+from AI.views.model_picker import (ModelChoiceDelegate, PRESENTATION_ROLE, SEARCH_ROLE,
+                                  model_identity, model_presentation, search_text)
+from AI.views.reasoning_control import ReasoningControl
 
 from AI.constants.ui_constants import (
+    AI_BRAND_ICON_NAME,
     AI_CHAT_ACTIVE_BRAIN_CLOUD_TEXT,
     AI_CHAT_ACTIVE_BRAIN_TEMPLATE,
     AI_CHAT_ACTIVE_BRAIN_TEXT,
@@ -51,7 +55,6 @@ from AI.constants.ui_constants import (
     AI_CHAT_BRAIN_CLOUD_TEXT,
     AI_CHAT_BRAIN_TEMPLATE,
     AI_CHAT_BRAIN_UNSELECTED,
-    AI_CHAT_AGENT_ACTIVITY_TEXT,
     AI_CHAT_CLOUD_MODEL_MISSING_TEXT,
     AI_CHAT_CLOUD_NOT_CONNECTED_TEXT,
     AI_CHAT_CLOUD_PREP_TEXT,
@@ -122,8 +125,10 @@ class _AiActionsProxy:
 ai_actions = _AiActionsProxy()
 from AI.views.views import AIManagerDialog
 from Core.threads.sync_worker import SyncWorker
+from AI.views.stream_worker import ChatStreamWorker
+from AI.views.run_activity import RunActivityPanel
+from AI.views.conversation_sidebar import ConversationSidebar
 from Core.views import ResettableSplitter
-from Core.views.tab_widgets import SplitPanelSidebar
 from Feedback.processors.pipeline import MessageHandler, Result
 from settings import ASSETS_DIR
 from AI.processors.agent import (
@@ -139,6 +144,7 @@ from AI.processors.cloud_runtime import (
     begin_provider_chat_turn,
     build_provider_chat_client,
     provider_invocation_provenance,
+    provider_reasoning_capabilities,
 )
 from AI.processors.conversation_runtime import (
     grounded_capability_overview,
@@ -148,6 +154,13 @@ from AI.processors.local_runtime import build_local_planner_client, release_loca
 from AI.processors.local_resources import build_local_resource_plan
 from AI.processors.operation_runtime import execute_approved_operation
 from AI.processors.task_store import list_agent_task_states, load_agent_task_state
+from AI.processors.chat_session_store import (
+    conversation_history,
+    load_active_chat_session,
+    save_active_chat_session,
+    list_chat_sessions,
+    load_chat_session,
+)
 from AI.processors.task_runtime import (
     cancel_agent_task_by_id,
     interpret_agent_turn,
@@ -162,6 +175,30 @@ from AI.processors.task_runtime import (
     safe_agent_runtime_context,
     supersede_agent_task_by_id,
 )
+
+
+_DEFAULT_SYNC_WORKER = SyncWorker
+
+
+def _make_chat_worker(*args, **kwargs):
+    # Keep the existing injectable worker factory for offline UI tests.
+    worker_type = ChatStreamWorker if SyncWorker is _DEFAULT_SYNC_WORKER else SyncWorker
+    return worker_type(*args, **kwargs)
+
+
+def _assistant_message_block(safe_message: str, role_name: str = AI_CHAT_ASSISTANT_ROLE_TEXT,
+                             *, activity_html: str = "") -> str:
+    icon_url = html.escape(QUrl.fromLocalFile(_ai_icon_path()).toString())
+    return (
+        '<table width="78%" cellspacing="0" cellpadding="0" style="margin:0 0 18px 0;">'
+        f'<tr><td width="46" valign="top"><img src="{icon_url}" width="36" height="36"></td>'
+        '<td valign="top">'
+        f'<div style="font-size:11px;color:#0F172A;font-weight:900;margin-bottom:5px;">{role_name}</div>'
+        '<table width="100%" cellspacing="0" cellpadding="10" bgcolor="#FFFFFF" '
+        'style="background-color:#FFFFFF;color:#0F172A;">'
+        f'<tr><td style="color:#0F172A;line-height:1.55;">{safe_message}</td></tr>'
+        f'</table>{activity_html}</td></tr></table>'
+    )
 
 
 def _local_contextual_write_followup_requested(text: str, history: list[dict[str, str]]) -> bool:
@@ -225,6 +262,7 @@ def _run_chat_turn_with_runtime(
     session_state: dict[str, Any] | None = None,
     progress_callback: Callable[[int, str], None] | None = None,
     task_control: Any = None,
+    history_includes_current: bool = False,
 ) -> Result:
     record = dict(runtime_record or {})
     planner_client = None
@@ -290,12 +328,23 @@ def _run_chat_turn_with_runtime(
         return pending_read
 
     if source == AI_CHAT_SOURCE_LOCAL_VALUE:
+        local_startup_error = "Seçilen yerel model dosyası veya motor bulunamadı."
         try:
             planner_client = build_local_planner_client(record)
-        except Exception:
+        except Exception as error:
+            local_startup_error = str(error).splitlines()[0][:300] or "Yerel motor başlatılamadı."
             planner_client = None
         if planner_client is None:
-            return Result.fail("Seçilen yerel model başlatılamadı; sohbet model bağlantısı bekliyor.", close_dialog=False)
+            message = "Yerel model açılamadı: " + local_startup_error
+            state = AgentSessionState.from_dict(session_state) if session_state else AgentSessionState(goal=text)
+            state.goal, state.status = text, "paused"
+            state.record_turn(role="user", content=text, mode="local_startup")
+            state.record_turn(role="assistant", content=message, mode="runtime_error")
+            from AI.processors.task_store import save_agent_task_state
+            path = save_agent_task_state(state)
+            return Result.fail(message, close_dialog=False, data={"session_state": state.to_dict(),
+                "state": state.to_dict(), "state_path": str(path), "model_invoked": False,
+                "runtime_error": {"phase": "local_startup"}})
     else:
         provider_id = int(record.get("id") or 0)
         explicit_runtime_override = bool(
@@ -348,7 +397,8 @@ def _run_chat_turn_with_runtime(
         try:
             result = run_model_loop(text, client=planner_client, session_state=session_state, history=history,
                 db_name=DB_NAME, persist=True, runtime_context=_task_runtime_context(source, record),
-                progress_callback=progress_callback, task_control=task_control)
+                progress_callback=progress_callback, task_control=task_control,
+                history_includes_current=history_includes_current)
             return project_runtime_result(result, planner_client, source=source, model_name=record.get("default_model", ""))
         finally:
             if source == AI_CHAT_SOURCE_LOCAL_VALUE and bool(getattr(planner_client, "release_after_turn", False)):
@@ -1085,16 +1135,24 @@ def _format_runtime_activity(source: str, runtime: dict[str, Any]) -> str:
     runtime_name = _safe_text(runtime.get("runtime_name"), "rule_fallback")
     model_name = _safe_text(runtime.get("model_name"), "selected")
     if source == AI_CHAT_SOURCE_LOCAL_VALUE:
-        return (
+        text = (
             f"Local runner: {runtime_name} / {model_name} / {runtime_plan.get('profile')} "
             f"/ ctx {runtime_plan.get('num_ctx')} / out {runtime_plan.get('max_tokens')}"
         )
-    if bool(runtime_plan.get("fallback_used")):
+    else:
+        text = f"Cloud runner: {runtime_name} / {model_name}"
+    if source != AI_CHAT_SOURCE_LOCAL_VALUE and bool(runtime_plan.get("fallback_used")):
         requested = _safe_text(runtime_plan.get("requested_model"), "")
         actual = _safe_text(runtime_plan.get("actual_model") or model_name, model_name)
         if requested and actual and requested != actual:
-            return f"Cloud runner: {runtime_name} / {actual} (fallback: {requested} -> {actual})"
-    return f"Cloud runner: {runtime_name} / {model_name}"
+            text = f"Cloud runner: {runtime_name} / {actual} (fallback: {requested} -> {actual})"
+    usage = runtime_plan.get("provider_usage_totals")
+    if isinstance(usage, dict) and usage.get("responses_with_usage"):
+        def count(value: Any) -> str:
+            return f"{int(value):,}" if isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0 else "?"
+        text += (f" | Token toplamı: giriş {count(usage.get('input_tokens'))}, çıkış {count(usage.get('output_tokens'))}"
+                 f" | {count(usage.get('response_count'))} model yanıtı")
+    return text
 
 
 def _chat_data_from_task_result(result: Result) -> dict[str, Any]:
@@ -1295,10 +1353,29 @@ def _cloud_provider_sort_key(record: dict[str, Any]) -> tuple[int, int, str]:
 
 
 def _ai_icon_path() -> str:
-    preferred = os.path.join(ASSETS_DIR, "ai-icon-search.png")
+    preferred = os.path.join(ASSETS_DIR, AI_BRAND_ICON_NAME)
     if os.path.exists(preferred):
         return preferred
     return os.path.join(ASSETS_DIR, "orderscout-logo.png")
+
+
+def _chat_icon(name: str, color: str = "#64748B") -> QIcon:
+    paths = {
+        "panel": '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/>',
+        "plus": '<path d="M12 5v14M5 12h14"/>',
+        "arrow": '<path d="M12 19V5m-6 6 6-6 6 6"/>',
+        "steps": '<path d="m3 7 2 2 3-4m3 2h10M3 15l2 2 3-4m3 2h10"/>',
+        "chevron": '<path d="m6 9 6 6 6-6"/>',
+    }
+    svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" '
+           f'stroke="{color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'
+           + paths[name] + '</svg>')
+    pixmap = QPixmap(48, 48)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    QSvgRenderer(svg.encode()).render(painter)
+    painter.end()
+    return QIcon(pixmap)
 
 
 def _model_display_name(record: dict[str, Any]) -> str:
@@ -1321,104 +1398,31 @@ def _model_display_name(record: dict[str, Any]) -> str:
     return f"{display_name} · {quantization}" if quantization else display_name
 
 
-class _ModelChoiceRow(QFrame):
-    """Visual row shared by local models, cloud providers and cloud model choices."""
-
-    def __init__(self, payload: dict[str, Any], parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-        self._payload = dict(payload or {})
-        self._selected = False
-        self.setObjectName("AiModelChoiceRow")
-        source_kind = _safe_text(self._payload.get("_source_kind"), "local_model")
-        self._source_kind = source_kind
-        self.setProperty("rowKind", source_kind)
-        self.setProperty("selected", False)
-
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(10, 7, 10, 7)
-        layout.setSpacing(8)
-        text = QVBoxLayout()
-        text.setSpacing(3)
-        self.title_label = QLabel(self._title())
-        self.title_label.setObjectName("AiModelRowTitle")
-        self.title_label.setWordWrap(True)
-        self.meta_label = QLabel(self._meta())
-        self.meta_label.setObjectName("AiModelRowMeta")
-        self.meta_label.setWordWrap(True)
-        text.addWidget(self.title_label)
-        text.addWidget(self.meta_label)
-        layout.addLayout(text, 1)
-
-        self.indicator = QLabel(self._indicator_text())
-        self.indicator.setObjectName("AiModelRowIndicator")
-        self.indicator.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.indicator, 0, Qt.AlignmentFlag.AlignVCenter)
-        self.setMinimumHeight(58 if source_kind != "local_model" else 66)
-
-    def _title(self) -> str:
-        if self._source_kind == "cloud_provider_header":
-            return _safe_text(self._payload.get("label"), "Provider")
-        return _model_display_name(self._payload)
-
-    def _meta(self) -> str:
-        if self._source_kind == "cloud_provider_header":
-            provider_code = _safe_text(self._payload.get("provider_code"), "").casefold()
-            return (
-                "Bağlı · canlı ücretsiz katalog"
-                if provider_code == "openrouter"
-                else "Bağlı · ücretsiz modeller erişilebilir"
-            )
-        if self._source_kind == "cloud_model":
-            metadata = dict(self._payload.get("model_metadata") or {})
-            parts = ["Ücretsiz" if bool(metadata.get("is_free")) else "Ücretli"]
-            capability = dict(metadata.get("capability_profile") or {})
-            if capability.get("native_tool_calling_available"):
-                parts.append("Tools")
-            context = int(metadata.get("context_length") or 0)
-            if context:
-                parts.append(f"{max(1, context // 1024)}K context")
-            rank = int(self._payload.get("free_model_rank") or 0)
-            if bool(metadata.get("is_free")) and rank == 0:
-                parts.insert(0, "Önerilen #1")
-            return " · ".join(parts)
-        size_text = _safe_text(self._payload.get("size_text"), "-")
-        resource_plan = (
-            dict(self._payload.get("resource_plan") or {})
-            if isinstance(self._payload.get("resource_plan"), dict)
-            else {}
-        )
-        context = int(resource_plan.get("num_ctx") or self._payload.get("num_ctx") or 0)
-        context_text = f"{max(1, context // 1024)}K context" if context else "context otomatik"
-        profile = _safe_text(resource_plan.get("profile"), "").casefold()
-        runtime_text = {
-            "gpu_auto": "GPU otomatik",
-            "reasoning": "reasoning profili",
-            "low_memory": "düşük bellek",
-        }.get(profile, "runtime hazır")
-        return f"llama.cpp · {size_text} · {context_text} · {runtime_text}"
-
-    def _indicator_text(self) -> str:
-        if self._source_kind == "cloud_provider_header":
-            return "^"
-        if self._source_kind == "local_model":
-            resource_plan = (
-                dict(self._payload.get("resource_plan") or {})
-                if isinstance(self._payload.get("resource_plan"), dict)
-                else {}
-            )
-            return "●  Sınırlı" if _safe_text(resource_plan.get("profile"), "").casefold() == "low_memory" else "●  Hazır"
-        return "●" if self._selected else "○"
-
-    def set_selected(self, selected: bool) -> None:
-        self._selected = bool(selected)
-        self.setProperty("selected", self._selected)
-        self.indicator.setText(self._indicator_text())
-        self.style().unpolish(self)
-        self.style().polish(self)
-
-    def set_collapsed(self, collapsed: bool) -> None:
-        if self._source_kind == "cloud_provider_header":
-            self.indicator.setText("v" if collapsed else "^")
+def _local_plan_description(plan: dict[str, Any]) -> str:
+    """Translate the effective resource plan into a decision, without promising speed."""
+    if not plan:
+        return "Kaynak planı henüz hesaplanmadı."
+    if not bool(plan.get("safe_to_run", True)) or plan.get("suitability") == "blocked":
+        status = "Bu model başlatılamaz"
+    elif plan.get("requires_paging") or plan.get("suitability") == "slow":
+        status = "Çalışabilir · yavaş yanıt bekleniyor"
+    elif plan.get("suitability") == "recommended":
+        status = "Bu cihaz için önerilen"
+    else:
+        status = "Kaynak planı hazır"
+    mode = str(plan.get("capacity_label") or plan.get("reason") or "").strip()
+    if plan.get("suitability") == "recommended" and plan.get("capacity_label"):
+        status, mode = str(plan["capacity_label"]), ""
+    parts = [status, mode]
+    context = int(plan.get("num_ctx") or 0)
+    output = int(plan.get("max_tokens") or 0)
+    if context:
+        parts.append(f"Bağlam {context:,} · yanıt en çok {output:,} token")
+    runtime_bytes = int(plan.get("estimated_runtime_bytes") or 0)
+    if runtime_bytes:
+        parts.append(f"Tahmini çalışma belleği {runtime_bytes / (1024 ** 3):.1f} GiB")
+    parts.extend(str(item) for item in list(plan.get("warnings") or [])[:2])
+    return "\n".join(dict.fromkeys(part for part in parts if part))
 
 
 class _AdvancedModelSettingsDialog(QDialog):
@@ -1434,7 +1438,7 @@ class _AdvancedModelSettingsDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self.setObjectName("AiAdvancedModelPopup")
-        self.setWindowTitle("Gelişmiş model ayarları")
+        self.setWindowTitle("Model çalışma ayarları")
         self.setWindowFlag(Qt.WindowType.Popup, True)
         self.setModal(False)
         self.setMinimumWidth(420)
@@ -1453,7 +1457,7 @@ class _AdvancedModelSettingsDialog(QDialog):
             if isinstance(model_metadata.get("capability_profile"), dict)
             else dict(self._record.get("capability_profile") or {})
             if isinstance(self._record.get("capability_profile"), dict)
-            else {}
+            else dict(self._record.get("runtime_capabilities") or {})
         )
         self.setStyleSheet(
             """
@@ -1490,6 +1494,11 @@ class _AdvancedModelSettingsDialog(QDialog):
                 padding: 0 14px;
                 font-weight: 800;
             }
+            QDialog#AiAdvancedModelPopup QScrollArea,
+            QWidget#AiAdvancedBody {
+                background: #FFFFFF;
+                border: 0;
+            }
             QDialog#AiAdvancedModelPopup QPushButton#Secondary {
                 background: #FFFFFF;
                 color: #0F172A;
@@ -1506,45 +1515,88 @@ class _AdvancedModelSettingsDialog(QDialog):
         root.setContentsMargins(18, 16, 18, 16)
         root.setSpacing(10)
         model_name = _model_display_name(self._record)
-        title = QLabel(f"{model_name} · Gelişmiş")
+        title = QLabel(model_name)
         title.setObjectName("PopupTitle")
         title.setWordWrap(True)
         root.addWidget(title)
-        hint = QLabel("Yalnız bu sohbet ve modelin desteklediği ayarlar uygulanır.")
+        hint = QLabel("Bu sohbetin çalışma ayarları. Kaynak planı uygularken yeniden hesaplanır." if is_local else "Yalnız bu sohbet ve modelin desteklediği ayarlar uygulanır.")
         hint.setObjectName("PopupHint")
         hint.setWordWrap(True)
         root.addWidget(hint)
 
+        scroll = QScrollArea(self)
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        body = QWidget(scroll)
+        body.setObjectName("AiAdvancedBody")
+        content = QVBoxLayout(body)
+        content.setContentsMargins(0, 0, 4, 0)
+        content.setSpacing(10)
+        scroll.setWidget(body)
+        root.addWidget(scroll, 1)
+        self._performance_preset = None
+        runtime_config = dict(self._record.get("runtime_config") or {})
+        resource_plan = dict(self._record.get("resource_plan") or {})
+
+        def _default(key: str, fallback: Any) -> Any:
+            for source in (self._record, runtime_config, resource_plan, resource_plan.get("sampling_defaults") or {}):
+                value = source.get(key)
+                if value is not None and value != "":
+                    return value
+            return fallback
+
+        if self._is_local:
+            plan_hint = QLabel(_local_plan_description(resource_plan))
+            plan_hint.setObjectName("PopupHint")
+            plan_hint.setWordWrap(True)
+            content.addWidget(plan_hint)
+            content.addWidget(QLabel("ÇALIŞMA PROFİLİ", objectName="FieldKey"))
+            self._performance_preset = QComboBox(body)
+            for label, value in (
+                ("Otomatik · cihaz kaynaklarına göre", "auto"),
+                ("Ekonomik · daha az kaynak", "eco"),
+                ("Dengeli", "balanced"),
+                ("Hız öncelikli", "fast"),
+                ("Kalite öncelikli · gerekirse yavaş", "quality"),
+            ):
+                self._performance_preset.addItem(label, value)
+            self._default_profile = _default("performance_preset", "auto")
+            profile_index = self._performance_preset.findData(self._default_profile)
+            self._performance_preset.setCurrentIndex(max(0, profile_index))
+            content.addWidget(self._performance_preset)
+
         self._fields: dict[str, QLineEdit] = {}
         generation_rows = [
-            ("num_ctx", "Context", self._record.get("num_ctx") or 8192),
-            ("max_tokens", "Max output", self._record.get("max_tokens") or self._record.get("max_output_tokens") or 1024),
-            ("temperature", "Temperature", self._record.get("temperature") if self._record.get("temperature") is not None else 0.2),
-            ("top_p", "Top P", self._record.get("top_p") if self._record.get("top_p") is not None else 0.9),
-            ("top_k", "Top K", self._record.get("top_k") or 40),
-            ("repeat_penalty", "Repeat penalty", self._record.get("repeat_penalty") or 1.1),
+            ("num_ctx", "Başlangıç bağlamı (token)" if self._is_local else "Bağlam (token)", _default("num_ctx", 8192)),
+            ("max_tokens", "Yanıt sınırı (token)", _default("max_tokens", self._record.get("max_output_tokens") or 1024)),
+            ("temperature", "Sıcaklık", _default("temperature", 0.2)),
+            ("top_p", "Top P", _default("top_p", 0.9)),
+            ("top_k", "Top K", _default("top_k", 40)),
+            ("repeat_penalty", "Tekrar cezası", _default("repeat_penalty", 1.1)),
         ]
         runtime_rows: list[tuple[str, str, Any]] = []
         if self._is_local:
             runtime_rows = [
-                ("num_gpu", "GPU layers", self._record.get("num_gpu") or "auto"),
-                ("num_thread", "Threads", self._record.get("num_thread") or "auto"),
-                ("num_batch", "Batch size", self._record.get("num_batch") or 512),
-                ("seed", "Seed", self._record.get("seed") or "random"),
+                ("num_gpu", "GPU katmanı", _default("num_gpu", "auto")),
+                ("num_thread", "CPU iş parçacığı", _default("num_thread", "auto")),
+                ("num_batch", "İşleme grubu", _default("num_batch", 128)),
+                ("seed", "Rastgelelik tohumu", _default("seed", "random")),
             ]
         rows = [*generation_rows, *runtime_rows]
         self._default_values = {key: value for key, _label, value in rows}
+        self._active_resource_defaults = dict(self._default_values)
         supported_settings = self._supported_setting_names([key for key, _label, _value in rows])
         self._unsupported_fields: list[str] = []
 
-        def _add_settings_group(title_text: str, group_rows: list[tuple[str, str, Any]]) -> None:
+        def _add_settings_group(target: QVBoxLayout, title_text: str, group_rows: list[tuple[str, str, Any]]) -> None:
             section = QLabel(title_text)
             section.setObjectName("FieldKey")
-            root.addWidget(section)
+            target.addWidget(section)
             grid = QGridLayout()
             grid.setHorizontalSpacing(10)
             grid.setVerticalSpacing(8)
-            root.addLayout(grid)
+            target.addLayout(grid)
             for index, (key, label_text, value) in enumerate(group_rows):
                 column = index % 2
                 row = (index // 2) * 2
@@ -1552,6 +1604,13 @@ class _AdvancedModelSettingsDialog(QDialog):
                 label.setObjectName("FieldKey")
                 field = QLineEdit(str(value))
                 field.setObjectName(f"AiAdvanced_{key}")
+                field.setToolTip({
+                    "num_ctx": "Sohbet geçmişi, talimatlar ve yanıtın toplam token bütçesi. Daha büyük bağlam daha fazla bellek kullanır.",
+                    "max_tokens": "Tek yanıtta üretilebilecek en fazla token. Bağlam alanında yanıt için yer bırakın.",
+                    "num_gpu": "GPU'ya aktarılacak katman sayısı. 0 yalnız CPU kullanır; auto kaynak planına bırakır.",
+                    "num_thread": "CPU iş parçacığı sayısı. auto cihaz kaynaklarına göre seçer.",
+                    "num_batch": "Birlikte işlenen token sayısı. Daha büyük değer daha çok bellek kullanır.",
+                }.get(key, ""))
                 if key not in supported_settings:
                     field.setEnabled(False)
                     field.setToolTip("Seçili model/provider bu ayarı desteklediğini bildirmiyor.")
@@ -1560,10 +1619,29 @@ class _AdvancedModelSettingsDialog(QDialog):
                 grid.addWidget(label, row, column)
                 grid.addWidget(field, row + 1, column)
                 self._fields[key] = field
+                if self._performance_preset is not None and key in {"num_ctx", "max_tokens", "num_gpu", "num_thread", "num_batch"}:
+                    field.textEdited.connect(self._mark_manual_resource_settings)
 
-        _add_settings_group("ÜRETİM", generation_rows)
+        _add_settings_group(content, "BAĞLAM VE YANIT", generation_rows[:2])
+        advanced_button = QPushButton("Diğer üretim ve donanım ayarları ▸")
+        advanced_button.setObjectName("Secondary")
+        advanced_button.setCheckable(True)
+        content.addWidget(advanced_button)
+        self._advanced_fields_panel = QWidget(body)
+        advanced_layout = QVBoxLayout(self._advanced_fields_panel)
+        advanced_layout.setContentsMargins(0, 0, 0, 0)
+        advanced_layout.setSpacing(10)
+        _add_settings_group(advanced_layout, "ÜRETİM", generation_rows[2:])
         if runtime_rows:
-            _add_settings_group("RUNTIME", runtime_rows)
+            _add_settings_group(advanced_layout, "DONANIM", runtime_rows)
+        content.addWidget(self._advanced_fields_panel)
+        self._advanced_fields_panel.hide()
+        advanced_button.toggled.connect(self._advanced_fields_panel.setVisible)
+        advanced_button.toggled.connect(lambda checked: advanced_button.setText(
+            "Diğer üretim ve donanım ayarları ▾" if checked else "Diğer üretim ve donanım ayarları ▸"
+        ))
+        if self._performance_preset is not None:
+            self._performance_preset.currentIndexChanged.connect(self._apply_preset_defaults)
         if self._unsupported_fields:
             unsupported_hint = QLabel(
                 "Bu modelde desteklenmeyen ayarlar pasif: "
@@ -1571,7 +1649,13 @@ class _AdvancedModelSettingsDialog(QDialog):
             )
             unsupported_hint.setObjectName("PopupHint")
             unsupported_hint.setWordWrap(True)
-            root.addWidget(unsupported_hint)
+            content.addWidget(unsupported_hint)
+        content.addStretch(1)
+        self.validation_label = QLabel()
+        self.validation_label.setWordWrap(True)
+        self.validation_label.setStyleSheet("color: #B91C1C; font-size: 12px;")
+        self.validation_label.hide()
+        root.addWidget(self.validation_label)
 
         buttons = QHBoxLayout()
         reset = QPushButton("Varsayılana dön")
@@ -1615,10 +1699,30 @@ class _AdvancedModelSettingsDialog(QDialog):
         return supported
 
     def _reset_defaults(self) -> None:
+        if self._performance_preset is not None:
+            self._performance_preset.setCurrentIndex(max(0, self._performance_preset.findData(self._default_profile)))
         for key, value in self._default_values.items():
             field = self._fields.get(key)
             if field is not None:
                 field.setText(str(value))
+        self._active_resource_defaults = dict(self._default_values)
+        self.validation_label.hide()
+
+    def _mark_manual_resource_settings(self, *_args) -> None:
+        if self._performance_preset is not None and self._performance_preset.currentData() == "auto":
+            self._performance_preset.setCurrentIndex(self._performance_preset.findData("quality"))
+
+    def _apply_preset_defaults(self, *_args) -> None:
+        if self._performance_preset is None:
+            return
+        preset = self._performance_preset.currentData()
+        if preset in {"auto", "eco", "balanced", "fast", "quality"}:
+            context, output = {"eco": (4096, 1024), "fast": (4096, 1024),
+                "balanced": (8192, 2048), "quality": (16384, 4096), "auto": (16384, 4096)}[preset]
+            self._fields["num_ctx"].setText(str(context))
+            self._fields["max_tokens"].setText(str(output))
+            for key in ("num_ctx", "max_tokens"):
+                self._active_resource_defaults[key] = self._fields[key].text()
 
     @staticmethod
     def _parsed_value(value: str) -> Any:
@@ -1628,7 +1732,7 @@ class _AdvancedModelSettingsDialog(QDialog):
         if clean.casefold() in {"auto", "automatic", "random", "rastgele"}:
             return clean.casefold()
         try:
-            return float(clean) if "." in clean or "," in clean else int(clean)
+            return float(clean.replace(",", ".")) if "." in clean or "," in clean else int(clean)
         except ValueError:
             return clean
 
@@ -1638,6 +1742,35 @@ class _AdvancedModelSettingsDialog(QDialog):
             for key, field in self._fields.items()
             if field.isEnabled()
         }
+        ranges = {
+            "num_ctx": (512, 1_048_576), "max_tokens": (1, 1_048_576),
+            "temperature": (0, 2), "top_p": (0, 1), "top_k": (0, 10_000),
+            "repeat_penalty": (0.01, 10), "num_gpu": (0, 999),
+            "num_thread": (1, 1024), "num_batch": (1, 8192), "seed": (-1, 2 ** 32 - 1),
+        }
+        integer_fields = {"num_ctx", "max_tokens", "top_k", "num_gpu", "num_thread", "num_batch", "seed"}
+        if self._is_local:
+            ranges["num_ctx"] = (2048, 32768)
+            ranges["max_tokens"] = (128, 8192)
+        for key, value in payload.items():
+            if key in {"num_gpu", "num_thread"} and value in {"auto", "automatic"}:
+                continue
+            if key == "seed" and value in {"random", "rastgele"}:
+                continue
+            lower, upper = ranges[key]
+            if not isinstance(value, (int, float)) or not lower <= value <= upper or (key in integer_fields and not isinstance(value, int)):
+                self.validation_label.setText(f"{key}: {lower:,} ile {upper:,} arasında geçerli bir sayı girin.")
+                self.validation_label.show()
+                self._fields[key].setFocus()
+                return
+        if payload.get("max_tokens", 0) >= payload.get("num_ctx", 1_048_577):
+            self.validation_label.setText("Yanıt sınırı bağlamdan küçük olmalı; talimatlar ve mesajlar için yer bırakın.")
+            self.validation_label.show()
+            return
+        if self._performance_preset is not None:
+            if any(self._fields[key].text().strip() != str(self._active_resource_defaults[key]) for key in ("num_ctx", "max_tokens", "num_gpu", "num_thread", "num_batch")):
+                self._mark_manual_resource_settings()
+            payload["performance_preset"] = self._performance_preset.currentData()
         self._on_apply(payload)
         self.close()
 
@@ -1650,8 +1783,8 @@ class AITab(QWidget):
         self._models_worker: Optional[SyncWorker] = None
         self._model_hub_window: Optional[AIManagerDialog] = None
         self._splitter_guard = False
-        self._left_stick_size = 430
-        self._left_collapse_trigger = 390
+        self._left_stick_size = 242
+        self._left_collapse_trigger = 90
         self._chat_message_count = 0
         self._chat_history: list[dict[str, Any]] = []
         self._conversation_state: dict[str, Any] = AgentSessionState(
@@ -1659,6 +1792,19 @@ class AITab(QWidget):
             active_domain="orders",
         ).to_dict()
         self._chat_worker: Optional[SyncWorker] = None
+        self._response_generation = 0
+        self._response_active_token: int | None = None
+        self._response_stream_id = ""
+        self._response_closed_stream_ids: set[str] = set()
+        self._response_pending: list[str] = []
+        self._response_draft_text = ""
+        self._response_draft_table = None
+        self._response_draft_cell = None
+        self._response_draft_label = None
+        self._response_flush_timer = QTimer(self)
+        self._response_flush_timer.setSingleShot(True)
+        self._response_flush_timer.setInterval(40)
+        self._response_flush_timer.timeout.connect(self._flush_chat_response)
         self._schedule_owner_id = "ai-ui-" + uuid4().hex
         self._schedule_last_error = ""
         self._task_control = None
@@ -1666,20 +1812,32 @@ class AITab(QWidget):
         self._action_worker: Optional[SyncWorker] = None
         self._providers_worker: Optional[SyncWorker] = None
         self._provider_catalog_worker: Optional[SyncWorker] = None
-        self._cloud_price_filter = "free"
+        self._cloud_price_filter = "all"
+        self._provider_catalog_generation = 0
+        self._pending_provider_records = None
+        self._model_catalog_warning = ""
+        self._cloud_catalog_stale = False
+        self._model_filter_timer = QTimer(self)
+        self._model_filter_timer.setSingleShot(True)
+        self._model_filter_timer.setInterval(90)
+        self._model_filter_timer.timeout.connect(self._filter_model_choices)
         self._cloud_model_groups: list[dict[str, Any]] = []
+        self._cloud_routes_by_provider: dict[str, dict[str, Any]] = {}
         self._cloud_collapsed_provider_keys: set[str] = set()
         self._last_selected_cloud_model_id = ""
+        self._selected_cloud_model_record: dict[str, Any] | None = None
+        self._restored_model_choice: dict[str, Any] | None = None
+        self._restoring_model_choice = False
         self._known_local_model_count: int | None = None
         self._known_provider_count: int | None = None
         self._advanced_dialog: Optional[_AdvancedModelSettingsDialog] = None
         self._models_bootstrapped = False
         self._resource_plan_cache: dict[str, Any] = {}
+        self._resource_plan_worker: Optional[SyncWorker] = None
         self._chat_progress_timer: Optional[QTimer] = None
-        self._chat_progress_value = 0
         self._chat_progress_started_at = 0.0
-        self._chat_progress_estimated_seconds = 0.0
-        self._chat_progress_overrun = False
+        self._activity_runs: dict[str, dict[str, Any]] = {}
+        self._activity_run_id = ""
         self._last_task_progress_message = ""
         self._last_chat_success = True
         self._agent_state: dict[str, Any] = {}
@@ -1688,10 +1846,12 @@ class AITab(QWidget):
         self._latest_approval_card_token = ""
         self._superseded_actions: list[dict[str, Any]] = []
         self._delivered_artifacts: dict[str, dict[str, Any]] = {}
+        self._shown_artifact_cards: set[str] = set()
         self._task_session_rows: list[dict[str, Any]] = []
         self._restored_task_session_ids: set[str] = set()
-        self._task_history_visible = False
         self._is_disposing = False
+        self._chat_persistence_error = ""
+        self._chat_restore_failed = False
         self._auto_switched_to_cloud = False
 
         self.setStyleSheet(
@@ -1841,25 +2001,10 @@ class AITab(QWidget):
                 border-top: 1px solid #E5E7EB;
                 border-radius: 0;
             }
-            QFrame#AiRunProgress {
-                background: #EEF6FF;
-                border: 1px solid rgba(37, 99, 235, 0.16);
-                border-radius: 6px;
-            }
             QFrame#AiTaskState {
                 background: #F8FAFC;
                 border: 1px solid rgba(148, 163, 184, 0.32);
                 border-radius: 6px;
-            }
-            QLabel#AiRunProgressLabel {
-                color: #0F172A;
-                font-size: 12px;
-                font-weight: 800;
-            }
-            QLabel#AiRunProgressPercent {
-                color: #2563EB;
-                font-size: 12px;
-                font-weight: 900;
             }
             QLabel#AiTaskStateTitle {
                 color: #0F172A;
@@ -1874,17 +2019,6 @@ class AITab(QWidget):
                 color: #9A3412;
                 font-size: 11px;
                 font-weight: 800;
-            }
-            QProgressBar#AiResponseProgress {
-                background: #E2E8F0;
-                border: none;
-                border-radius: 6px;
-                min-height: 8px;
-                max-height: 8px;
-            }
-            QProgressBar#AiResponseProgress::chunk {
-                background: #2563EB;
-                border-radius: 6px;
             }
             QTextEdit#AiTranscript, QTextBrowser#AiTranscript {
                 background: #FFFFFF;
@@ -1972,6 +2106,31 @@ class AITab(QWidget):
             """
         )
 
+        self.setStyleSheet(self.styleSheet() + """
+            QFrame#AiControlBand { border-radius:13px; }
+            QLabel#AiControlTitle { font-size:17px; font-weight:700; }
+            QFrame#AiChatHeader QLabel#SectionTitle { font-size:13px; font-weight:600; }
+            QPushButton#AiPlainButton { border:0; border-radius:7px; background:transparent;
+                color:#64748B; font-size:11px; padding:5px 7px; }
+            QPushButton#AiPlainButton:hover, QPushButton#AiModelPicker:hover { background:#EFF3F8; }
+            QPushButton#AiPlainButton:disabled { color:#94A3B8; }
+            QPushButton#AiModelPicker { background:transparent; border:0; border-radius:7px;
+                color:#0F172A; font-size:12px; padding:6px 8px; font-weight:600; }
+            QComboBox#AiConversationReasoning { background:transparent; border:0; border-radius:7px;
+                color:#64748B; font-size:11px; padding:5px 7px; }
+            QComboBox#AiConversationReasoning::drop-down { border:0; width:18px; }
+            QFrame#AiModelPopup { background:#FFFFFF; border:1px solid #DDE5F0; border-radius:12px; }
+            QFrame#AiModelPopup QLabel#SectionTitle { font-size:13px; font-weight:600; }
+            QFrame#AiModelPopup QPushButton#AiSegment { min-height:28px; padding:0 8px; font-size:12px; }
+            QLineEdit#AiModelSearch { border:1px solid #E2E8F0; border-radius:7px;
+                background:#FFFFFF; color:#0F172A; padding:7px 9px; font-size:12px; }
+            QFrame#AiModelPopup QListWidget#ModelList { border:0; padding:0; }
+            QPushButton#AiComposerIcon { min-width:30px; max-width:30px; min-height:30px;
+                max-height:30px; background:transparent; border:0; color:#64748B; font-weight:400; }
+            QPushButton#AiSendButton { min-width:32px; max-width:32px; min-height:32px;
+                max-height:32px; padding:0; border-radius:8px; }
+        """)
+
         root = QVBoxLayout(self)
         root.setContentsMargins(10, 8, 10, 8)
         root.setSpacing(10)
@@ -1983,18 +2142,7 @@ class AITab(QWidget):
         content_row.setSpacing(8)
         root.addLayout(content_row, 1)
 
-        self._panel_sidebar = SplitPanelSidebar(self, sidebar_width=80)
-        self._panel_sidebar.add_panel_button(
-            "models",
-            "",
-            tooltip=AI_CHAT_MODEL_PANEL_TOOLTIP,
-            icon_path=str(_ai_icon_path()),
-            shape="circular",
-            icon_scale=1.28,
-        )
-        self._panel_sidebar.panel_toggled.connect(self._on_panel_sidebar_toggled)
-        content_row.addWidget(self._panel_sidebar)
-
+        self._model_popup = self._build_model_popup()
         self._tab_splitter = ResettableSplitter(Qt.Orientation.Horizontal)
         self._tab_splitter.setChildrenCollapsible(True)
         self._tab_splitter.setHandleWidth(6)
@@ -2003,14 +2151,16 @@ class AITab(QWidget):
         self._tab_splitter.splitterMoved.connect(self._on_tab_splitter_moved)
         content_row.addWidget(self._tab_splitter, 1)
 
-        left_scroll = QScrollArea(self)
-        left_scroll.setWidgetResizable(True)
-        left_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        left_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        left_scroll.setWidget(self._build_left_panel())
-        self._tab_splitter.addWidget(left_scroll)
+        self.conversation_sidebar = ConversationSidebar(self)
+        self.conversation_sidebar.session_requested.connect(self._open_chat_session)
+        self.conversation_sidebar.new_chat_requested.connect(self._reset_chat)
+        self.conversation_sidebar.workflows_requested.connect(self._open_saved_workflows)
+        self.conversation_sidebar.schedules_requested.connect(self._open_workflow_schedules)
+        self._tab_splitter.addWidget(self.conversation_sidebar)
         self._tab_splitter.addWidget(self._build_chat_panel())
-        self._tab_splitter.setSizes([430, 1210])
+        self._tab_splitter.setStretchFactor(0, 0)
+        self._tab_splitter.setStretchFactor(1, 1)
+        self._tab_splitter.setSizes([242, 1000])
 
         self._sync_model_panel_mode()
         self._refresh_chat_surface()
@@ -2020,40 +2170,28 @@ class AITab(QWidget):
         self._schedule_timer.setInterval(30_000)
         self._schedule_timer.timeout.connect(self._poll_scheduled_workflows)
         self._schedule_timer.start()
+        self._restore_active_chat_session()
+        self._refresh_conversations()
 
     def _build_control_band(self) -> QWidget:
         band = QFrame(self)
         band.setObjectName("AiControlBand")
-        band.setMaximumHeight(78)
+        band.setFixedHeight(55)
         layout = QHBoxLayout(band)
-        layout.setContentsMargins(18, 14, 18, 14)
-        layout.setSpacing(16)
-
-        text_col = QVBoxLayout()
-        text_col.setSpacing(5)
-        title = QLabel("OrderScout AI")
-        title.setObjectName("AiControlTitle")
-        subtitle = QLabel(
-            "Model seçimi ve çalışma ayarları sohbetin içinde; Model Hub yalnız bağlantı ve indirme içindir."
-        )
-        subtitle.setObjectName("Muted")
-        subtitle.setWordWrap(True)
-        text_col.addWidget(title)
-        text_col.addWidget(subtitle)
-        layout.addLayout(text_col, 1)
-
-        right = QHBoxLayout()
-        right.setSpacing(8)
-        self.resource_summary = QLabel("Kaynaklar hazır")
-        status = self.resource_summary
-        status.setObjectName("AiActivePill")
-        status.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        btn = QPushButton("Model Hub · API & İndir")
-        btn.setObjectName("AiLaunchButton")
-        btn.clicked.connect(self._open_model_hub)
-        right.addWidget(status, 0, Qt.AlignmentFlag.AlignVCenter)
-        right.addWidget(btn, 0, Qt.AlignmentFlag.AlignVCenter)
-        layout.addLayout(right)
+        layout.setContentsMargins(16, 6, 16, 6)
+        layout.setSpacing(10)
+        icon = QLabel(band)
+        icon.setPixmap(QPixmap(_ai_icon_path()).scaled(29, 29, Qt.AspectRatioMode.KeepAspectRatio,
+                                                      Qt.TransformationMode.SmoothTransformation))
+        layout.addWidget(icon)
+        layout.addWidget(QLabel("OrderScout AI", objectName="AiControlTitle"))
+        layout.addStretch(1)
+        self.resource_summary = QLabel("Kaynaklar hazır", objectName="StatusInfo")
+        layout.addWidget(self.resource_summary)
+        self.btn_model_hub = QPushButton("Model Hub", objectName="AiSecondary")
+        self.btn_model_hub.clicked.connect(self._open_model_hub)
+        self.btn_model_hub.setToolTip("Bağlantıları ve model indirmelerini yönet")
+        layout.addWidget(self.btn_model_hub)
         return band
 
     def showEvent(self, event) -> None:
@@ -2063,151 +2201,227 @@ class AITab(QWidget):
         self._models_bootstrapped = True
         QTimer.singleShot(0, self._refresh_current_source)
 
-    def _build_left_panel(self) -> QWidget:
-        host = QWidget(self)
-        layout = QVBoxLayout(host)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-
-        card = QFrame(host)
-        card.setObjectName("SectionCard")
-        panel = QVBoxLayout(card)
+    def _build_model_popup(self) -> QFrame:
+        popup = QFrame(self, Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint)
+        popup.setObjectName("AiModelPopup")
+        popup.setFixedWidth(480)
+        panel = QVBoxLayout(popup)
         self._model_panel_layout = panel
-        panel.setContentsMargins(16, 16, 16, 14)
-        panel.setSpacing(12)
-        panel.addWidget(QLabel("Model seçimi", objectName="SectionTitle"))
-        intro_text = QLabel(
-            "Kaynağı seç, modeli aç ve bu sohbet için çalışma zekâsını ayarla.",
-            objectName="Muted",
-        )
-        intro_text.setWordWrap(True)
-        panel.addWidget(intro_text)
-
-        panel.addWidget(QLabel("KAYNAK", objectName="AiEyebrow"))
-        source_shell = QFrame(card)
-        source_shell.setObjectName("AiSegmentShell")
+        panel.setContentsMargins(14, 12, 14, 12)
+        panel.setSpacing(9)
+        heading = QHBoxLayout()
+        heading.addWidget(QLabel("Model seçimi", objectName="SectionTitle"), 1)
+        close = QPushButton("×", objectName="AiPlainButton")
+        close.setFixedSize(25, 25)
+        close.setAccessibleName("Model menüsünü kapat")
+        close.clicked.connect(popup.hide)
+        heading.addWidget(close)
+        panel.addLayout(heading)
+        self.model_search = QLineEdit(popup)
+        self.model_search.setObjectName("AiModelSearch")
+        self.model_search.setPlaceholderText("Model veya geliştirici ara…")
+        self.model_search.setAccessibleName("Model ara")
+        self.model_search.setClearButtonEnabled(True)
+        self.model_search.textChanged.connect(lambda: self._model_filter_timer.start())
+        self.model_search.installEventFilter(self)
+        panel.addWidget(self.model_search)
+        source_shell = QFrame(popup, objectName="AiSegmentShell")
         source_layout = QHBoxLayout(source_shell)
-        source_layout.setContentsMargins(6, 6, 6, 6)
-        source_layout.setSpacing(6)
+        source_layout.setContentsMargins(3, 3, 3, 3)
+        source_layout.setSpacing(4)
         self.source_button_group = QButtonGroup(self)
         self.source_button_group.setExclusive(True)
-        self.btn_source_local = QPushButton("◉  Yerel")
-        self.btn_source_cloud = QPushButton("☁  Cloud")
-        for button, value in (
-            (self.btn_source_local, AI_CHAT_SOURCE_LOCAL_VALUE),
-            (self.btn_source_cloud, AI_CHAT_SOURCE_CLOUD_VALUE),
-        ):
-            button.setObjectName("AiSegment")
-            button.setProperty("segmentKind", "source")
+        self.btn_source_local = QPushButton("Yerel", objectName="AiSegment")
+        self.btn_source_cloud = QPushButton("Bulut", objectName="AiSegment")
+        for button, value in ((self.btn_source_cloud, AI_CHAT_SOURCE_CLOUD_VALUE),
+                              (self.btn_source_local, AI_CHAT_SOURCE_LOCAL_VALUE)):
             button.setCheckable(True)
             button.clicked.connect(lambda _checked=False, selected=value: self._set_source_from_segment(selected))
             self.source_button_group.addButton(button)
             source_layout.addWidget(button, 1)
         self.btn_source_local.setChecked(True)
         panel.addWidget(source_shell)
-
-        self.source_combo = QComboBox(card)
+        self.source_combo = QComboBox(popup)
         self.source_combo.addItem(AI_CHAT_SOURCE_LOCAL_TEXT, AI_CHAT_SOURCE_LOCAL_VALUE)
         self.source_combo.addItem(AI_CHAT_SOURCE_CLOUD_TEXT, AI_CHAT_SOURCE_CLOUD_VALUE)
         self.source_combo.currentIndexChanged.connect(self._on_source_changed)
         self.source_combo.hide()
-
-        self.cloud_filter_shell = QFrame(card)
-        self.cloud_filter_shell.setObjectName("AiSegmentShell")
-        filter_layout = QHBoxLayout(self.cloud_filter_shell)
-        filter_layout.setContentsMargins(4, 4, 4, 4)
-        filter_layout.setSpacing(4)
+        self.cloud_filter_shell = QFrame(popup, objectName="AiSegmentShell")
+        filters = QHBoxLayout(self.cloud_filter_shell)
+        filters.setContentsMargins(3, 3, 3, 3)
+        filters.setSpacing(3)
         self.cloud_price_button_group = QButtonGroup(self)
         self.cloud_price_button_group.setExclusive(True)
-        self.cloud_price_buttons: dict[str, QPushButton] = {}
-        for key, text in (("free", "Ücretsiz"), ("paid", "Ücretli"), ("all", "Tümü")):
-            button = QPushButton(text)
-            button.setObjectName("AiSegment")
-            button.setProperty("segmentKind", "filter")
+        self.cloud_price_buttons = {}
+        for key, label in (("all", "Tümü"), ("free", "Ücretsiz"), ("paid", "Ücretli")):
+            button = QPushButton(label, objectName="AiSegment")
             button.setCheckable(True)
             button.clicked.connect(lambda _checked=False, selected=key: self._set_cloud_price_filter(selected))
             self.cloud_price_button_group.addButton(button)
             self.cloud_price_buttons[key] = button
-            filter_layout.addWidget(button, 1)
-        self.cloud_price_buttons["free"].setChecked(True)
-        self.cloud_filter_shell.hide()
+            filters.addWidget(button, 1)
+        self.cloud_price_buttons["all"].setChecked(True)
         panel.addWidget(self.cloud_filter_shell)
-
-        self.source_list_label = QLabel(AI_CHAT_LOCAL_MODELS_LABEL, objectName="Muted")
-        panel.addWidget(self.source_list_label)
-        self.source_list_label.hide()
-        self.model_list = QListWidget()
+        self.model_list = QListWidget(popup)
         self.model_list.setObjectName("ModelList")
         self.model_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.model_list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.model_list.setAccessibleName("Modeller")
+        self.model_list.setMouseTracking(True)
+        self.model_list.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self._model_choice_delegate = ModelChoiceDelegate(self.model_list)
+        self.model_list.setItemDelegate(self._model_choice_delegate)
         self.model_list.itemSelectionChanged.connect(self._on_model_selection_changed)
         self.model_list.itemClicked.connect(self._on_model_list_item_clicked)
-        self.model_list.setMinimumHeight(310)
+        self.model_list.itemActivated.connect(
+            lambda item: self._on_model_list_item_clicked(item, keep_provider_focus=True)
+        )
         panel.addWidget(self.model_list, 1)
-
-        self.model_status = QLabel(AI_CHAT_MODEL_LIST_WAITING)
-        self.model_status.setObjectName("Muted")
+        self.model_empty_state = QLabel("Aramana uygun model bulunamadı.", objectName="Muted")
+        self.model_empty_state.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.model_empty_state.setWordWrap(True)
+        self.model_empty_state.hide()
+        panel.addWidget(self.model_empty_state)
+        self.btn_search_all_models = QPushButton("Tüm modellerde ara", objectName="AiPlainButton")
+        self.btn_search_all_models.clicked.connect(lambda: self._set_cloud_price_filter("all"))
+        self.btn_search_all_models.hide()
+        panel.addWidget(self.btn_search_all_models)
+        self.model_status = QLabel(AI_CHAT_MODEL_LIST_WAITING, objectName="Muted")
         self.model_status.setWordWrap(True)
         panel.addWidget(self.model_status)
-        self.model_status.hide()
-
-        self.local_count_pill = QLabel(AI_CHAT_LOCAL_COUNT_TEMPLATE.format(count=0))
-        self.local_count_pill.setObjectName("AiStatPill")
-        self.active_source_pill = QLabel(AI_CHAT_SOURCE_PILL_LOCAL_TEXT)
-        self.active_source_pill.setObjectName("AiStatPill")
-        self.brain_label = QLabel(AI_CHAT_ACTIVE_BRAIN_TEXT)
-        self.brain_label.setObjectName("AiStatPill")
-        self.brain_label.setWordWrap(True)
-        self.runner_status = QLabel(AI_CHAT_RUNNER_STATUS_TEXT)
-        self.runner_status.setObjectName("Muted")
-        self.runner_status.setWordWrap(True)
-
-        self.btn_refresh_models = QPushButton(AI_CHAT_REFRESH_MODELS_TEXT)
-        self.btn_refresh_models.setObjectName("AiSecondary")
-        self.btn_refresh_models.clicked.connect(self._refresh_current_source)
-        self.btn_refresh_models.hide()
-
-        self.btn_open_model_hub = QPushButton(AI_CHAT_OPEN_HUB_TEXT)
-        self.btn_open_model_hub.setObjectName("AiLaunchButton")
-        self.btn_open_model_hub.clicked.connect(self._open_model_hub)
-        self.btn_open_model_hub.hide()
-
-        self.model_panel_filler = QWidget(card)
-        self.model_panel_filler.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
-        self.model_panel_filler.hide()
-        panel.addWidget(self.model_panel_filler, 1)
-
-        divider = QFrame(card)
-        divider.setFrameShape(QFrame.Shape.HLine)
-        divider.setStyleSheet("color: #E2E8F0;")
-        panel.addWidget(divider)
-        panel.addWidget(QLabel("BU SOHBETİN AYARI", objectName="AiEyebrow"))
-        settings_row = QHBoxLayout()
-        settings_row.setSpacing(8)
-        self.reasoning_combo = QComboBox(card)
-        self.reasoning_combo.setObjectName("AiConversationReasoning")
-        self.reasoning_combo.addItem("Zekâ: Otomatik", "auto")
-        self.reasoning_combo.addItem("Zekâ: Düşük", "low")
-        self.reasoning_combo.addItem("Zekâ: Orta", "medium")
-        self.reasoning_combo.addItem("Zekâ: Yüksek", "high")
-        self.reasoning_combo.currentIndexChanged.connect(self._apply_simple_model_settings)
-        self.btn_advanced_model_settings = QPushButton("Gelişmiş ···")
-        self.btn_advanced_model_settings.setObjectName("AiSecondary")
-        self.btn_advanced_model_settings.clicked.connect(self._open_advanced_model_settings)
-        settings_row.addWidget(self.reasoning_combo, 1)
-        settings_row.addWidget(self.btn_advanced_model_settings, 1)
-        panel.addLayout(settings_row)
-        self.fallback_checkbox = QCheckBox(
-            "Limit dolarsa aynı provider içindeki sıradaki uygun modele geç.",
-            card,
-        )
+        self.selected_model_hint = QLabel("", objectName="Muted")
+        self.selected_model_hint.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
+        panel.addWidget(self.selected_model_hint)
+        self.selected_local_plan = QLabel("", objectName="Muted")
+        self.selected_local_plan.setWordWrap(True)
+        self.selected_local_plan.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        panel.addWidget(self.selected_local_plan)
+        self.fallback_checkbox = QCheckBox("Limitte uygun modele geç", popup)
         self.fallback_checkbox.setChecked(True)
-        self.fallback_checkbox.setObjectName("AiFallbackToggle")
+        self.fallback_checkbox.setToolTip("Limit dolarsa aynı sağlayıcı içindeki sıradaki uygun modele geç.")
         self.fallback_checkbox.toggled.connect(self._apply_simple_model_settings)
         panel.addWidget(self.fallback_checkbox)
+        footer = QHBoxLayout()
+        self.btn_advanced_model_settings = QPushButton("Gelişmiş ayarlar", objectName="AiPlainButton")
+        self.btn_advanced_model_settings.clicked.connect(self._open_advanced_model_settings)
+        footer.addWidget(self.btn_advanced_model_settings)
+        footer.addStretch(1)
+        self.btn_refresh_models = QPushButton("Yenile", objectName="AiPlainButton")
+        self.btn_refresh_models.clicked.connect(self._refresh_current_source)
+        footer.addWidget(self.btn_refresh_models)
+        self.btn_open_model_hub = QPushButton("Model Hub ↗", objectName="AiPlainButton")
+        self.btn_open_model_hub.clicked.connect(self._open_model_hub)
+        footer.addWidget(self.btn_open_model_hub)
+        panel.addLayout(footer)
+        # Hidden metadata retains the shared selection/acceptance interfaces.
+        for name, label in (("source_list_label", AI_CHAT_LOCAL_MODELS_LABEL),
+                            ("local_count_pill", ""), ("active_source_pill", ""),
+                            ("brain_label", ""), ("runner_status", "")):
+            widget = QLabel(label, popup)
+            widget.hide()
+            setattr(self, name, widget)
+        popup.hide()
+        return popup
 
-        layout.addWidget(card)
-        return host
+    def _filter_model_choices(self, *_args) -> None:
+        if self._is_disposing:
+            return
+        self._model_filter_timer.stop()
+        terms = search_text(self.model_search.text()).split()
+        headers, group_matches = [], {}
+        available = matched = 0
+        updates = self.model_list.updatesEnabled()
+        self.model_list.setUpdatesEnabled(False)
+        try:
+            for index in range(self.model_list.count()):
+                item = self.model_list.item(index)
+                presentation = item.data(PRESENTATION_ROLE) or {}
+                kind = presentation.get("kind")
+                if kind == "cloud_provider_header":
+                    headers.append(item)
+                    continue
+                # The small cached presentation avoids decoding full provider /
+                # model metadata on every keystroke. Raw legacy rows still work.
+                if not kind:
+                    payload = item.data(Qt.ItemDataRole.UserRole) or {}
+                    kind = payload.get("_source_kind", "local_model")
+                    haystack = search_text(_model_display_name(payload))
+                    is_free = bool((payload.get("model_metadata") or {}).get("is_free"))
+                    group = self._cloud_provider_key(payload)
+                else:
+                    haystack = item.data(SEARCH_ROLE) or ""
+                    is_free = presentation.get("is_free", False)
+                    group = presentation.get("group", "")
+                price_match = (kind != "cloud_model" or self._cloud_price_filter == "all"
+                               or (self._cloud_price_filter == "free") == is_free)
+                available += bool(price_match)
+                match = price_match and all(term in haystack for term in terms)
+                matched += bool(match)
+                group_matches[group] = group_matches.get(group, False) or match
+                # A search temporarily reveals matching models inside collapsed
+                # providers without changing the user's saved collapse choice.
+                visible = match and (bool(terms) or group not in self._cloud_collapsed_provider_keys or kind != "cloud_model")
+                if item.isHidden() == visible:
+                    item.setHidden(not visible)
+            for header in headers:
+                presentation = header.data(PRESENTATION_ROLE) or {}
+                visible = not terms or group_matches.get(presentation.get("group"), False)
+                if header.isHidden() == visible:
+                    header.setHidden(not visible)
+        finally:
+            self.model_list.setUpdatesEnabled(updates)
+        is_cloud = self.source_combo.currentData() == AI_CHAT_SOURCE_CLOUD_VALUE
+        empty = matched == 0 and (self.model_list.count() > 0 or bool(terms))
+        self.model_empty_state.setVisible(empty)
+        filtered = is_cloud and self._cloud_price_filter != "all"
+        self.model_empty_state.setText("Bu filtrede aramana uygun model bulunamadı." if filtered else "Aramana uygun model bulunamadı.")
+        self.btn_search_all_models.setVisible(empty and filtered)
+        if self.model_list.count():
+            label = {"all": "Tümü", "free": "Ücretsiz", "paid": "Ücretli"}.get(self._cloud_price_filter, "Tümü") if is_cloud else "Yerel"
+            count_text = f"{matched} / {available} model · {label}" if terms else f"{available} model · {label}"
+            warning = self._model_catalog_warning if is_cloud else ""
+            self.model_status.setText(count_text + (" · " + warning if warning else ""))
+
+    def eventFilter(self, watched, event) -> bool:
+        if watched is self.model_search and event.type() == QEvent.Type.KeyPress:
+            key = event.key()
+            if key in {Qt.Key.Key_Down, Qt.Key.Key_Up, Qt.Key.Key_Return, Qt.Key.Key_Enter}:
+                self._filter_model_choices()
+                rows = [self.model_list.item(index) for index in range(self.model_list.count())
+                        if not self.model_list.item(index).isHidden()
+                        and (self.model_list.item(index).data(PRESENTATION_ROLE) or {}).get("kind") != "cloud_provider_header"]
+                if rows:
+                    target = rows[-1] if key == Qt.Key.Key_Up else rows[0]
+                    self.model_list.setCurrentItem(target)
+                    self.model_list.scrollToItem(target)
+                    if key in {Qt.Key.Key_Return, Qt.Key.Key_Enter}:
+                        self._on_model_list_item_clicked(target)
+                    else:
+                        self.model_list.setFocus()
+                return True
+        return super().eventFilter(watched, event)
+
+    def _toggle_model_picker(self) -> None:
+        if self._worker_is_running():
+            return
+        if self._model_popup.isVisible():
+            self._model_popup.hide()
+            return
+        self._model_popup.adjustSize()
+        anchor = self.btn_model_picker.mapToGlobal(QPoint(0, 0))
+        screen = self.screen().availableGeometry()
+        width = min(480, max(280, self.window().width() - 24), screen.width() - 24)
+        self._model_popup.setFixedWidth(width)
+        height = min(620, screen.height() - 24, max(320, self.window().height() - 96))
+        self._model_popup.resize(width, height)
+        x = min(max(screen.left() + 8, anchor.x()), screen.right() - width - 7)
+        y = max(screen.top() + 8, anchor.y() - height - 9)
+        self._model_popup.move(x, y)
+        self._model_popup.show()
+        # Establish viewport geometry before its first paint after a hidden
+        # catalogue refresh.
+        self.model_list.doItemsLayout()
+        self.model_search.setFocus()
 
     def _set_source_from_segment(self, source: str) -> None:
         index = self.source_combo.findData(source)
@@ -2227,51 +2441,62 @@ class AITab(QWidget):
         self.resource_summary.setText(" · ".join(parts) if parts else "Kaynaklar hazır")
 
     def _sync_model_panel_mode(self) -> None:
-        source = str(self.source_combo.currentData() or AI_CHAT_SOURCE_LOCAL_VALUE)
-        is_local = source == AI_CHAT_SOURCE_LOCAL_VALUE
+        is_local = str(self.source_combo.currentData() or AI_CHAT_SOURCE_LOCAL_VALUE) == AI_CHAT_SOURCE_LOCAL_VALUE
         self.btn_source_local.setChecked(is_local)
         self.btn_source_cloud.setChecked(not is_local)
         self.cloud_filter_shell.setVisible(not is_local)
         self.fallback_checkbox.setVisible(not is_local)
-        self.model_list.setMinimumHeight(240 if is_local else 310)
-        self.model_list.setMaximumHeight(260 if is_local else 16_777_215)
-        if hasattr(self, "_model_panel_layout"):
-            self._model_panel_layout.setStretchFactor(self.model_list, 0 if is_local else 1)
-        if hasattr(self, "model_panel_filler"):
-            self.model_panel_filler.setVisible(True)
-            self.model_panel_filler.setMinimumHeight(0 if is_local else 24)
-            self.model_panel_filler.setMaximumHeight(16_777_215 if is_local else 24)
-            self.model_panel_filler.setSizePolicy(
-                QSizePolicy.Policy.Preferred,
-                QSizePolicy.Policy.Expanding if is_local else QSizePolicy.Policy.Fixed,
-            )
+        self.selected_local_plan.setVisible(is_local)
+        self.model_list.setMinimumHeight(150)
+        self.model_list.setMaximumHeight(380)
 
     def _set_cloud_price_filter(self, price_filter: str) -> None:
-        clean = price_filter if price_filter in {"free", "paid", "all"} else "free"
+        clean = price_filter if price_filter in {"free", "paid", "all"} else "all"
         self._cloud_price_filter = clean
         for key, button in self.cloud_price_buttons.items():
             button.setChecked(key == clean)
-        if str(self.source_combo.currentData() or "") == AI_CHAT_SOURCE_CLOUD_VALUE:
-            self._refresh_current_source()
+        self._filter_model_choices()
 
-    def _apply_simple_model_settings(self, *_args) -> None:
+    def _model_settings_target(self) -> tuple[QListWidgetItem | None, dict[str, Any] | None]:
         item = self.model_list.currentItem()
         payload = item.data(Qt.ItemDataRole.UserRole) if item is not None else None
+        if isinstance(payload, dict) and payload.get("_source_kind") in {"local_model", "cloud_provider", "cloud_model"}:
+            return item, payload
+        payload = self._selected_provider_record()
+        if payload is not None:
+            for index in range(self.model_list.count()):
+                candidate = self.model_list.item(index)
+                record = candidate.data(Qt.ItemDataRole.UserRole) or {}
+                if record.get("_source_kind") == "cloud_model" and record.get("id") == payload.get("id") and record.get("default_model") == payload.get("default_model"):
+                    return candidate, record
+        return None, payload
+
+    def _apply_simple_model_settings(self, *_args) -> None:
+        item, payload = self._model_settings_target()
         if not isinstance(payload, dict):
             return
         source_kind = _safe_text(payload.get("_source_kind"), "")
         if source_kind not in {"local_model", "cloud_provider", "cloud_model"}:
             return
         updated = dict(payload)
+        if source_kind in {"cloud_provider", "cloud_model"}:
+            updated.pop("free_model_test_route", None)
         updated["reasoning_effort"] = str(self.reasoning_combo.currentData() or "auto")
         updated["allow_model_fallback"] = bool(self.fallback_checkbox.isChecked())
-        item.setData(Qt.ItemDataRole.UserRole, updated)
+        if source_kind == "local_model":
+            updated["runtime_config"] = {**dict(updated.get("runtime_config") or {}), "reasoning_effort": updated["reasoning_effort"]}
+            if isinstance(updated.get("resource_plan"), dict):
+                updated["resource_plan"] = {**updated["resource_plan"], "reasoning_effort": updated["reasoning_effort"]}
+        if item is not None:
+            item.setData(Qt.ItemDataRole.UserRole, updated)
+        if source_kind in {"cloud_provider", "cloud_model"}:
+            self._selected_cloud_model_record = updated
         self._resource_plan_cache.clear()
         self._update_chat_controls()
 
     def _open_advanced_model_settings(self) -> None:
-        item = self.model_list.currentItem()
-        payload = item.data(Qt.ItemDataRole.UserRole) if item is not None else None
+        self._model_popup.hide()
+        item, payload = self._model_settings_target()
         if not isinstance(payload, dict):
             self.model_status.setText("Önce bu sohbet için bir model seç.")
             return
@@ -2281,33 +2506,120 @@ class AITab(QWidget):
             return
         if self._advanced_dialog is not None:
             self._advanced_dialog.close()
+        target_index = QPersistentModelIndex(self.model_list.indexFromItem(item)) if item is not None else None
+        target_identity = (payload.get("_source_kind"), payload.get("id"), payload.get("default_model"))
+
+        def _apply_to_original_selection(values: dict[str, Any]) -> None:
+            # A catalogue refresh can replace the list while this dialog is open.
+            # Never retain a QListWidgetItem across that asynchronous boundary.
+            if target_index is not None:
+                if not target_index.isValid():
+                    self.model_status.setText("Model listesi değişti; ayarları yeniden aç.")
+                    return
+                target = self.model_list.item(target_index.row())
+            else:
+                selected = self._selected_provider_record() or {}
+                if (selected.get("_source_kind"), selected.get("id"), selected.get("default_model")) != target_identity:
+                    self.model_status.setText("Seçili model değişti; ayarları yeniden aç.")
+                    return
+                target = None
+            self._apply_advanced_model_settings(target, values)
+
         self._advanced_dialog = _AdvancedModelSettingsDialog(
             self,
             record=dict(payload),
             is_local=source_kind == "local_model",
-            on_apply=lambda values, target=item: self._apply_advanced_model_settings(target, values),
+            on_apply=_apply_to_original_selection,
         )
-        splitter_sizes = self._tab_splitter.sizes()
-        left_width = splitter_sizes[0] if splitter_sizes else self._left_stick_size
-        anchor = self._tab_splitter.mapToGlobal(QPoint(left_width + 8, 96))
-        self._advanced_dialog.move(max(0, anchor.x()), max(0, anchor.y()))
+        anchor = self.btn_model_picker.mapToGlobal(QPoint(0, -8))
+        self._advanced_dialog.adjustSize()
+        bounds = self.window().frameGeometry()
+        self._advanced_dialog.move(
+            max(bounds.left(), min(anchor.x(), bounds.right() - self._advanced_dialog.width() + 1)),
+            max(bounds.top(), min(anchor.y() - self._advanced_dialog.height(), bounds.bottom() - self._advanced_dialog.height() + 1)),
+        )
         self._advanced_dialog.finished.connect(lambda *_: setattr(self, "_advanced_dialog", None))
         self._advanced_dialog.show()
 
     def _apply_advanced_model_settings(
         self,
-        item: QListWidgetItem,
+        item: QListWidgetItem | None,
         values: dict[str, Any],
     ) -> None:
-        payload = item.data(Qt.ItemDataRole.UserRole)
+        payload = item.data(Qt.ItemDataRole.UserRole) if item is not None else self._selected_provider_record()
         if not isinstance(payload, dict):
             return
         updated = {**payload, **{key: value for key, value in values.items() if value is not None}}
+        if _safe_text(payload.get("_source_kind"), "") in {"cloud_provider", "cloud_model"}:
+            updated.pop("free_model_test_route", None)
+        if _safe_text(payload.get("_source_kind"), "") == "local_model":
+            runtime_keys = {"num_ctx", "max_tokens", "num_gpu", "num_thread", "num_batch", "performance_preset"}
+            config = dict(payload.get("runtime_config") or {})
+            config.update({key: value for key, value in values.items() if key in runtime_keys and value is not None})
+            for key in ("num_gpu", "num_thread"):
+                if str(config.get(key) or "").casefold() in {"auto", "automatic"}:
+                    config.pop(key, None)
+            updated["runtime_config"] = config
+            updated["resource_plan"] = {
+                "safe_to_run": False, "profile": "planning", "reason": "Kaynak planı hesaplanıyor…",
+                "num_ctx": values.get("num_ctx") or 8192, "max_tokens": values.get("max_tokens") or 1024,
+            }
         updated["reasoning_effort"] = str(self.reasoning_combo.currentData() or "auto")
         updated["allow_model_fallback"] = bool(self.fallback_checkbox.isChecked())
-        item.setData(Qt.ItemDataRole.UserRole, updated)
+        if _safe_text(payload.get("_source_kind"), "") == "local_model":
+            updated["runtime_config"]["reasoning_effort"] = updated["reasoning_effort"]
+        if item is not None:
+            item.setData(Qt.ItemDataRole.UserRole, updated)
+        if _safe_text(payload.get("_source_kind"), "") in {"cloud_provider", "cloud_model"}:
+            self._selected_cloud_model_record = updated
         self._resource_plan_cache.clear()
         self.model_status.setText("Gelişmiş ayarlar yalnız bu sohbete uygulandı.")
+        self._update_chat_controls()
+        if _safe_text(payload.get("_source_kind"), "") == "local_model":
+            self._rebuild_local_plan_preview(updated)
+
+    def _rebuild_local_plan_preview(self, updated: dict[str, Any]) -> None:
+        """Keep hardware inspection off the Qt thread, and reject stale list results."""
+        if self._resource_plan_worker is not None:
+            return
+        record = dict(updated)
+        record.pop("resource_plan", None)
+        key = tuple(str(record.get(field) or "") for field in ("repo_id", "filename", "local_path"))
+        self._resource_plan_worker = SyncWorker(
+            lambda: Result.ok(close_dialog=False, data={"plan": build_local_resource_plan(record).to_dict()}),
+            parent=self,
+        )
+
+        def _done(result: Result) -> None:
+            if self._is_disposing:
+                return
+            plan = dict((result.data or {}).get("plan") or {}) if result.success else {
+                "safe_to_run": False, "profile": "plan_failed", "reason": result.message,
+                "num_ctx": record.get("num_ctx") or 8192, "max_tokens": record.get("max_tokens") or 1024,
+            }
+            for index in range(self.model_list.count()):
+                target = self.model_list.item(index)
+                payload = target.data(Qt.ItemDataRole.UserRole)
+                if not isinstance(payload, dict):
+                    continue
+                candidate = tuple(str(payload.get(field) or "") for field in ("repo_id", "filename", "local_path"))
+                if candidate != key or payload.get("runtime_config") != record.get("runtime_config"):
+                    continue
+                payload["resource_plan"] = plan
+                target.setData(Qt.ItemDataRole.UserRole, payload)
+                self._install_model_item_widget(target, payload)
+            self._resource_plan_cache.clear()
+            self._refresh_model_row_selection()
+            self._update_chat_controls()
+
+        def _finished() -> None:
+            self._resource_plan_worker = None
+            if not self._is_disposing:
+                self._update_chat_controls()
+
+        self._resource_plan_worker.result_ready.connect(_done)
+        self._resource_plan_worker.finished.connect(_finished)
+        self._resource_plan_worker.start()
         self._update_chat_controls()
 
     def _build_chat_panel(self) -> QWidget:
@@ -2319,45 +2631,44 @@ class AITab(QWidget):
 
         header_frame = QFrame(card)
         header_frame.setObjectName("AiChatHeader")
-        header_frame.setFixedHeight(74)
-        header = QHBoxLayout()
-        header.setContentsMargins(20, 12, 20, 12)
+        header_frame.setFixedHeight(56)
+        header = QHBoxLayout(header_frame)
+        header.setContentsMargins(15, 8, 15, 8)
         header.setSpacing(10)
-
-        title_col = QVBoxLayout()
-        title = QLabel("Sohbet", objectName="SectionTitle")
-        hint = QLabel(
-            "Sipariş, stok, ilan, pazaryeri, finans ve lojistik bağlamı hazır.",
-            objectName="Muted",
-        )
-        hint.setWordWrap(True)
-        title_col.addWidget(title)
-        title_col.addWidget(hint)
-        header.addLayout(title_col, 1)
-
-        self.chat_status = QLabel(AI_CHAT_STATUS_WAITING)
-        self.chat_status.setObjectName("AiStatPill")
-        header.addWidget(self.chat_status, 0, Qt.AlignmentFlag.AlignVCenter)
-        self.btn_new_chat = QPushButton(AI_CHAT_NEW_CHAT_BUTTON_TEXT)
-        self.btn_new_chat.setObjectName("AiSecondary")
+        self.btn_toggle_history = QPushButton(objectName="AiPlainButton")
+        self.btn_toggle_history.setIcon(_chat_icon("panel"))
+        self.btn_toggle_history.setFixedSize(32, 32)
+        self.btn_toggle_history.clicked.connect(self._toggle_task_history)
+        header.addWidget(self.btn_toggle_history)
+        self.chat_title = QLabel("Yeni sohbet", objectName="SectionTitle")
+        self.chat_title.setTextFormat(Qt.TextFormat.PlainText)
+        self.chat_title.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        self.chat_title.setMinimumWidth(0)
+        header.addWidget(self.chat_title, 1)
+        self.btn_run_details = QPushButton("İşlem ayrıntıları", objectName="AiPlainButton")
+        self.btn_run_details.setIcon(_chat_icon("steps"))
+        self.btn_run_details.clicked.connect(self._toggle_current_run_details)
+        self.btn_run_details.setEnabled(False)
+        header.addWidget(self.btn_run_details)
+        self.btn_new_chat = QPushButton(objectName="AiPlainButton")
+        self.btn_new_chat.setIcon(_chat_icon("plus"))
+        self.btn_new_chat.setFixedSize(32, 32)
+        self.btn_new_chat.setAccessibleName("Yeni sohbet")
+        self.btn_new_chat.setToolTip("Yeni sohbet")
         self.btn_new_chat.clicked.connect(self._reset_chat)
-        header.addWidget(self.btn_new_chat, 0, Qt.AlignmentFlag.AlignVCenter)
-        self.btn_saved_tasks = QPushButton("Çalışmalar")
-        self.btn_saved_tasks.setObjectName("AiSecondary")
-        self.btn_saved_tasks.clicked.connect(self._toggle_task_history)
-        header.addWidget(self.btn_saved_tasks, 0, Qt.AlignmentFlag.AlignVCenter)
-        self.btn_saved_workflows = QPushButton("Yönergeler")
-        self.btn_saved_workflows.setObjectName("AiSecondary")
-        self.btn_saved_workflows.clicked.connect(self._open_saved_workflows)
-        header.addWidget(self.btn_saved_workflows, 0, Qt.AlignmentFlag.AlignVCenter)
-        self.btn_workflow_schedules = QPushButton("Planlar")
-        self.btn_workflow_schedules.setObjectName("AiSecondary")
-        self.btn_workflow_schedules.clicked.connect(self._open_workflow_schedules)
-        header.addWidget(self.btn_workflow_schedules, 0, Qt.AlignmentFlag.AlignVCenter)
-        header_frame.setLayout(header)
+        header.addWidget(self.btn_new_chat)
+        self.chat_status = QLabel(AI_CHAT_STATUS_WAITING, card)
+        self.chat_status.hide()
+        self.btn_saved_tasks = self.btn_toggle_history
+        self.btn_saved_workflows = self.conversation_sidebar.workflows_button
+        self.btn_workflow_schedules = self.conversation_sidebar.schedules_button
         layout.addWidget(header_frame)
 
-        surface = QFrame(self)
+        work_body = QWidget(card)
+        work_body_layout = QHBoxLayout(work_body)
+        work_body_layout.setContentsMargins(0, 0, 0, 0)
+        work_body_layout.setSpacing(0)
+        surface = QFrame(work_body)
         surface.setObjectName("AiChatSurface")
         surface_layout = QVBoxLayout(surface)
         surface_layout.setContentsMargins(20, 18, 20, 20)
@@ -2390,32 +2701,6 @@ class AITab(QWidget):
         top_meta.addWidget(self.btn_load_task_session, 0, Qt.AlignmentFlag.AlignLeft)
         top_meta.addStretch(1)
         self.task_session_bar.hide()
-        surface_layout.addWidget(self.task_session_bar)
-
-        self.chat_progress_shell = QFrame(surface)
-        self.chat_progress_shell.setObjectName("AiRunProgress")
-        self.chat_progress_shell.setMaximumHeight(56)
-        progress_layout = QVBoxLayout(self.chat_progress_shell)
-        progress_layout.setContentsMargins(12, 10, 12, 10)
-        progress_layout.setSpacing(8)
-        progress_top = QHBoxLayout()
-        progress_top.setSpacing(8)
-        self.chat_progress_label = QLabel("Hazir")
-        self.chat_progress_label.setObjectName("AiRunProgressLabel")
-        self.chat_progress_percent = QLabel("0%")
-        self.chat_progress_percent.setObjectName("AiRunProgressPercent")
-        progress_top.addWidget(self.chat_progress_label, 1)
-        progress_top.addWidget(self.chat_progress_percent)
-        progress_layout.addLayout(progress_top)
-        self.chat_progress = QProgressBar()
-        self.chat_progress.setObjectName("AiResponseProgress")
-        self.chat_progress.setMinimum(0)
-        self.chat_progress.setMaximum(100)
-        self.chat_progress.setTextVisible(False)
-        self.chat_progress.setValue(0)
-        progress_layout.addWidget(self.chat_progress)
-        self.chat_progress_shell.hide()
-        surface_layout.addWidget(self.chat_progress_shell)
 
         self.agent_state_card = QFrame(surface)
         self.agent_state_card.setObjectName("AiTaskState")
@@ -2491,7 +2776,13 @@ class AITab(QWidget):
         self.transcript.setOpenLinks(False)
         self.transcript.setOpenExternalLinks(False)
         self.transcript.anchorClicked.connect(self._on_transcript_anchor_clicked)
-        transcript_layout.addWidget(self.transcript)
+        self.transcript.setMaximumWidth(1120)
+        transcript_row = QHBoxLayout()
+        transcript_row.setContentsMargins(0, 0, 0, 0)
+        transcript_row.addStretch(1)
+        transcript_row.addWidget(self.transcript, 100)
+        transcript_row.addStretch(1)
+        transcript_layout.addLayout(transcript_row)
 
         self.chat_stack.addWidget(welcome_page)
         self.chat_stack.addWidget(transcript_page)
@@ -2499,7 +2790,8 @@ class AITab(QWidget):
 
         composer_card = QFrame(surface)
         composer_card.setObjectName("AiComposerShell")
-        composer_card.setFixedHeight(128)
+        composer_card.setFixedHeight(166)
+        composer_card.setMaximumWidth(1000)
         composer_layout = QVBoxLayout(composer_card)
         composer_layout.setContentsMargins(18, 14, 18, 14)
         composer_layout.setSpacing(8)
@@ -2521,10 +2813,29 @@ class AITab(QWidget):
         self.btn_attach.clicked.connect(self._attach_files)
         actions.addWidget(self.btn_attach, 0, Qt.AlignmentFlag.AlignVCenter)
 
-        self.composer_meta = QLabel(AI_CHAT_BRAIN_UNSELECTED)
+        self.composer_meta = QLabel(AI_CHAT_BRAIN_UNSELECTED, composer_card)
         self.composer_meta.setObjectName("StatusInfo")
-        self.composer_meta.setWordWrap(True)
-        actions.addWidget(self.composer_meta, 1)
+        self.composer_meta.hide()
+        self.btn_model_picker = QPushButton("Model seç", objectName="AiModelPicker")
+        self.btn_model_picker.setIcon(_chat_icon("chevron"))
+        self.btn_model_picker.setIconSize(QSize(13, 13))
+        self.btn_model_picker.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        self.btn_model_picker.setAccessibleName("Model seçimi")
+        self.btn_model_picker.setMinimumWidth(0)
+        self.btn_model_picker.setMaximumWidth(260)
+        self.btn_model_picker.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        self.btn_model_picker.clicked.connect(self._toggle_model_picker)
+        actions.addWidget(self.btn_model_picker)
+        self.reasoning_combo = ReasoningControl(composer_card)
+        self.reasoning_combo.setObjectName("AiConversationReasoning")
+        self.reasoning_combo.configure_efforts(["auto", "low", "medium", "high"])
+        self.reasoning_combo.currentIndexChanged.connect(self._apply_simple_model_settings)
+        self.reasoning_combo.setMaximumWidth(240)
+        self.reasoning_combo.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        self.reasoning_combo.setAccessibleName("Akıl yürütme düzeyi")
+        self.reasoning_combo.show()
+        actions.addWidget(self.reasoning_combo)
+        actions.addStretch(1)
 
         self.btn_pause_task = QPushButton("Duraklat")
         self.btn_pause_task.setObjectName("AiSecondary")
@@ -2533,14 +2844,28 @@ class AITab(QWidget):
         self.btn_pause_task.hide()
         actions.addWidget(self.btn_pause_task)
 
-        self.btn_send = QPushButton(AI_CHAT_SEND_BUTTON_TEXT)
+        self.btn_send = QPushButton()
+        self.btn_send.setIcon(_chat_icon("arrow", "#FFFFFF"))
+        self.btn_send.setAccessibleName("Gönder")
+        self.btn_send.setToolTip("Gönder")
         self.btn_send.setObjectName("AiSendButton")
         self.btn_send.clicked.connect(self._send_message)
         actions.addWidget(self.btn_send)
 
         composer_layout.addLayout(actions)
-        surface_layout.addWidget(composer_card)
-        layout.addWidget(surface, 1)
+        composer_row = QHBoxLayout()
+        composer_row.setContentsMargins(0, 0, 0, 0)
+        composer_row.addStretch(1)
+        composer_row.addWidget(composer_card, 100)
+        composer_row.addStretch(1)
+        surface_layout.addLayout(composer_row)
+        work_body_layout.addWidget(surface, 1)
+        self.run_activity_panel = RunActivityPanel(work_body)
+        self.run_activity_panel.setFixedWidth(240)
+        self.run_activity_panel.close_requested.connect(self.run_activity_panel.hide)
+        self.run_activity_panel.hide()
+        work_body_layout.addWidget(self.run_activity_panel)
+        layout.addWidget(work_body, 1)
         self._refresh_task_sessions()
         return card
 
@@ -2588,6 +2913,7 @@ class AITab(QWidget):
 
     def _refresh_chat_surface(self) -> None:
         self.chat_stack.setCurrentIndex(1 if self._chat_message_count > 0 else 0)
+        self._refresh_chat_title()
 
     def _task_session_label(self, row: dict[str, Any]) -> str:
         session_id = _safe_text(row.get("session_id"), "")
@@ -2601,8 +2927,63 @@ class AITab(QWidget):
         return f"{short_goal} — {label}, {completed} adım"
 
     def _toggle_task_history(self) -> None:
-        self._task_history_visible = not self._task_history_visible
-        self._refresh_task_sessions()
+        if self._is_conversation_list_open():
+            self._close_conversation_list()
+        else:
+            self._open_conversation_list()
+
+    def _toggle_current_run_details(self) -> None:
+        if self._activity_run_id:
+            self._on_transcript_anchor_clicked(QUrl("orderscout://activity/" + self._activity_run_id))
+
+    def _refresh_conversations(self) -> None:
+        if not hasattr(self, "conversation_sidebar"):
+            return
+        try:
+            saved = list_chat_sessions(limit=100)
+        except Exception as exc:
+            self.conversation_sidebar.setToolTip("Sohbet listesi okunamadı: " + _safe_text(exc))
+            return
+        by_id = {str(row["session_id"]): dict(row) for row in self._task_session_rows if row.get("session_id")}
+        by_id.update({str(row["session_id"]): dict(row) for row in saved})
+        self._conversation_rows = by_id
+        self.conversation_sidebar.set_sessions(list(by_id.values()),
+                                              active_session_id=str(self._conversation_state.get("session_id") or ""))
+        self._refresh_chat_title()
+
+    def _refresh_chat_title(self) -> None:
+        if not hasattr(self, "chat_title"):
+            return
+        first = next((str(row["content"]) for row in self._chat_history if row.get("role") == "user"), "")
+        title = " ".join(first.split()) or "Yeni sohbet"
+        self.chat_title.setText(title[:80] + ("…" if len(title) > 80 else ""))
+        self.chat_title.setToolTip("<qt>" + html.escape(title) + "</qt>")
+
+    def _open_chat_session(self, session_id: str) -> None:
+        if self._worker_is_running() or session_id == self._conversation_state.get("session_id"):
+            return
+        if not self._persist_chat_session():
+            return
+        try:
+            saved = load_chat_session(session_id)
+            if saved is None:
+                row = getattr(self, "_conversation_rows", {}).get(session_id)
+                if not row:
+                    raise FileNotFoundError(session_id)
+                state = load_agent_task_state(session_id).to_dict()
+                saved = {"state": state, "history": conversation_history(state), "composer_text": ""}
+            data = _chat_data_from_task_result(Result.ok("Sohbet açıldı.", data={"state": saved["state"]}))
+            # Commit the complete target snapshot before changing visible UI.
+            # A failed switch must not erase either conversation's unsent draft.
+            save_active_chat_session(saved["state"], saved["history"], composer_text=saved["composer_text"])
+        except FileNotFoundError:
+            self._append_chat_activity("Sohbet kaydı bulunamadı.", notice=True)
+            return
+        except Exception as exc:
+            self._append_chat_activity("Sohbet açılamadı: " + _safe_text(exc), notice=True)
+            return
+        self._restore_task_chat_context(data, history=saved["history"], composer_text=saved["composer_text"], persist=False)
+        self._refresh_conversations()
 
     def _current_workflow_scope_bindings(self) -> dict[str, list[Any]]:
         from AI.processors.tools import marketplaces_account_lookup
@@ -2681,15 +3062,18 @@ class AITab(QWidget):
                                   runtime_record: dict[str, Any], allowed_scope_bindings: dict[str, Any]) -> None:
         from AI.processors.task_control import AgentTaskControl
         self._task_control = AgentTaskControl()
-        self._append_chat_activity("Planlı yönerge başladı; güncel kaynaklar okunacak, işlemler için yeniden onay istenecek.")
-        self._chat_worker = SyncWorker(
+        self._chat_worker = _make_chat_worker(
             _run_scheduled_chat_with_runtime, parent=self, progress_callback_kw="progress_callback",
             lease=lease, scheduler=scheduler, source=source, runtime_record=dict(runtime_record),
             current_session=dict(self._conversation_state), allowed_scope_bindings=allowed_scope_bindings,
             task_control=self._task_control,
         )
-        self._start_chat_progress(self._estimate_chat_duration_seconds(source, None, "Planlı çalışma"))
+        response_token = self._begin_chat_response(self._chat_worker)
+        self._start_chat_progress()
+        self._append_chat_activity("Planlı yönerge başladı; güncel kaynaklar okunacak, işlemler için yeniden onay istenecek.")
         def done(result: Result) -> None:
+            if not self._complete_chat_response(response_token):
+                return
             data = dict(result.data or {})
             state = data.get("session_state") or data.get("state")
             if isinstance(state, dict):
@@ -2702,7 +3086,11 @@ class AITab(QWidget):
                 self._show_action_approval_dialog(data["action_proposal"])
             self._last_chat_success = bool(result.success)
             self._refresh_task_sessions()
+            self._persist_chat_session()
         def finished() -> None:
+            if not self._response_token_current(response_token):
+                return
+            self._finish_chat_response(response_token)
             self._chat_worker = None
             self._task_control = None
             self._finish_chat_progress(self._last_chat_success)
@@ -2710,7 +3098,6 @@ class AITab(QWidget):
             if self._queued_guidance:
                 QTimer.singleShot(0, self._run_queued_guidance)
         self._chat_worker.result_ready.connect(done)
-        self._chat_worker.progress.connect(self._on_task_progress)
         self._chat_worker.finished.connect(finished)
         self._chat_worker.start()
         self._update_chat_controls()
@@ -2754,7 +3141,7 @@ class AITab(QWidget):
                 self._append_chat_activity(f"Task session listesi okunamadi: {_safe_text(exc)}")
         self._task_session_rows = [dict(row) for row in rows if isinstance(row, dict)]
         if hasattr(self, "task_session_bar"):
-            self.task_session_bar.setVisible(self._task_history_visible)
+            self.task_session_bar.hide()
         self.task_session_combo.blockSignals(True)
         self.task_session_combo.clear()
         if not self._task_session_rows:
@@ -2769,12 +3156,61 @@ class AITab(QWidget):
             self.task_session_combo.setCurrentIndex(selected_index)
         self.task_session_combo.blockSignals(False)
         self._sync_task_session_controls()
+        self._refresh_conversations()
 
     def _sync_task_session_controls(self) -> None:
         if hasattr(self, "btn_load_task_session") and hasattr(self, "task_session_combo"):
-            self.btn_load_task_session.setEnabled(bool(self.task_session_combo.currentData()))
+            self.btn_load_task_session.setEnabled(bool(self.task_session_combo.currentData()) and not self._worker_is_running())
+
+    def _persist_chat_session(self) -> bool:
+        if self._chat_restore_failed and not self._chat_history and not self.composer.toPlainText():
+            return False
+        try:
+            save_active_chat_session(
+                self._conversation_state, self._chat_history,
+                composer_text=self.composer.toPlainText(), queued_guidance=self._queued_guidance,
+            )
+            self._chat_persistence_error = ""
+            self._chat_restore_failed = False
+            self._refresh_conversations()
+            return True
+        except Exception as exc:
+            message = _safe_text(exc)
+            if message != self._chat_persistence_error:
+                self._append_chat_activity("Sohbet kaydedilemedi: " + message)
+                self._chat_persistence_error = message
+            return False
+
+    def _restore_active_chat_session(self) -> None:
+        try:
+            saved = load_active_chat_session()
+        except Exception as exc:
+            self._chat_restore_failed = True
+            self._append_chat_activity("Önceki sohbet açılamadı: " + _safe_text(exc))
+            return
+        if saved is None:
+            return
+        state = saved["state"]
+        if not saved["history"] and not state.get("pending_actions"):
+            self._conversation_state = dict(state)
+            self.composer.setPlainText(saved["composer_text"])
+            self._restore_chat_model_choice((state.get("active_entities") or {}).get("runtime_context") or {})
+            return
+        # Restore only data and current approval cards. Opening the tab never
+        # submits a resume command or replays a saved tool call.
+        data = _chat_data_from_task_result(Result.ok("Sohbet açıldı.", data={"state": state}))
+        self._restore_task_chat_context(data, history=saved["history"], composer_text=saved["composer_text"])
+        if saved.get("checkpoint_error"):
+            self._append_chat_activity("Son görev kaydı okunamadı; sohbet yedeği açıldı.")
+        if saved.get("recovered_user_messages"):
+            self._append_chat_activity("Son gönderdiğin talimatlar korundu; devam etmek için yeni bir mesaj gönderebilirsin.")
+        elif saved.get("resubmit_user_messages"):
+            self._append_chat_activity("Son isteğin yazı alanında yeniden göndermeni bekliyor.")
 
     def _load_selected_task_session(self) -> None:
+        if self._worker_is_running():
+            self._append_chat_activity("Süren çalışma tamamlanınca başka bir sohbet açabilirsin.")
+            return
         row = self.task_session_combo.currentData()
         if not isinstance(row, dict):
             self._append_chat_activity("Yuklenecek kayitli task session secilmedi.")
@@ -2794,14 +3230,27 @@ class AITab(QWidget):
             data={"state": state.to_dict(), "state_path": _safe_text(row.get("path"), "")},
         )
         data = _chat_data_from_task_result(restored)
-        self._update_agent_state_from_result_data(data)
         self._restore_task_chat_context(data)
 
-    def _restore_task_chat_context(self, data: dict[str, Any]) -> None:
+    def _restore_task_chat_context(self, data: dict[str, Any], *, history: list[dict[str, Any]] | None = None,
+                                   composer_text: str | None = None, persist: bool = True) -> None:
+        if self._worker_is_running():
+            self._append_chat_activity("Süren çalışma tamamlanınca başka bir sohbet açabilirsin.")
+            return
         state = dict(data.get("state") or {}) if isinstance(data.get("state"), dict) else {}
         session_id = _safe_text(state.get("session_id"), "")
-        if not session_id or session_id in self._restored_task_session_ids:
+        if not session_id:
+            self._append_chat_activity("Kayitli sohbet kimligi eksik.")
+            return
+        if (session_id == self._conversation_state.get("session_id") and session_id in self._restored_task_session_ids
+                and state == self._conversation_state):
             self._append_chat_activity("Kayitli gorev zaten bu sohbette yuklu.")
+            return
+        try:
+            restored_history = conversation_history(state) if history is None else [dict(row) for row in history]
+            typed_state = AgentSessionState.from_dict(state)
+        except Exception as exc:
+            self._append_chat_activity("Kayitli sohbet açılamadı: " + _safe_text(exc))
             return
 
         active_entities = (
@@ -2809,71 +3258,83 @@ class AITab(QWidget):
             if isinstance(state.get("active_entities"), dict)
             else {}
         )
+        self._invalidate_chat_response()
+        self.transcript.clear()
+        self._activity_runs.clear()
+        self._chat_message_count = 0
+        self._chat_history.clear()
+        self._approval_card_actions.clear()
+        self._latest_approval_card_token = ""
+        self._superseded_actions.clear()
+        self._delivered_artifacts.clear()
+        self._shown_artifact_cards.clear()
+        self._queued_guidance.clear()
+        self.composer.clear()
         self._conversation_state = dict(state)
-        recorded_history = state.get("conversation_turns") or active_entities.get("conversation_history") or []
-        restored_history = [
-            {
-                "role": _safe_text(row.get("role"), ""),
-                "content": _safe_text(row.get("content"), ""),
-            }
-            for row in list(recorded_history)
-            if isinstance(row, dict)
-            and _safe_text(row.get("role"), "") in {"user", "assistant"}
-            and _safe_text(row.get("content"), "")
-        ]
+        self._restore_chat_model_choice(active_entities.get("runtime_context") or {})
         goal = _safe_text(state.get("goal"), "")
-        if goal and not any(
+        if history is None and goal and not any(
             row.get("role") == "user" and row.get("content") == goal
             for row in restored_history
         ):
             restored_history.append({"role": "user", "content": goal})
 
-        existing = {
-            (_safe_text(row.get("role"), ""), _safe_text(row.get("content"), ""))
-            for row in self._chat_history
-            if isinstance(row, dict)
-        }
-        for row in restored_history[-24:]:
-            key = (row["role"], row["content"])
-            if key in existing:
-                continue
-            self._append_chat_message(row["role"], row["content"])
-            self._chat_history.append(dict(row))
-            existing.add(key)
-
+        self._chat_history.extend(restored_history)
         answer = _safe_text(data.get("answer"), "")
-        if answer and ("assistant", answer) not in existing:
-            self._append_chat_message("assistant", answer)
+        if answer and (not self._chat_history or self._chat_history[-1].get("role") != "assistant"
+                       or self._chat_history[-1].get("content") != answer):
             self._chat_history.append({"role": "assistant", "content": answer})
+        self._render_restored_chat_history(typed_state)
 
-        action = data.get("action_proposal") if isinstance(data.get("action_proposal"), dict) else None
-        if bool(data.get("approval_required")) and action:
+        action = typed_state.active_pending_action()
+        presentation_state = {**state, "pending_actions": [action] if action else []}
+        self._update_agent_state_from_result_data({**data, "state": presentation_state, "session_state": presentation_state})
+        if action:
             self._show_action_approval_dialog(action)
             self._append_chat_activity("Kayitli gorev onay bekleyen adimdan devam etmeye hazir.")
         else:
             self._append_chat_activity("Kayitli gorev baglami sohbete geri yuklendi.")
-            if state.get("remaining_steps") and state.get("status") in {"running", "paused", "interrupted"}:
+            if state.get("status") in {"running", "paused", "interrupted"} and self._chat_history:
                 control = active_entities.get("task_control") or {}
                 guidance = [message for message in control.get("queued_user_messages") or []
                             if isinstance(message, str) and message.strip()]
                 if control.get("reason") == "user_revision" and guidance:
-                    for message in guidance:
-                        if ("user", message) not in existing:
-                            self._append_chat_message("user", message)
-                            self._chat_history.append({"role": "user", "content": message})
-                            existing.add(("user", message))
                     self.composer.setPlainText("\n".join(guidance))
                     self._append_chat_message("assistant", "Yarım kalan çalışma ve son talimatların açıldı. Yazı alanındaki talimatı göndererek güncellenmiş hedefle devam edebilirsin.")
                 else:
                     self._append_chat_message("assistant", "Yarım kalan çalışma açıldı. ‘Devam et’ yazdığında kalan okuma adımlarını sürdürebilirim.")
         self._restored_task_session_ids.add(session_id)
         self._append_verified_artifact_links(data)
+        if composer_text is not None:
+            self.composer.setPlainText(composer_text)
         self._update_chat_controls()
+        if persist:
+            self._persist_chat_session()
+
+    def _render_restored_chat_history(self, state: AgentSessionState) -> None:
+        from AI.processors.observation_context import verified_export_report_receipts
+
+        receipts = verified_export_report_receipts(state)
+        document = self.transcript.document()
+        cursor = QTextCursor(document)
+        document.setLayoutEnabled(False)
+        cursor.beginEditBlock()
+        try:
+            for row in self._chat_history:
+                cursor.insertHtml(self._chat_message_html(row["role"], row["content"], receipts=receipts))
+                cursor.insertText("\n")
+        finally:
+            cursor.endEditBlock()
+            document.setLayoutEnabled(True)
+        self._chat_message_count = len(self._chat_history)
+        self._refresh_chat_surface()
+        self._restore_transcript_scroll((0, True))
 
     def _format_chat_elapsed(self) -> str:
-        if not self._chat_progress_started_at:
-            return "0s"
-        return f"{int(max(0.0, time.monotonic() - self._chat_progress_started_at))}s"
+        run = self._activity_runs.get(self._activity_run_id, {})
+        started = run.get("started_at") or self._chat_progress_started_at
+        elapsed = time.monotonic() - started if started else 0.0
+        return f"{int(max(0, run.get('elapsed_seconds', elapsed)))} sn"
 
     def _worker_is_running(self) -> bool:
         for worker in (self._chat_worker, self._action_worker):
@@ -2881,131 +3342,349 @@ class AITab(QWidget):
                 return True
         return False
 
-    def _set_chat_progress(self, value: int, label: str | None = None, *, percent_text: str | None = None) -> None:
-        if not hasattr(self, "chat_progress"):
-            return
-        clean_value = max(0, min(100, int(value or 0)))
-        if self.chat_progress.minimum() != 0 or self.chat_progress.maximum() != 100:
-            self.chat_progress.setRange(0, 100)
-        self._chat_progress_value = clean_value
-        self.chat_progress.setValue(clean_value)
-        self.chat_progress_percent.setText(percent_text if percent_text is not None else f"{clean_value}%")
-        if label:
-            self.chat_progress_label.setText(str(label))
-        self.chat_progress_shell.setVisible(clean_value > 0 or self._worker_is_running())
+    def _new_activity_run(self) -> None:
+        self._activity_run_id = uuid4().hex
+        self._activity_runs[self._activity_run_id] = {
+            "status": "Yanıt bekleniyor", "started_at": time.monotonic(),
+            "active": True, "messages": [], "cursor": None,
+        }
+        self._last_task_progress_message = ""
+        # Bound presentation-only records; model history is managed separately.
+        while len(self._activity_runs) > 100:
+            del self._activity_runs[next(iter(self._activity_runs))]
+        self.run_activity_panel.hide()
 
-    def _estimate_chat_duration_seconds(self, source: str, planner_client: Any, prompt: str) -> float:
-        plan = getattr(planner_client, "resource_plan", {}) if planner_client is not None else {}
-        profile = str((plan or {}).get("profile") or "").casefold() if isinstance(plan, dict) else ""
-        model_name = _safe_text(getattr(planner_client, "model_name", ""), "").casefold()
-        prompt_factor = min(40.0, len(str(prompt or "")) / 20.0)
-        if source == AI_CHAT_SOURCE_CLOUD_VALUE:
-            return 22.0 + prompt_factor
-        if "gpt-oss" in model_name or "disk_guarded" in profile:
-            return 95.0 + prompt_factor
-        if "large" in profile:
-            return 65.0 + prompt_factor
-        return 32.0 + prompt_factor
+    def _activity_marker_html(self) -> str:
+        if not self._activity_run_id:
+            return ""
+        return ("<div style='font-size:11px;color:#64748B;margin-top:10px;'>"
+                f"activity-status-{self._activity_run_id}</div>")
+
+    def _bind_activity_cursor(self) -> None:
+        run = self._activity_runs.get(self._activity_run_id)
+        if run is None:
+            return
+        cursor = self.transcript.document().find("activity-status-" + self._activity_run_id)
+        if not cursor.isNull():
+            run["cursor"] = cursor
+            self._render_activity_status()
+
+    def _render_activity_status(self) -> None:
+        run = self._activity_runs.get(self._activity_run_id)
+        if not run:
+            return
+        cursor = run.get("cursor")
+        if cursor is not None and not cursor.isNull():
+            scroll_state = self._transcript_scroll_state()
+            status = html.escape(str(run["status"]))
+            elapsed = self._format_chat_elapsed()
+            href = "orderscout://activity/" + self._activity_run_id
+            indicator = "◌" if run["active"] else "·"
+            start = cursor.selectionStart()
+            cursor.insertHtml(
+                f'<span style="font-size:11px;color:#64748B;">{indicator} &nbsp;{status}'
+                f' &nbsp;· {elapsed} &nbsp;&nbsp; '
+                f'<a href="{href}" style="color:#64748B;text-decoration:none;">İşlem ayrıntıları ›</a></span>'
+            )
+            cursor.setPosition(start, QTextCursor.MoveMode.KeepAnchor)
+            self._restore_transcript_scroll(scroll_state)
+        if self.run_activity_panel.isVisible() and self.run_activity_panel.run_id == self._activity_run_id:
+            self._load_activity_panel(self._activity_run_id)
+
+    def _load_activity_panel(self, run_id: str) -> None:
+        run = self._activity_runs.get(run_id)
+        if not run:
+            return
+        seconds = run.get("elapsed_seconds", max(0, time.monotonic() - run["started_at"]))
+        self.run_activity_panel.set_run(
+            run_id, status=run["status"], elapsed=f"{int(seconds)} sn",
+            messages=list(run["messages"]), active=run["active"],
+        )
+
+    def _set_run_status(self, label: str) -> None:
+        run = self._activity_runs.get(self._activity_run_id)
+        if run and run["status"] != label:
+            run["status"] = label
+            self._render_activity_status()
+
+    def _record_run_activity(self, message: str) -> None:
+        run = self._activity_runs.get(self._activity_run_id)
+        if not run:
+            return
+        messages = run["messages"]
+        message = message[:4000]
+        if not messages or messages[-1] != message:
+            messages.append(message)
+            del messages[:-100]
+        self._render_activity_status()
 
     def _start_chat_progress(self, estimated_seconds: float | None = None) -> None:
+        # The optional argument is accepted for older callers; no time-based
+        # completion estimate or invented phases are presented to the user.
+        if not self._activity_runs.get(self._activity_run_id, {}).get("active"):
+            self._new_activity_run()
         if self._chat_progress_timer is None:
             self._chat_progress_timer = QTimer(self)
-            self._chat_progress_timer.setInterval(700)
+            self._chat_progress_timer.setInterval(1000)
             self._chat_progress_timer.timeout.connect(self._advance_chat_progress)
         self._chat_progress_started_at = time.monotonic()
-        self._chat_progress_estimated_seconds = max(8.0, float(estimated_seconds or 0.0))
-        self._chat_progress_overrun = False
-        self.chat_progress_shell.show()
-        self._set_chat_progress(4, "Istek alindi", percent_text=f"4% | {self._format_chat_elapsed()}")
+        self._ensure_chat_response_draft()
         self._chat_progress_timer.start()
 
     def _advance_chat_progress(self) -> None:
-        if not self._worker_is_running():
-            return
-        elapsed = max(0.0, time.monotonic() - self._chat_progress_started_at)
-        estimate = max(8.0, self._chat_progress_estimated_seconds)
-        ratio = elapsed / estimate
-        if ratio >= 1.0:
-            if not self._chat_progress_overrun:
-                self._chat_progress_overrun = True
-                self.chat_progress.setRange(0, 0)
-            self.chat_progress_percent.setText(self._format_chat_elapsed())
-            self.chat_progress_label.setText("Model beklenenden uzun suruyor")
-            self.chat_progress_shell.show()
-            return
-        value = int(4 + min(84.0, ratio * 84.0))
-        if value < 24:
-            label = "Tool plani hazirlaniyor"
-        elif value < 58:
-            label = "Model cevabi uretiyor"
-        elif value < 78:
-            label = "E-ticaret baglami isleniyor"
-        else:
-            label = "Cevap toparlaniyor"
-        self._set_chat_progress(value, label, percent_text=f"{value}% | {self._format_chat_elapsed()}")
+        run = self._activity_runs.get(self._activity_run_id)
+        if run and run["active"]:
+            self._render_activity_status()
 
     def _finish_chat_progress(self, success: bool = True) -> None:
         if self._chat_progress_timer is not None:
             self._chat_progress_timer.stop()
-        self._set_chat_progress(100, "Cevap hazir" if success else "Tamamlanamadi", percent_text=f"100% | {self._format_chat_elapsed()}")
-        QTimer.singleShot(900, self._hide_chat_progress_if_idle)
+        run = self._activity_runs.get(self._activity_run_id)
+        if run:
+            run["active"] = False
+            run["elapsed_seconds"] = max(0, time.monotonic() - run["started_at"])
+            state = str(self._conversation_state.get("status") or "")
+            label = "Tamamlandı" if success else "Tamamlanamadı"
+            if success and (self._pending_action_from_state() or state == "approval_required"):
+                label = "Onay bekliyor"
+            elif state == "paused":
+                label = "Duraklatıldı"
+            elif state == "interrupted":
+                label = "Çalışma kesildi"
+            run["status"] = label
+            self._render_activity_status()
 
     def _hide_chat_progress_if_idle(self) -> None:
         if self._worker_is_running():
             return
-        self.chat_progress_shell.hide()
+        if self._chat_progress_timer is not None:
+            self._chat_progress_timer.stop()
         self._chat_progress_started_at = 0.0
-        self._chat_progress_estimated_seconds = 0.0
-        self._chat_progress_overrun = False
-        self._set_chat_progress(0, "Hazir", percent_text="0%")
+
+    def _transcript_scroll_state(self) -> tuple[int, bool]:
+        scroll = self.transcript.verticalScrollBar()
+        return scroll.value(), scroll.maximum() - scroll.value() <= 8
+
+    def _restore_transcript_scroll(self, state: tuple[int, bool]) -> None:
+        scroll = self.transcript.verticalScrollBar()
+        scroll.setValue(scroll.maximum() if state[1] else state[0])
+
+    def _append_transcript_html(self, block: str) -> None:
+        scroll_state = self._transcript_scroll_state()
+        cursor = QTextCursor(self.transcript.document())
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        cursor.insertHtml(block)
+        cursor.insertText("\n")
+        self._restore_transcript_scroll(scroll_state)
+
+    def _begin_chat_response(self, worker: SyncWorker) -> int:
+        self._invalidate_chat_response()
+        self._new_activity_run()
+        token = self._response_generation
+        self._response_active_token = token
+        signal = getattr(worker, "response_event", None)
+        if signal is not None and hasattr(signal, "connect"):
+            callback = lambda event: self._on_response_stream_event(event, token=token)
+            try:
+                signal.connect(callback, Qt.ConnectionType.QueuedConnection)
+            except TypeError:
+                signal.connect(callback)
+        progress_signal = getattr(worker, "progress", None)
+        if progress_signal is not None and hasattr(progress_signal, "connect"):
+            def progress(percent: int, message: str) -> None:
+                if self._response_active_token == token and self._response_token_current(token):
+                    self._on_task_progress(percent, message)
+            try:
+                progress_signal.connect(progress, Qt.ConnectionType.QueuedConnection)
+            except TypeError:
+                progress_signal.connect(progress)
+        return token
+
+    def _invalidate_chat_response(self) -> None:
+        self._response_generation += 1
+        self._response_active_token = None
+        self._drop_chat_response_draft()
+        self._response_stream_id = ""
+        self._response_closed_stream_ids.clear()
+        if self._chat_progress_timer is not None:
+            self._chat_progress_timer.stop()
+        run = self._activity_runs.get(self._activity_run_id)
+        if run and run["active"]:
+            run["active"] = False
+            run["elapsed_seconds"] = max(0, time.monotonic() - run["started_at"])
+        self._activity_run_id = ""
+        self.run_activity_panel.hide()
+
+    def _response_token_current(self, token: int) -> bool:
+        return token == self._response_generation and not self._is_disposing
+
+    def _complete_chat_response(self, token: int) -> bool:
+        if token != self._response_active_token or not self._response_token_current(token):
+            return False
+        self._flush_chat_response()
+        self._drop_chat_response_draft()
+        self._response_active_token = None
+        return True
+
+    def _finish_chat_response(self, token: int) -> None:
+        if not self._response_token_current(token) or self._response_active_token is None:
+            return
+        self._flush_chat_response()
+        self._set_chat_response_label("Yanıt tamamlanamadı")
+        self._last_chat_success = False
+        self._response_active_token = None
+
+    def _on_response_stream_event(self, event: dict[str, Any], *, token: int | None = None) -> None:
+        token = self._response_active_token if token is None else token
+        if token is None or token != self._response_active_token or not self._response_token_current(token):
+            return
+        if not isinstance(event, dict):
+            return
+        stream_id = str(event.get("stream_id") or "")
+        kind = event.get("event")
+        if not stream_id:
+            return
+        if kind == "start":
+            if stream_id == self._response_stream_id or stream_id in self._response_closed_stream_ids:
+                return
+            if self._response_stream_id:
+                self._response_closed_stream_ids.add(self._response_stream_id)
+            self._drop_chat_response_draft()
+            self._response_stream_id = stream_id
+            self._set_run_status("Yanıt bekleniyor")
+            if self._chat_progress_timer is not None and self._chat_progress_timer.isActive():
+                self._ensure_chat_response_draft()
+            return
+        if stream_id != self._response_stream_id or stream_id in self._response_closed_stream_ids:
+            return
+        if kind == "delta":
+            text = event.get("text")
+            if not isinstance(text, str) or not text:
+                return
+            self._response_pending.append(text)
+            if not self._response_draft_text:
+                # Show the first actual fragment immediately. Subsequent fragments
+                # share a timer, so a fast provider does not repaint each token.
+                self._flush_chat_response()
+            elif not self._response_flush_timer.isActive():
+                self._response_flush_timer.start()
+            self._set_run_status("Yanıt geliyor")
+        elif kind in {"end", "error", "cancelled"}:
+            self._flush_chat_response()
+            self._response_closed_stream_ids.add(stream_id)
+            label = {"end": "Yanıt kontrol ediliyor", "error": "Yanıt kesildi", "cancelled": "Yanıt durduruldu"}[kind]
+            self._set_chat_response_label(label)
+
+    def _ensure_chat_response_draft(self) -> None:
+        if self._response_draft_cell is not None:
+            return
+        marker = "stream-draft-" + uuid4().hex
+        label_marker = marker + "-label"
+        self._append_transcript_html(_assistant_message_block(marker, label_marker,
+                                                              activity_html=self._activity_marker_html()))
+        document = self.transcript.document()
+        # The label also contains marker, so find the body after the label.
+        label = document.find(label_marker)
+        content = document.find(marker, label.selectionEnd())
+        inner_table = content.currentTable()
+        self._response_draft_cell = inner_table.cellAt(content)
+        table = inner_table
+        while table.parentFrame() != document.rootFrame():
+            table = table.parentFrame()
+        self._response_draft_table = table
+        content.removeSelectedText()
+        self._response_draft_label = label
+        label.insertText(AI_CHAT_ASSISTANT_ROLE_TEXT)
+        self._bind_activity_cursor()
+        self._chat_message_count += 1
+        self._refresh_chat_surface()
+
+    def _set_chat_response_label(self, label: str) -> None:
+        self._set_run_status(label)
+
+    def _flush_chat_response(self) -> None:
+        self._response_flush_timer.stop()
+        if not self._response_pending:
+            return
+        scroll_state = self._transcript_scroll_state()
+        text = "".join(self._response_pending)
+        self._response_pending.clear()
+        self._ensure_chat_response_draft()
+        # Plain text insertion escapes HTML and never creates approval/file links.
+        cursor = self._response_draft_cell.lastCursorPosition()
+        cursor.insertText(text)
+        self._response_draft_text += text
+        self._restore_transcript_scroll(scroll_state)
+
+    def _drop_chat_response_draft(self) -> None:
+        self._response_flush_timer.stop()
+        self._response_pending.clear()
+        table = self._response_draft_table
+        if table is not None:
+            run = self._activity_runs.get(self._activity_run_id)
+            if run:
+                run["cursor"] = None
+            scroll_state = self._transcript_scroll_state()
+            cursor = QTextCursor(self.transcript.document())
+            cursor.setPosition(table.firstPosition() - 1)
+            cursor.setPosition(table.lastPosition() + 1, QTextCursor.MoveMode.KeepAnchor)
+            cursor.removeSelectedText()
+            self._chat_message_count = max(0, self._chat_message_count - 1)
+            self._restore_transcript_scroll(scroll_state)
+        self._response_draft_table = None
+        self._response_draft_cell = None
+        self._response_draft_label = None
+        self._response_draft_text = ""
 
     def _append_chat_message(self, role: str, message: str) -> None:
-        role_name = AI_CHAT_USER_ROLE_TEXT if str(role).strip().lower() == "user" else AI_CHAT_ASSISTANT_ROLE_TEXT
-        safe_message = html.escape(str(message or "").strip()).replace("\n", "<br>")
-        if role_name == "Sen":
-            block = (
+        role = str(role).strip().lower()
+        receipts = []
+        if role == "assistant" and any(
+            isinstance(row, dict) and row.get("tool_names") == ["execute_approved_operation"]
+            for row in (self._conversation_state.get("last_tool_results") or ())
+        ):
+            from AI.processors.observation_context import verified_export_report_receipts
+            receipts = verified_export_report_receipts(AgentSessionState.from_dict(self._conversation_state))
+        self._append_transcript_html(self._chat_message_html(role, message, receipts=receipts))
+        if role == "assistant":
+            self._bind_activity_cursor()
+        self._chat_message_count += 1
+        self._refresh_chat_surface()
+
+    def _chat_message_html(self, role: str, message: str, *, receipts: list[dict[str, Any]]) -> str:
+        role = str(role).strip().lower()
+        if role == "assistant" and receipts:
+            from AI.runtime.artifact_delivery import verified_file_message_html
+            safe_message, linked = verified_file_message_html(message, receipts)
+            self._delivered_artifacts.update(linked)
+        else:
+            safe_message = html.escape(str(message or "").strip()).replace("\n", "<br>")
+        if role == "user":
+            return (
                 '<table width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 18px 0;">'
                 '<tr><td width="48%"></td><td align="right">'
-                f'<div style="font-size:11px;color:#64748B;font-weight:800;margin-bottom:4px;">{role_name}</div>'
+                f'<div style="font-size:11px;color:#64748B;font-weight:800;margin-bottom:4px;">{AI_CHAT_USER_ROLE_TEXT}</div>'
                 '<table width="100%" cellspacing="0" cellpadding="14" bgcolor="#2563EB" '
                 'style="background-color:#2563EB;border:1px solid #1D4ED8;color:#FFFFFF;">'
                 f'<tr><td style="color:#FFFFFF;text-align:left;line-height:1.5;">{safe_message}</td></tr>'
                 "</table></td></tr></table>"
             )
-        else:
-            icon_url = html.escape(QUrl.fromLocalFile(_ai_icon_path()).toString())
-            block = (
-                '<table width="78%" cellspacing="0" cellpadding="0" style="margin:0 0 18px 0;">'
-                f'<tr><td width="46" valign="top"><img src="{icon_url}" width="36" height="36"></td>'
-                '<td valign="top">'
-                f'<div style="font-size:11px;color:#0F172A;font-weight:900;margin-bottom:5px;">{role_name}</div>'
-                '<table width="100%" cellspacing="0" cellpadding="10" bgcolor="#FFFFFF" '
-                'style="background-color:#FFFFFF;color:#0F172A;">'
-                f'<tr><td style="color:#0F172A;line-height:1.55;">{safe_message}</td></tr>'
-                "</table></td></tr></table>"
-            )
-        self.transcript.moveCursor(QTextCursor.MoveOperation.End)
-        self.transcript.insertHtml(block)
-        self.transcript.insertPlainText("\n")
-        self.transcript.moveCursor(QTextCursor.MoveOperation.End)
-        self._chat_message_count += 1
-        self._refresh_chat_surface()
+        run = self._activity_runs.get(self._activity_run_id)
+        activity = self._activity_marker_html() if run and run["active"] and run.get("cursor") is None else ""
+        return _assistant_message_block(safe_message, activity_html=activity)
 
-    def _append_chat_activity(self, message: str) -> None:
+    def _append_chat_activity(self, message: str, *, notice: bool = False) -> None:
         safe_message = html.escape(str(message or "").strip()).replace("\n", "<br>")
         if not safe_message:
             return
-        block = (
-            '<table width="78%" cellspacing="0" cellpadding="0" style="margin:0 0 10px 46px;">'
-            '<tr><td><table width="100%" cellspacing="0" cellpadding="8" bgcolor="#EEF2F7" '
-            'style="background-color:#EEF2F7;border:1px solid #E2E8F0;color:#475569;">'
-            f'<tr><td style="color:#475569;font-size:11px;line-height:1.4;">{safe_message}</td></tr>'
-            "</table></td></tr></table>"
-        )
-        self.transcript.moveCursor(QTextCursor.MoveOperation.End)
-        self.transcript.insertHtml(block)
-        self.transcript.insertPlainText("\n")
-        self.transcript.moveCursor(QTextCursor.MoveOperation.End)
+        run = self._activity_runs.get(self._activity_run_id)
+        if run and run["active"]:
+            self._record_run_activity(str(message).strip())
+            if not notice:
+                return
+        # Notices outside a running task remain visible, with no activity cards.
+        block = f'<p style="color:#64748B;font-size:11px;margin:6px 0 10px 46px;">{safe_message}</p>'
+        self._append_transcript_html(block)
         self._chat_message_count += 1
         self._refresh_chat_surface()
 
@@ -3016,11 +3695,13 @@ class AITab(QWidget):
         if not isinstance(raw_state, dict):
             return
         receipts = verified_export_report_receipts(AgentSessionState.from_dict(raw_state))
+        from AI.runtime.artifact_delivery import artifact_link_token
         for receipt in receipts:
-            token = hashlib.sha256((receipt["output_path"] + receipt["file_sha256"]).encode("utf-8")).hexdigest()
-            if token in self._delivered_artifacts:
+            token = artifact_link_token(receipt)
+            if token in self._shown_artifact_cards:
                 continue
             self._delivered_artifacts[token] = dict(receipt)
+            self._shown_artifact_cards.add(token)
             filename = html.escape(receipt["filename"])
             location = html.escape(receipt["output_path"])
             size_kb = receipt["size_bytes"] / 1024
@@ -3033,9 +3714,7 @@ class AITab(QWidget):
                 f'<span style="font-size:10px;color:#64748B;">{location}</span>'
                 '</td></tr></table>'
             )
-            self.transcript.moveCursor(QTextCursor.MoveOperation.End)
-            self.transcript.insertHtml(block)
-            self.transcript.insertPlainText("\n")
+            self._append_transcript_html(block)
             self._chat_message_count += 1
         self._refresh_chat_surface()
 
@@ -3043,12 +3722,14 @@ class AITab(QWidget):
         clean_message = _safe_text(message, "")
         if not clean_message:
             return
-        clean_percent = max(4, min(96, int(percent or 0)))
-        self._set_chat_progress(
-            clean_percent,
-            clean_message,
-            percent_text=f"{clean_percent}% | {self._format_chat_elapsed()}",
-        )
+        # Callback percentages describe orchestration, not measurable completion.
+        # Only observed messages and elapsed wall time are shown.
+        if not self._activity_run_id:
+            self._start_chat_progress()
+        label = clean_message
+        if re.match(r"^[a-z][a-z0-9_]*(?:\.[a-z0-9_]+)+\s", label):
+            label = "İşlem yürütülüyor"
+        self._set_run_status(label[:88] + ("…" if len(label) > 88 else ""))
         if clean_message != self._last_task_progress_message:
             self._append_chat_activity(clean_message)
             self._last_task_progress_message = clean_message
@@ -3108,14 +3789,20 @@ class AITab(QWidget):
             '</div>'
             '</div></td><td width="22%"></td></tr></table>'
         )
-        self.transcript.moveCursor(QTextCursor.MoveOperation.End)
-        self.transcript.insertHtml(block)
-        self.transcript.insertPlainText("\n")
-        self.transcript.moveCursor(QTextCursor.MoveOperation.End)
+        self._append_transcript_html(block)
         self._chat_message_count += 1
         self._refresh_chat_surface()
 
     def _on_transcript_anchor_clicked(self, url: QUrl) -> None:
+        if url.scheme().casefold() == "orderscout" and url.host().casefold() == "activity":
+            run_id = url.path().strip("/")
+            if run_id in self._activity_runs:
+                if self.run_activity_panel.isVisible() and self.run_activity_panel.run_id == run_id:
+                    self.run_activity_panel.hide()
+                else:
+                    self._load_activity_panel(run_id)
+                    self.run_activity_panel.show()
+            return
         if url.scheme().casefold() == "orderscout" and url.host().casefold() == "artifact":
             parts = [part for part in url.path().split("/") if part]
             receipt = self._delivered_artifacts.get(parts[1]) if len(parts) == 2 and parts[0] == "open" else None
@@ -3123,7 +3810,7 @@ class AITab(QWidget):
                 return
             path = Path(receipt["output_path"])
             if not path.is_file():
-                self._append_chat_activity("Dosya bu konumda bulunamadı; taşınmış veya silinmiş olabilir.")
+                self._append_chat_activity("Dosya bu konumda bulunamadı; taşınmış veya silinmiş olabilir.", notice=True)
                 return
             QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))
             return
@@ -3136,17 +3823,18 @@ class AITab(QWidget):
         if intent not in {"approve", "cancel"}:
             return
         if self._worker_is_running():
-            self._append_chat_activity("Bir islem zaten calisiyor; tamamlaninca tekrar deneyebilirsin.")
+            self._append_chat_activity("Bir islem zaten calisiyor; tamamlaninca tekrar deneyebilirsin.", notice=True)
             return
         card_action = self._approval_card_actions.get(card_token)
         pending_action = self._pending_action_from_state()
         if not card_action or not pending_action or not self._approval_actions_match(card_action, pending_action):
-            self._append_chat_activity("Bu onay karti artik aktif degil.")
+            self._append_chat_activity("Bu onay karti artik aktif degil.", notice=True)
             return
         reply = "Onayla ve çalıştır" if intent == "approve" else "Vazgeç"
         self._append_chat_message("user", reply)
         self._chat_history.append({"role": "user", "content": reply})
         self._handle_pending_action_reply(reply)
+        self._persist_chat_session()
 
     def _approval_actions_match(self, left: dict[str, Any], right: dict[str, Any]) -> bool:
         def _business_payload(value: Any) -> Any:
@@ -3507,7 +4195,7 @@ class AITab(QWidget):
         if not intent:
             return False
         if self._worker_is_running():
-            self._append_chat_activity("Bir islem zaten calisiyor; yeni onay calistirilmadi.")
+            self._append_chat_activity("Bir islem zaten calisiyor; yeni onay calistirilmadi.", notice=True)
             return True
         task_session_id = _safe_text(action.get("_agent_task_session_id"), "")
         active_action_id = _safe_text(action.get("action_id"), "")
@@ -3769,16 +4457,19 @@ class AITab(QWidget):
             detail="Onaylanan islem arka planda calistiriliyor.",
             pending_action=action,
         )
-        self._action_worker = SyncWorker(
+        self._action_worker = _make_chat_worker(
             _run_approved_chat_action,
             dict(action),
             parent=self,
             progress_callback_kw="progress_callback",
         )
-        self._start_chat_progress(estimated_seconds=30)
+        response_token = self._begin_chat_response(self._action_worker)
+        self._start_chat_progress()
         self._update_chat_controls()
 
         def _done(execute_result: Result) -> None:
+            if not self._complete_chat_response(response_token):
+                return
             data = dict(execute_result.data or {})
             if task_session_id:
                 returned_session_state = data.get("session_state")
@@ -3818,16 +4509,17 @@ class AITab(QWidget):
                 self._show_action_approval_dialog(next_action)
             self._chat_history.append({"role": "assistant", "content": answer})
             self._last_chat_success = bool(execute_result.success)
+            self._persist_chat_session()
 
         def _finished() -> None:
+            if not self._response_token_current(response_token):
+                return
+            self._finish_chat_response(response_token)
             self._action_worker = None
             self._finish_chat_progress(self._last_chat_success)
             self._update_chat_controls()
 
         self._action_worker.result_ready.connect(_done)
-        progress_signal = getattr(self._action_worker, "progress", None)
-        if progress_signal is not None and hasattr(progress_signal, "connect"):
-            progress_signal.connect(self._on_task_progress)
         self._action_worker.finished.connect(_finished)
         self._action_worker.start()
         self._update_chat_controls()
@@ -3863,18 +4555,33 @@ class AITab(QWidget):
         return f"{repo_id}\n{filename}\n{quant} | {size_text}"
 
     def _install_model_item_widget(self, item: QListWidgetItem, payload: dict[str, Any]) -> None:
-        row = _ModelChoiceRow(payload, self.model_list)
-        item.setSizeHint(QSize(240, row.minimumHeight()))
-        item.setText("")
-        self.model_list.setItemWidget(item, row)
+        kind = payload.get("_source_kind", "local_model")
+        title = str(payload.get("label") or "Bağlantı") if kind == "cloud_provider_header" else _model_display_name(payload)
+        plan = payload.get("resource_plan") or {}
+        context = plan.get("num_ctx") or payload.get("num_ctx")
+        local_meta = " · ".join(str(value) for value in (
+            payload.get("size_text"), f"{context:,} bağlam" if context else None, plan.get("capacity_label")) if value)
+        presentation = model_presentation(payload, title, local_meta)
+        presentation.update(group=self._cloud_provider_key(payload),
+                            is_free=bool((payload.get("model_metadata") or {}).get("is_free")))
+        item.setData(PRESENTATION_ROLE, presentation)
+        item.setData(SEARCH_ROLE, search_text(" ".join(str(value or "") for value in (
+            title, payload.get("default_model"), payload.get("repo_id"), payload.get("filename"),
+            payload.get("label"), payload.get("provider_code")))))
+        # Native text retains accessibility; the delegate draws the visible row.
+        item.setText(title)
+        item.setToolTip("<br>".join(html.escape(str(value)) for value in (
+            title, payload.get("default_model") or payload.get("repo_id") or "", presentation["meta"]) if value))
 
     def _refresh_model_row_selection(self) -> None:
+        self._filter_model_choices()
         current = self.model_list.currentItem()
-        for index in range(self.model_list.count()):
-            item = self.model_list.item(index)
-            row = self.model_list.itemWidget(item)
-            if isinstance(row, _ModelChoiceRow):
-                row.set_selected(item is current)
+        payload = (self._selected_cloud_model_record if self.source_combo.currentData() == AI_CHAT_SOURCE_CLOUD_VALUE
+                   else current.data(Qt.ItemDataRole.UserRole) if current else None)
+        self._model_choice_delegate.selected_identity = model_identity(payload) if payload else None
+        self.selected_model_hint.setText("Seçili: " + _model_display_name(payload) if payload else "")
+        self.selected_model_hint.setToolTip(_model_display_name(payload) if payload else "")
+        self.model_list.viewport().update()
 
     def _refresh_current_source(self) -> None:
         if self._is_disposing:
@@ -3884,6 +4591,43 @@ class AITab(QWidget):
             self._refresh_cloud_providers()
         else:
             self._refresh_local_models()
+
+    def _restore_chat_model_choice(self, runtime: dict[str, Any]) -> None:
+        """Restore a model identity; accounts and credentials still come from the current catalogue."""
+        runtime = safe_agent_runtime_context(dict(runtime or {}))
+        source = _safe_text(runtime.get("source"), "")
+        model = _safe_text(runtime.get("model_name"), "")
+        if source not in {AI_CHAT_SOURCE_CLOUD_VALUE, AI_CHAT_SOURCE_LOCAL_VALUE} or not model:
+            self._restored_model_choice = None
+            return
+        choice = {"source": source, "model_name": model}
+        if source == AI_CHAT_SOURCE_CLOUD_VALUE:
+            provider_id = int(runtime.get("provider_id") or 0)
+            if provider_id <= 0:
+                self._restored_model_choice = None
+                return
+            choice["provider_id"] = provider_id
+            self._selected_cloud_model_record = {
+                "id": provider_id, "provider_code": _safe_text(runtime.get("provider_code"), ""),
+                "label": _safe_text(runtime.get("provider_label") or runtime.get("provider_code"), ""),
+                "default_model": model, "_source_kind": "cloud_model", "_explicit_runtime_override": True,
+                "reasoning_effort": _safe_text(runtime.get("reasoning_effort"), "auto"),
+                "model_metadata": dict(runtime.get("model_metadata") or {}),
+                "allow_model_fallback": bool(runtime.get("allow_model_fallback", False)),
+                "_selection_unavailable": "Kayıtlı modelin bağlantısı yükleniyor.",
+            }
+        else:
+            choice["model_record"] = dict(runtime.get("model_record") or {})
+        self._restored_model_choice = choice
+        self._restoring_model_choice = True
+        try:
+            index = self.source_combo.findData(source)
+            if index != self.source_combo.currentIndex():
+                self.source_combo.setCurrentIndex(index)
+            else:
+                self._on_source_changed()
+        finally:
+            self._restoring_model_choice = False
 
     def _switch_to_cloud_source(self) -> None:
         if self._is_disposing or self.source_combo.currentData() == AI_CHAT_SOURCE_CLOUD_VALUE:
@@ -3916,19 +4660,23 @@ class AITab(QWidget):
             records = list((result.data or {}).get("records") or [])
             self._known_local_model_count = len(records)
             self._update_resource_summary()
-            records.sort(
-                key=lambda row: (
-                    not bool(((row.get("resource_plan") or {}) if isinstance(row.get("resource_plan"), dict) else {}).get("safe_to_run", True)),
-                    _safe_text(row.get("repo_id"), "").casefold(),
-                    _safe_text(row.get("filename"), "").casefold(),
-                )
-            )
+            if self.source_combo.currentData() != AI_CHAT_SOURCE_LOCAL_VALUE:
+                return
+            from AI.processors.local_resources import local_model_sort_key
+            records.sort(key=local_model_sort_key)
+            previous = self.model_list.currentItem()
+            selected_path = str((previous.data(Qt.ItemDataRole.UserRole) or {}).get("local_path") or "") if previous else ""
+            restored = self._restored_model_choice or {}
+            if restored.get("source") == AI_CHAT_SOURCE_LOCAL_VALUE:
+                selected_path = str((restored.get("model_record") or {}).get("local_path") or restored["model_name"])
             self.model_list.clear()
 
             if not records:
                 self.model_status.setText(AI_CHAT_EMPTY_LIBRARY_TEXT)
                 self.local_count_pill.setText(AI_CHAT_LOCAL_COUNT_TEMPLATE.format(count=0))
-                if not self._auto_switched_to_cloud and self.source_combo.findData(AI_CHAT_SOURCE_CLOUD_VALUE) >= 0:
+                if restored.get("source") == AI_CHAT_SOURCE_LOCAL_VALUE:
+                    self.model_status.setText("Kayıtlı yerel model bulunamadı; başka bir model seçin.")
+                elif not self._auto_switched_to_cloud and self.source_combo.findData(AI_CHAT_SOURCE_CLOUD_VALUE) >= 0:
                     self._auto_switched_to_cloud = True
                     QTimer.singleShot(0, self._switch_to_cloud_source)
             else:
@@ -3941,13 +4689,18 @@ class AITab(QWidget):
                     self._install_model_item_widget(item, payload)
                 self.model_status.setText(AI_CHAT_INSTALLED_MODEL_COUNT_TEMPLATE.format(count=len(records)))
                 self.local_count_pill.setText(AI_CHAT_LOCAL_COUNT_TEMPLATE.format(count=len(records)))
-                self.model_list.setCurrentRow(0)
+                selected_index = next((index for index, row in enumerate(records)
+                    if selected_path and str(row.get("local_path") or "") == selected_path),
+                    -1 if restored.get("source") == AI_CHAT_SOURCE_LOCAL_VALUE else 0)
+                self.model_list.setCurrentRow(selected_index)
+                if selected_index < 0:
+                    self.model_status.setText("Kayıtlı yerel model bulunamadı; başka bir model seçin.")
 
             self._update_chat_controls()
 
         def _finished() -> None:
-            self.btn_refresh_models.setEnabled(True)
             self._models_worker = None
+            self._update_chat_controls()
 
         self._models_worker.result_ready.connect(_done)
         self._models_worker.finished.connect(_finished)
@@ -3959,13 +4712,18 @@ class AITab(QWidget):
         if self._providers_worker is not None and self._providers_worker.isRunning():
             return
 
+        self._provider_catalog_generation += 1
+        self._pending_provider_records = None
+        self._cloud_catalog_stale = False
+        generation = self._provider_catalog_generation
+
         self.source_list_label.setText(AI_CHAT_CLOUD_PROVIDERS_LABEL)
         self.model_status.setText(AI_CHAT_MODEL_LIST_WAITING)
         self.btn_refresh_models.setEnabled(False)
         self._providers_worker = SyncWorker(lambda: ai_actions.action_list_provider_accounts(include_secret=True), parent=self)
 
         def _done(result: Result) -> None:
-            if self._is_disposing:
+            if self._is_disposing or generation != self._provider_catalog_generation:
                 return
             self.btn_refresh_models.setEnabled(True)
             if not result.success:
@@ -3980,26 +4738,38 @@ class AITab(QWidget):
             )
             self._known_provider_count = len(records)
             self._update_resource_summary()
+            is_cloud = self.source_combo.currentData() == AI_CHAT_SOURCE_CLOUD_VALUE
 
             if not records:
-                self.model_list.clear()
-                self.model_status.setText(AI_CHAT_PROVIDER_EMPTY_TEXT)
+                if self._restored_model_choice and self._selected_cloud_model_record:
+                    self._selected_cloud_model_record["_selection_unavailable"] = "Kayıtlı modelin bağlantısı bulunamadı; başka bir model seçin."
+                else:
+                    self._selected_cloud_model_record = None
+                self._cloud_model_groups = []
+                self._cloud_routes_by_provider = {}
+                if is_cloud:
+                    with QSignalBlocker(self.model_list):
+                        self.model_list.clear()
+                    self._refresh_model_row_selection()
+                    self.model_status.setText(AI_CHAT_PROVIDER_EMPTY_TEXT)
                 self.local_count_pill.setText(AI_CHAT_PROVIDER_COUNT_TEMPLATE.format(count=0))
             else:
-                self._populate_cloud_model_list(
-                    [{"provider": record, "models": [], "route": {}} for record in records]
-                )
-                self.model_status.setText(
-                    f"{len(records)} provider bağlı; canlı model katalogları okunuyor."
-                )
+                cached = {self._cloud_provider_key(group.get("provider") or {}): group for group in self._cloud_model_groups}
+                groups = [{**cached.get(self._cloud_provider_key(record), {"models": [], "route": {}}),
+                           "provider": record} for record in records]
+                if is_cloud:
+                    self._populate_cloud_model_list(groups)
+                    self.model_status.setText("Model listesi güncelleniyor…")
+                else:
+                    self._cloud_model_groups = groups
                 self.local_count_pill.setText(AI_CHAT_PROVIDER_COUNT_TEMPLATE.format(count=len(records)))
                 self._refresh_provider_catalogs(records)
 
             self._update_chat_controls()
 
         def _finished() -> None:
-            self.btn_refresh_models.setEnabled(True)
             self._providers_worker = None
+            self._update_chat_controls()
 
         self._providers_worker.result_ready.connect(_done)
         self._providers_worker.finished.connect(_finished)
@@ -4014,17 +4784,15 @@ class AITab(QWidget):
                 provider_code=code,
                 endpoint_url=_safe_text(provider.get("endpoint_url"), ""),
                 api_key=_safe_text(provider.get("api_key"), ""),
-                free_only=self._cloud_price_filter == "free",
-                limit=120,
+                free_only=False,
+                limit=None,
             )
             if not catalog.success:
                 errors.append(f"{_safe_text(provider.get('label'), code)}: {catalog.message}")
-                groups.append({"provider": dict(provider), "models": [], "route": {}})
+                groups.append({"provider": dict(provider), "models": [], "route": {}, "catalog_error": True})
                 continue
             data = dict(catalog.data or {})
             models = [dict(row) for row in list(data.get("records") or []) if isinstance(row, dict)]
-            if self._cloud_price_filter == "paid":
-                models = [row for row in models if not bool(row.get("is_free"))]
             groups.append(
                 {
                     "provider": dict(provider),
@@ -4042,7 +4810,9 @@ class AITab(QWidget):
         if self._is_disposing or not records:
             return
         if self._provider_catalog_worker is not None and self._provider_catalog_worker.isRunning():
+            self._pending_provider_records = (self._provider_catalog_generation, [dict(row) for row in records])
             return
+        generation = self._provider_catalog_generation
         self._provider_catalog_worker = SyncWorker(
             self._provider_catalog_result,
             [dict(row) for row in records],
@@ -4050,22 +4820,30 @@ class AITab(QWidget):
         )
 
         def _done(result: Result) -> None:
-            if self._is_disposing or not result.success:
+            if self._is_disposing or not result.success or generation != self._provider_catalog_generation:
                 return
             data = dict(result.data or {})
             groups = [dict(row) for row in list(data.get("groups") or []) if isinstance(row, dict)]
-            self._populate_cloud_model_list(groups)
-            model_count = sum(len(list(row.get("models") or [])) for row in groups)
+            cached = {self._cloud_provider_key(group.get("provider") or {}): group for group in self._cloud_model_groups}
+            groups = [{**group, "models": cached.get(self._cloud_provider_key(group.get("provider") or {}), {}).get("models", [])}
+                      if group.get("catalog_error") else group for group in groups]
             errors = list(data.get("errors") or [])
-            suffix = f" · {len(errors)} katalog erişilemedi" if errors else ""
-            self.model_status.setText(
-                f"{len(groups)} provider · {model_count} model{suffix}"
-            )
+            self._model_catalog_warning = "Güncellenemedi; son liste" if errors else ""
+            if self.source_combo.currentData() == AI_CHAT_SOURCE_CLOUD_VALUE:
+                self._populate_cloud_model_list(groups, catalog_complete=True)
+            else:
+                self._cloud_model_groups = groups
             self._update_chat_controls()
 
         def _finished() -> None:
             self._provider_catalog_worker = None
-            self.btn_refresh_models.setEnabled(True)
+            if self._is_disposing:
+                return
+            pending = self._pending_provider_records
+            self._pending_provider_records = None
+            if pending and pending[0] == self._provider_catalog_generation:
+                self._refresh_provider_catalogs(pending[1])
+            self._update_chat_controls()
 
         self._provider_catalog_worker.result_ready.connect(_done)
         self._provider_catalog_worker.finished.connect(_finished)
@@ -4083,15 +4861,36 @@ class AITab(QWidget):
         groups: list[dict[str, Any]],
         *,
         preserve_model_id: str = "",
+        catalog_complete: bool = False,
     ) -> None:
+        selection_blocker = QSignalBlocker(self.model_list)
+        preserve_model_id = preserve_model_id or str((self._selected_cloud_model_record or {}).get("default_model") or "")
         self._cloud_model_groups = [dict(group) for group in groups]
+        self._cloud_routes_by_provider = {self._cloud_provider_key(group.get("provider") or {}): group.get("route") or {}
+                                          for group in groups}
+        preserved = dict(self._selected_cloud_model_record or {}) if preserve_model_id else {}
+        if preserved.get("default_model") != preserve_model_id:
+            preserved = {}
+        restored = self._restored_model_choice or {}
+        restoring_cloud = restored.get("source") == AI_CHAT_SOURCE_CLOUD_VALUE
+        if preserved and not restoring_cloud and not any(
+            self._cloud_provider_key(dict(group.get("provider") or {})) == self._cloud_provider_key(preserved)
+            and (
+                any(isinstance(model, dict) and model.get("id") == preserve_model_id for model in group.get("models") or [])
+                or not group.get("models") and dict(group.get("provider") or {}).get("default_model") == preserve_model_id
+            )
+            for group in groups
+        ):
+            preserved = {}
+        self._selected_cloud_model_record = preserved or None
         self.model_list.clear()
         first_model_row = -1
         selected_model_row = -1
+        selected_provider_row = -1
+        catalog_model_count = 0
         for group in groups:
             provider = dict(group.get("provider") or {})
             models = [dict(row) for row in list(group.get("models") or []) if isinstance(row, dict)]
-            route = dict(group.get("route") or {})
             provider_key = self._cloud_provider_key(provider)
             collapsed = provider_key in self._cloud_collapsed_provider_keys
             header_payload = {
@@ -4099,29 +4898,27 @@ class AITab(QWidget):
                 "_source_kind": "cloud_provider_header",
                 "_provider_key": provider_key,
                 "_collapsed": collapsed,
+                "_model_count": len(models),
             }
             header = QListWidgetItem(self._label_for_record(header_payload))
             header.setData(Qt.ItemDataRole.UserRole, header_payload)
             header.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             self.model_list.addItem(header)
+            if preserved and provider_key == self._cloud_provider_key(preserved):
+                selected_provider_row = self.model_list.count() - 1
             self._install_model_item_widget(header, header_payload)
-            header_row = self.model_list.itemWidget(header)
-            if isinstance(header_row, _ModelChoiceRow):
-                header_row.set_collapsed(collapsed)
-
-            if collapsed:
-                continue
 
             if not models and _safe_text(provider.get("default_model"), ""):
                 models = [
                     {
                         "id": provider.get("default_model"),
                         "name": provider.get("default_model"),
-                        "is_free": str(provider.get("default_model") or "").casefold().endswith(":free")
-                        or _safe_text(provider.get("provider_code"), "").casefold() == "gemini",
+                        # A configured name is not current pricing evidence.
+                        "is_free": False,
                         "capability_profile": {},
                     }
                 ]
+            catalog_model_count += sum(bool(_safe_text(model.get("id"), "")) for model in models)
             for rank, model in enumerate(models):
                 model_id = _safe_text(model.get("id"), "")
                 if not model_id:
@@ -4131,27 +4928,54 @@ class AITab(QWidget):
                     "_source_kind": "cloud_model",
                     "default_model": model_id,
                     "model_metadata": model,
-                    "free_model_test_route": route,
                     "free_model_rank": rank,
                     "allow_model_fallback": bool(provider.get("allow_model_fallback", True)),
                     "_explicit_runtime_override": True,
                 }
+                if preserved and model_id == preserve_model_id and provider_key == self._cloud_provider_key(preserved):
+                    # Keep this conversation's controls, while account fields
+                    # (including refreshed credentials/endpoint) stay current.
+                    payload.update({key: preserved[key] for key in (
+                        "reasoning_effort", "allow_model_fallback", "num_ctx", "max_tokens",
+                        "temperature", "top_p", "top_k", "repeat_penalty") if key in preserved})
                 item = QListWidgetItem(self._label_for_record(payload))
                 item.setData(Qt.ItemDataRole.UserRole, payload)
                 self.model_list.addItem(item)
                 self._install_model_item_widget(item, payload)
                 if first_model_row < 0:
                     first_model_row = self.model_list.count() - 1
-                if preserve_model_id and model_id == preserve_model_id:
+                if preserve_model_id and model_id == preserve_model_id and (not preserved or provider_key == self._cloud_provider_key(preserved)):
                     selected_model_row = self.model_list.count() - 1
-        target_row = selected_model_row if selected_model_row >= 0 else first_model_row
+        target_row = selected_model_row if selected_model_row >= 0 else selected_provider_row if selected_provider_row >= 0 else first_model_row
+        if restoring_cloud:
+            target_row = selected_model_row
+            if selected_model_row < 0 and self._selected_cloud_model_record:
+                matching = next((group for group in groups if self._cloud_provider_key(group.get("provider") or {})
+                                 == str(restored["provider_id"])), None)
+                if matching is None:
+                    message = "Kayıtlı modelin bağlantısı bulunamadı; başka bir model seçin."
+                elif matching.get("catalog_error"):
+                    message = "Kayıtlı modelin kataloğu doğrulanamadı; listeyi yenileyin veya başka bir model seçin."
+                elif catalog_complete or matching.get("models"):
+                    message = "Kayıtlı model katalogda bulunamadı; başka bir model seçin."
+                else:
+                    message = "Kayıtlı modelin bağlantısı yükleniyor."
+                self._selected_cloud_model_record["_selection_unavailable"] = message
         if target_row >= 0:
             self.model_list.setCurrentRow(target_row)
-        self._refresh_model_row_selection()
+        elif restoring_cloud:
+            self.model_list.setCurrentRow(-1)
+        count = catalog_model_count
+        self.model_status.setText(f"{count} model listeleniyor" if count else "Bu kaynakta uygun model bulunamadı.")
+        selection_blocker.unblock()
+        self._on_model_selection_changed()
 
-    def _on_model_list_item_clicked(self, item: QListWidgetItem) -> None:
+    def _on_model_list_item_clicked(
+        self, item: QListWidgetItem, *, keep_provider_focus: bool = False
+    ) -> None:
         payload = item.data(Qt.ItemDataRole.UserRole)
         if not isinstance(payload, dict) or _safe_text(payload.get("_source_kind"), "") != "cloud_provider_header":
+            self._model_popup.hide()
             return
         provider_key = _safe_text(payload.get("_provider_key"), "")
         if not provider_key:
@@ -4160,10 +4984,15 @@ class AITab(QWidget):
             self._cloud_collapsed_provider_keys.discard(provider_key)
         else:
             self._cloud_collapsed_provider_keys.add(provider_key)
-        self._populate_cloud_model_list(
-            self._cloud_model_groups,
-            preserve_model_id=self._last_selected_cloud_model_id,
-        )
+        # Keep every item alive through Qt's remaining click/activation slots.
+        # Collapsing only changes visibility; it never rebuilds the catalogue.
+        payload["_collapsed"] = provider_key in self._cloud_collapsed_provider_keys
+        item.setData(Qt.ItemDataRole.UserRole, payload)
+        presentation = item.data(PRESENTATION_ROLE) or {}
+        presentation["collapsed"] = payload["_collapsed"]
+        item.setData(PRESENTATION_ROLE, presentation)
+        self._filter_model_choices()
+        self.model_list.viewport().update()
 
     def _selected_local_record(self) -> dict[str, Any] | None:
         item = self.model_list.currentItem()
@@ -4175,12 +5004,25 @@ class AITab(QWidget):
     def _selected_provider_record(self) -> dict[str, Any] | None:
         item = self.model_list.currentItem()
         payload = item.data(Qt.ItemDataRole.UserRole) if item is not None else None
-        if not isinstance(payload, dict) or str(payload.get("_source_kind") or "") not in {
+        if not isinstance(payload, dict) or payload.get("_source_kind") == "cloud_provider_header":
+            payload = self._selected_cloud_model_record if self.source_combo.currentData() == AI_CHAT_SOURCE_CLOUD_VALUE else None
+        if not isinstance(payload, dict):
+            return None
+        if str(payload.get("_source_kind") or "") not in {
             "cloud_provider",
             "cloud_model",
         }:
             return None
-        return payload if int(payload.get("id") or 0) > 0 else None
+        if int(payload.get("id") or 0) <= 0:
+            return None
+        self._selected_cloud_model_record = {key: value for key, value in payload.items() if key != "free_model_test_route"}
+        # Routing metadata describes the whole provider catalogue. Keep it once
+        # in Python, never N times in Qt's per-row QVariant trees.
+        selected = dict(self._selected_cloud_model_record)
+        route = self._cloud_routes_by_provider.get(self._cloud_provider_key(payload))
+        if route is not None:
+            selected["free_model_test_route"] = route
+        return selected
 
     def _resource_plan_for_record(self, record: dict[str, Any]):
         key = "|".join(
@@ -4190,13 +5032,12 @@ class AITab(QWidget):
         if key not in self._resource_plan_cache:
             plan_payload = record.get("resource_plan")
             if isinstance(plan_payload, dict) and "safe_to_run" in plan_payload:
-                self._resource_plan_cache[key] = SimpleNamespace(
-                    safe_to_run=bool(plan_payload.get("safe_to_run")),
-                    profile=_safe_text(plan_payload.get("profile"), "precomputed"),
-                    reason=_safe_text(plan_payload.get("reason"), ""),
-                    num_ctx=int(plan_payload.get("num_ctx") or 512),
-                    max_tokens=int(plan_payload.get("max_tokens") or 128),
-                )
+                effective = {**plan_payload, "safe_to_run": bool(plan_payload.get("safe_to_run")),
+                    "profile": _safe_text(plan_payload.get("profile"), "precomputed"),
+                    "reason": _safe_text(plan_payload.get("reason"), ""),
+                    "num_ctx": int(plan_payload.get("num_ctx") or 512),
+                    "max_tokens": int(plan_payload.get("max_tokens") or 128)}
+                self._resource_plan_cache[key] = SimpleNamespace(**effective)
             else:
                 self._resource_plan_cache[key] = build_local_resource_plan(record)
         return self._resource_plan_cache[key]
@@ -4204,14 +5045,21 @@ class AITab(QWidget):
     def _on_model_selection_changed(self) -> None:
         item = self.model_list.currentItem()
         payload = item.data(Qt.ItemDataRole.UserRole) if item is not None else None
+        if isinstance(payload, dict) and payload.get("_source_kind") == "cloud_provider_header":
+            payload = self._selected_provider_record()
         if isinstance(payload, dict):
+            restored = self._restored_model_choice or {}
+            if payload.get("_source_kind") == "cloud_model" and restored.get("source") == AI_CHAT_SOURCE_CLOUD_VALUE:
+                if (int(payload.get("id") or 0), payload.get("default_model")) != (restored["provider_id"], restored["model_name"]):
+                    self._restored_model_choice = None
+            elif payload.get("_source_kind") == "local_model" and restored.get("source") == AI_CHAT_SOURCE_LOCAL_VALUE:
+                expected = (restored.get("model_record") or {}).get("local_path") or restored["model_name"]
+                if payload.get("local_path") != expected:
+                    self._restored_model_choice = None
             if _safe_text(payload.get("_source_kind"), "") == "cloud_model":
                 self._last_selected_cloud_model_id = _safe_text(payload.get("default_model"), "")
-            effort = _safe_text(payload.get("reasoning_effort"), "auto").casefold()
-            index = self.reasoning_combo.findData(effort)
-            self.reasoning_combo.blockSignals(True)
-            self.reasoning_combo.setCurrentIndex(index if index >= 0 else 0)
-            self.reasoning_combo.blockSignals(False)
+                self._selected_cloud_model_record = dict(payload)
+            self._sync_reasoning_choices(payload)
             self.fallback_checkbox.blockSignals(True)
             self.fallback_checkbox.setChecked(bool(payload.get("allow_model_fallback", True)))
             self.fallback_checkbox.blockSignals(False)
@@ -4219,25 +5067,73 @@ class AITab(QWidget):
         self._update_chat_controls()
 
     def _on_source_changed(self) -> None:
+        if not self._restoring_model_choice:
+            self._restored_model_choice = None
         source = str(self.source_combo.currentData() or AI_CHAT_SOURCE_LOCAL_VALUE)
         is_local = source == AI_CHAT_SOURCE_LOCAL_VALUE
-        self.model_list.clear()
+        self._model_filter_timer.stop()
+        with QSignalBlocker(self.model_search):
+            self.model_search.clear()
+        with QSignalBlocker(self.model_list):
+            self.model_list.clear()
         self.model_list.setEnabled(True)
         self.btn_refresh_models.setEnabled(True)
         self.source_list_label.setText(AI_CHAT_LOCAL_MODELS_LABEL if is_local else AI_CHAT_CLOUD_PROVIDERS_LABEL)
         self.active_source_pill.setText(AI_CHAT_SOURCE_PILL_LOCAL_TEXT if is_local else AI_CHAT_SOURCE_PILL_CLOUD_TEXT)
         self.runner_status.setText(AI_CHAT_LOCAL_RUNNER_STATUS_TEXT if is_local else AI_CHAT_CLOUD_RUNNER_STATUS_TEXT)
         self._sync_model_panel_mode()
-        self._refresh_current_source()
+        if not is_local and self._cloud_model_groups:
+            self._populate_cloud_model_list(self._cloud_model_groups)
+            if self._cloud_catalog_stale:
+                self._refresh_cloud_providers()
+        else:
+            self._refresh_current_source()
         self._update_chat_controls()
+
+    def _sync_reasoning_choices(self, payload: dict[str, Any] | None) -> bool:
+        """Use the same model capability contract as the provider transport."""
+        payload = dict(payload or {})
+        selected = _safe_text(payload.get("reasoning_effort") or
+            dict(payload.get("runtime_config") or {}).get("reasoning_effort"), "auto").casefold()
+        model_name = _model_display_name(payload) if payload else ""
+        default_effort = ""
+        if self.source_combo.currentData() == AI_CHAT_SOURCE_LOCAL_VALUE:
+            capabilities = dict(payload.get("runtime_capabilities") or {})
+            supported = capabilities.get("supports_reasoning_effort") is not False
+            efforts = ["auto", "low", "medium", "high"] if supported else ["auto"]
+        else:
+            metadata = dict(payload.get("model_metadata") or {})
+            reasoning = dict(metadata["reasoning"]) if isinstance(metadata.get("reasoning"), dict) else {}
+            fresh_metadata = "supported_parameters" in metadata or bool(reasoning)
+            resolved = provider_reasoning_capabilities(
+                _safe_text(payload.get("provider_code"), ""),
+                _safe_text(payload.get("default_model"), ""), model_metadata=metadata
+            ) if fresh_metadata else dict(payload.get("reasoning_capabilities") or {}) or provider_reasoning_capabilities(
+                _safe_text(payload.get("provider_code"), ""),
+                _safe_text(payload.get("default_model"), ""), model_metadata=metadata)
+            # A legacy/manual model entry without catalogue capabilities is
+            # unknown, rather than evidence that reasoning is unsupported.
+            known = bool(payload.get("reasoning_capabilities")) or "supported_parameters" in metadata or bool(reasoning)
+            if known or resolved.get("supported"):
+                supported = bool(resolved.get("supported"))
+                efforts = list(resolved.get("efforts") or ["auto"])
+            else:
+                supported = True
+                efforts = ["auto", "low", "medium", "high"]
+            default_effort = _safe_text(resolved.get("default_effort") or reasoning.get("default_effort"), "")
+        self.reasoning_combo.configure_efforts(efforts, selected=selected,
+            default_effort=default_effort, model_name=model_name)
+        return supported
 
     def _update_chat_controls(self) -> None:
         source = str(self.source_combo.currentData() or AI_CHAT_SOURCE_LOCAL_VALUE)
         record = self._selected_local_record()
         provider = self._selected_provider_record()
-        reasoning_label = self.reasoning_combo.currentText().replace("Zekâ: ", "").strip() or "Otomatik"
+        supports_effort = self._sync_reasoning_choices(record if source == AI_CHAT_SOURCE_LOCAL_VALUE else provider)
+        reasoning_label = self.reasoning_combo.currentText().strip() or "Otomatik"
         message_ready = bool(self.composer.toPlainText().strip())
         busy = self._worker_is_running()
+        self._sync_task_session_controls()
         local_blocked = False
         selection_ready = False
 
@@ -4246,24 +5142,38 @@ class AITab(QWidget):
             repo_id = _safe_text(record.get("repo_id"))
             display_name = _model_display_name(record)
             plan = self._resource_plan_for_record(record)
-            local_blocked = not bool(getattr(plan, "safe_to_run", True))
+            local_blocked = not bool(getattr(plan, "safe_to_run", True)) or not record.get("exists_on_disk", True)
+            plan_data = plan.to_dict() if hasattr(plan, "to_dict") else {
+                **dict(vars(plan)),
+                **{key: getattr(plan, key) for key in ("safe_to_run", "profile", "reason", "num_ctx", "max_tokens") if hasattr(plan, key)},
+            }
+            self.selected_local_plan.setText(_local_plan_description(plan_data))
+            self.selected_local_plan.setStyleSheet("color: #B91C1C;" if local_blocked else "")
+            if not record.get("exists_on_disk", True):
+                self.selected_local_plan.setText("Model dosyası bulunamadı. Model Hub'dan yeniden indirin.")
             self.brain_label.setText(AI_CHAT_ACTIVE_BRAIN_TEMPLATE.format(repo_id=repo_id))
             self.active_brain_badge.setText(AI_CHAT_BRAIN_TEMPLATE.format(repo_id=repo_id))
             self.composer_meta.setText(
-                f"{AI_CHAT_SELECTED_LOCAL_BRAIN_TEMPLATE.format(repo_id=repo_id)} | {plan.profile}, ctx {plan.num_ctx}, out {plan.max_tokens}"
+                f"{display_name} · Yerel"
                 if not local_blocked
-                else f"{AI_CHAT_SELECTED_LOCAL_BRAIN_TEMPLATE.format(repo_id=repo_id)} | bloke: {plan.reason}"
+                else f"{display_name} · Kaynak kontrolü gerekli"
+            )
+            self.composer_meta.setToolTip(
+                f"{repo_id}\nBağlam: {plan.num_ctx:,} · Yanıt: {plan.max_tokens:,} token"
+                if not local_blocked else str(plan.reason)
             )
             self.chat_status.setText(
-                "Yerel model düşünüyor..."
+                "İşlem sürüyor"
                 if busy
-                else f"Yerel · {display_name} · Zekâ: {reasoning_label}"
+                else f"Yerel · {display_name} · Akıl yürütme: {reasoning_label}"
             )
             self.session_hint_badge.setText("İşlem sürüyor" if busy else "Yerel runner bağlı")
             if local_blocked:
-                self.chat_status.setText("Yerel model guvenli degil")
-                self.session_hint_badge.setText("OS koruma aktif")
+                self.chat_status.setText("Yerel model başlatılamaz")
+                self.session_hint_badge.setText("Kaynak kontrolü")
         elif source == AI_CHAT_SOURCE_LOCAL_VALUE:
+            self.selected_local_plan.setStyleSheet("")
+            self.selected_local_plan.setText("Yerel model bulunamadı. Model Hub'dan GGUF model indirin, ardından bu listeyi yenileyin.")
             self.brain_label.setText(AI_CHAT_ACTIVE_BRAIN_TEXT)
             self.active_brain_badge.setText(AI_CHAT_BRAIN_UNSELECTED)
             self.composer_meta.setText(AI_CHAT_SELECT_LOCAL_MODEL_TEXT)
@@ -4272,17 +5182,28 @@ class AITab(QWidget):
         elif provider:
             label = _safe_text(provider.get("label"))
             model = _safe_text(provider.get("default_model"), "model belirtilmedi")
-            selection_ready = bool(_safe_text(provider.get("default_model"), ""))
+            unavailable = _safe_text(provider.get("_selection_unavailable"), "")
+            selection_ready = bool(_safe_text(provider.get("default_model"), "")) and not unavailable
             self.brain_label.setText(f"Aktif beyin: {label}")
             self.active_brain_badge.setText(f"Beyin: {model}")
             if selection_ready:
-                self.composer_meta.setText(f"Seçili cloud beyin: {label} / {model}")
+                metadata = dict(provider.get("model_metadata") or {})
+                name = _safe_text(metadata.get("name"), model)
+                pricing = dict(metadata.get("pricing") or {})
+                free = bool(pricing) and all(str(pricing.get(key, "")) in {"0", "0.0"} for key in ("prompt", "completion"))
+                self.composer_meta.setText(f"{name} · Ücretsiz" if free else name)
+                self.composer_meta.setToolTip(f"{label}\n{model}\nAkıl yürütme: {reasoning_label}")
                 self.chat_status.setText(
-                    "Cloud model düşünüyor..."
+                    "İşlem sürüyor"
                     if busy
-                    else f"{label} · {model} · Zekâ: {reasoning_label}"
+                    else f"{label} · {model} · Akıl yürütme: {reasoning_label}"
                 )
                 self.session_hint_badge.setText("İşlem sürüyor" if busy else "Cloud runner bağlı")
+            elif unavailable:
+                self.composer_meta.setText(model + " · Kullanılamıyor")
+                self.composer_meta.setToolTip(unavailable)
+                self.chat_status.setText(unavailable)
+                self.session_hint_badge.setText("Model seçimi gerekli")
             else:
                 self.composer_meta.setText(AI_CHAT_CLOUD_MODEL_MISSING_TEXT)
                 self.chat_status.setText(AI_CHAT_CLOUD_WAITING_TEXT)
@@ -4302,13 +5223,49 @@ class AITab(QWidget):
         self.btn_attach.setEnabled(not busy)
         self.source_combo.setEnabled(not busy)
         self.model_list.setEnabled(not busy)
-        self.btn_refresh_models.setEnabled(not busy and self._models_worker is None and self._providers_worker is None)
-        self.btn_send.setText("Yönlendir" if can_guide else "Düşünüyor..." if busy else AI_CHAT_SEND_BUTTON_TEXT)
+        self.btn_advanced_model_settings.setEnabled(selection_ready and not busy)
+        if self._resource_plan_worker is not None:
+            self.btn_advanced_model_settings.setEnabled(False)
+        self.reasoning_combo.setEnabled(selection_ready and not busy and supports_effort and self._resource_plan_worker is None)
+        if busy:
+            reasoning_hint = "İşlem tamamlanınca akıl yürütme düzeyini ayarlayabilirsiniz."
+        elif self._resource_plan_worker is not None:
+            reasoning_hint = "Modelin kaynak planı hazırlanıyor."
+        elif not selection_ready:
+            reasoning_hint = _safe_text((provider or {}).get("_selection_unavailable"), "Önce bu sohbet için bir model seçin.")
+        elif not supports_effort:
+            reasoning_hint = "Bu model ayarlanabilir akıl yürütme düzeyi sunmuyor."
+        else:
+            reasoning_hint = "Akıl yürütme düzeyini ayarla"
+        self.reasoning_combo.setToolTip(reasoning_hint)
+        self.btn_refresh_models.setEnabled(not busy and self._models_worker is None and self._providers_worker is None
+                                          and self._provider_catalog_worker is None)
+        self.btn_send.setText("")
+        self.btn_send.setToolTip("Yönlendir" if can_guide else "Gönder")
+        self.btn_send.setAccessibleName("Yönlendir" if can_guide else "Gönder")
         self.btn_send.setEnabled(message_ready and selection_ready and (not busy or can_guide) and not local_blocked)
+        if source == AI_CHAT_SOURCE_LOCAL_VALUE and self._resource_plan_worker is not None:
+            self.selected_local_plan.setText("Kaynak planı hesaplanıyor…")
+            self.btn_send.setEnabled(False)
         self.btn_pause_task.setVisible(can_guide)
         self.btn_pause_task.setEnabled(can_guide and self._task_control is not None and not self._task_control.pause_requested)
+        display = self.composer_meta.text().split(" · ")[0]
+        self.btn_model_picker.setText(self.btn_model_picker.fontMetrics().elidedText(display, Qt.TextElideMode.ElideRight, 215))
+        self.btn_model_picker.setToolTip(self.composer_meta.toolTip() or self.composer_meta.text())
+        self.btn_model_picker.setEnabled(not busy)
+        self.btn_source_local.setEnabled(not busy)
+        self.btn_source_cloud.setEnabled(not busy)
+        for button in self.cloud_price_buttons.values():
+            button.setEnabled(not busy)
+        self.fallback_checkbox.setEnabled(selection_ready and not busy)
+        self.conversation_sidebar.set_busy(busy)
+        self.btn_run_details.setEnabled(bool(self._activity_run_id))
+        self._refresh_chat_title()
+        if busy:
+            self._model_popup.hide()
 
     def _open_model_hub(self) -> None:
+        self._model_popup.hide()
         if self._model_hub_window is not None and self._model_hub_window.isVisible():
             self._model_hub_window.raise_()
             self._model_hub_window.activateWindow()
@@ -4321,10 +5278,14 @@ class AITab(QWidget):
 
     def _on_model_hub_closed(self) -> None:
         self._model_hub_window = None
+        self._cloud_catalog_stale = True
         self._refresh_current_source()
 
     def closeEvent(self, event) -> None:
+        self._model_popup.close()
         self._is_disposing = True
+        self._model_filter_timer.stop()
+        self._invalidate_chat_response()
         self._schedule_timer.stop()
         if self._task_control is not None:
             self._task_control.request_pause()
@@ -4336,6 +5297,7 @@ class AITab(QWidget):
             self._models_worker,
             self._providers_worker,
             self._provider_catalog_worker,
+            self._resource_plan_worker,
         ):
             self._shutdown_worker(worker)
         self._chat_worker = None
@@ -4343,12 +5305,14 @@ class AITab(QWidget):
         self._models_worker = None
         self._providers_worker = None
         self._provider_catalog_worker = None
+        self._resource_plan_worker = None
+        self._persist_chat_session()
         super().closeEvent(event)
 
     def _shutdown_worker(self, worker: SyncWorker | None) -> None:
         if worker is None:
             return
-        for signal_name in ("result_ready", "progress", "finished"):
+        for signal_name in ("result_ready", "progress", "response_event", "finished"):
             signal = getattr(worker, signal_name, None)
             if signal is None or not hasattr(signal, "disconnect"):
                 continue
@@ -4367,19 +5331,30 @@ class AITab(QWidget):
             pass
 
     def _reset_chat(self) -> None:
+        if self._worker_is_running():
+            return
+        if (self._chat_history or self.composer.toPlainText() or self._queued_guidance) and not self._persist_chat_session():
+            return
+        new_state = AgentSessionState(goal="OrderScout AI conversation", active_domain="orders").to_dict()
+        try:
+            save_active_chat_session(new_state, [])
+        except Exception as exc:
+            self._append_chat_activity("Yeni sohbet açılamadı: " + _safe_text(exc), notice=True)
+            return
+        self._chat_restore_failed = False
+        self._invalidate_chat_response()
+        self._activity_runs.clear()
         self._queued_guidance.clear()
         self._task_control = None
         self.transcript.clear()
         self._chat_message_count = 0
         self._chat_history.clear()
-        self._conversation_state = AgentSessionState(
-            goal="OrderScout AI conversation",
-            active_domain="orders",
-        ).to_dict()
+        self._conversation_state = new_state
         self._approval_card_actions.clear()
         self._latest_approval_card_token = ""
         self._superseded_actions.clear()
         self._delivered_artifacts.clear()
+        self._shown_artifact_cards.clear()
         self._restored_task_session_ids.clear()
         self._last_task_progress_message = ""
         self.composer.clear()
@@ -4388,11 +5363,14 @@ class AITab(QWidget):
         self._set_agent_state(status="reset")
         self._refresh_chat_surface()
         self._update_chat_controls()
+        self._refresh_conversations()
 
     def _request_task_pause(self) -> None:
         if self._task_control is None or self._chat_worker is None:
             return
         self._task_control.request_pause()
+        self._flush_chat_response()
+        self._set_chat_response_label("Duraklatma isteniyor")
         self._append_chat_activity("Duraklatma istendi; sürmekte olan adımın sonucu kaydedilince çalışma duracak.")
         self._update_chat_controls()
 
@@ -4416,8 +5394,16 @@ class AITab(QWidget):
             self._chat_history.append({"role": "user", "content": text})
             self._queued_guidance.append(text)
             self._task_control.request_pause(reason="user_revision", user_message=text)
+            self._flush_chat_response()
+            self._set_chat_response_label("Talimatınla devam edilecek")
+            self._persist_chat_session()
             self._append_chat_activity("Yeni talimatını aldım; mevcut adımın sonucunu koruyup bu talimatla devam edeceğim.")
             self._update_chat_controls()
+            return
+
+        provider = self._selected_provider_record() if self.source_combo.currentData() == AI_CHAT_SOURCE_CLOUD_VALUE else None
+        if provider and provider.get("_selection_unavailable") and not self._approval_reply_intent(text):
+            self._append_chat_activity(str(provider["_selection_unavailable"]), notice=True)
             return
 
         pending_before_read = self._pending_action_from_state()
@@ -4434,6 +5420,7 @@ class AITab(QWidget):
         self.composer.clear()
         if not already_recorded:
             self._chat_history.append({"role": "user", "content": text})
+        self._persist_chat_session()
         superseded = None if model_owned else self._supersede_pending_action_for_revision(text)
         if superseded is False:
             self._append_chat_message(
@@ -4445,6 +5432,7 @@ class AITab(QWidget):
             self._update_chat_controls()
             return
         if superseded is None and self._handle_pending_action_reply(text):
+            self._persist_chat_session()
             return
         self._set_agent_state(
             status="running",
@@ -4461,25 +5449,18 @@ class AITab(QWidget):
                 self._append_chat_message("assistant", AI_CHAT_NO_LOCAL_MODEL_TEXT)
                 return
             plan = self._resource_plan_for_record(record)
-            estimated_seconds = self._estimate_chat_duration_seconds(source, None, text)
-            self._append_chat_activity(
-                f"Local runner hazirlaniyor: {_safe_text(record.get('repo_id'))} / {getattr(plan, 'profile', 'auto')} / ctx {getattr(plan, 'num_ctx', '-')}"
-            )
+            preparation = f"Yerel model: {_safe_text(record.get('repo_id'))} / {getattr(plan, 'profile', 'auto')} / ctx {getattr(plan, 'num_ctx', '-')}"
         else:
             record = self._selected_provider_record()
             if not record:
                 self._append_chat_message("assistant", AI_CHAT_SELECT_CLOUD_PROVIDER_TEXT)
                 return
-            estimated_seconds = self._estimate_chat_duration_seconds(source, None, text)
-            self._append_chat_activity(
-                f"Cloud runner hazirlaniyor: {_safe_text(record.get('label'))} / {_safe_text(record.get('default_model'), 'model')}"
-            )
+            preparation = f"Cloud model: {_safe_text(record.get('label'))} / {_safe_text(record.get('default_model'), 'model')}"
 
-        self._append_chat_activity(AI_CHAT_AGENT_ACTIVITY_TEXT)
         from AI.processors.task_control import AgentTaskControl
         self._task_control = AgentTaskControl()
         history = [{"role": "user", "content": text}] if fresh_history else list(self._chat_history)
-        self._chat_worker = SyncWorker(
+        self._chat_worker = _make_chat_worker(
             _run_chat_turn_with_runtime,
             text,
             parent=self,
@@ -4489,11 +5470,16 @@ class AITab(QWidget):
             history=history,
             session_state=dict(self._conversation_state),
             task_control=self._task_control,
+            history_includes_current=True,
         )
-        self._start_chat_progress(estimated_seconds)
+        response_token = self._begin_chat_response(self._chat_worker)
+        self._start_chat_progress()
+        self._append_chat_activity(preparation)
         self._update_chat_controls()
 
         def _done(result: Result) -> None:
+            if not self._complete_chat_response(response_token):
+                return
             if result.success:
                 data = result.data or {}
                 returned_session_state = data.get("session_state")
@@ -4523,13 +5509,11 @@ class AITab(QWidget):
                 if not visible_tools and tool_call and tool_call.get("tool"):
                     visible_tools = [str(tool_call.get("tool"))]
                 if visible_tools:
-                    self._set_chat_progress(90, "Tool sonucu isleniyor", percent_text=f"90% | {self._format_chat_elapsed()}")
                     self._append_chat_activity(AI_CHAT_TOOL_ACTIVITY_TEMPLATE.format(tool=", ".join(visible_tools)))
                 action_proposal = data.get("action_proposal") if isinstance(data.get("action_proposal"), dict) else None
                 if bool(data.get("approval_required")) and action_proposal:
                     self._append_chat_activity("Hazırlanan işlem onayını bekliyor. Henüz çalıştırılmadı.")
                 answer = _safe_text(data.get("answer")) or result.message
-                self._set_chat_progress(96, "Cevap ekrana yaziliyor", percent_text=f"96% | {self._format_chat_elapsed()}")
                 self._append_chat_message("assistant", answer)
                 if bool(data.get("approval_required")) and action_proposal:
                     self._show_action_approval_dialog(action_proposal)
@@ -4549,10 +5533,15 @@ class AITab(QWidget):
                     self._conversation_state = dict(failed_state)
                     self._update_agent_state_from_result_data(failed_data)
                 self._append_chat_message("assistant", result.message)
+                self._chat_history.append({"role": "assistant", "content": result.message})
                 self._append_verified_artifact_links(failed_data)
                 self._last_chat_success = False
+            self._persist_chat_session()
 
         def _finished() -> None:
+            if not self._response_token_current(response_token):
+                return
+            self._finish_chat_response(response_token)
             self._chat_worker = None
             self._task_control = None
             self._finish_chat_progress(self._last_chat_success)
@@ -4561,9 +5550,6 @@ class AITab(QWidget):
                 QTimer.singleShot(0, self._run_queued_guidance)
 
         self._chat_worker.result_ready.connect(_done)
-        progress_signal = getattr(self._chat_worker, "progress", None)
-        if progress_signal is not None and hasattr(progress_signal, "connect"):
-            progress_signal.connect(self._on_task_progress)
         self._chat_worker.finished.connect(_finished)
         self._chat_worker.start()
         self._update_chat_controls()
@@ -4572,14 +5558,17 @@ class AITab(QWidget):
         self._splitter_guard = False
         self._sync_sidebar_state_from_splitter()
 
-    def _is_model_panel_open(self) -> bool:
+    def _is_conversation_list_open(self) -> bool:
         sizes = self._tab_splitter.sizes()
         if len(sizes) < 2:
             return False
         return int(sizes[0]) > 8
 
     def _sync_sidebar_state_from_splitter(self) -> None:
-        self._panel_sidebar.set_active_panel("models" if self._is_model_panel_open() else None)
+        if hasattr(self, "btn_toggle_history"):
+            label = "Sohbet listesini gizle" if self._is_conversation_list_open() else "Sohbet listesini göster"
+            self.btn_toggle_history.setToolTip(label)
+            self.btn_toggle_history.setAccessibleName(label)
 
     def _splitter_total_size(self) -> int:
         sizes = self._tab_splitter.sizes()
@@ -4597,52 +5586,30 @@ class AITab(QWidget):
         self._tab_splitter.setSizes([clamped, max(0, int(total) - clamped)])
         QTimer.singleShot(0, self._release_splitter_guard)
 
-    def _open_model_panel(self) -> None:
-        if self._is_model_panel_open():
+    def _open_conversation_list(self) -> None:
+        if self._is_conversation_list_open():
             self._sync_sidebar_state_from_splitter()
             return
         total = self._splitter_total_size()
-        min_left = 320
+        min_left = 200
         target = max(min_left, min(self._left_stick_size, total - 320))
         if target <= 0:
             target = min_left
         self._snap_splitter(target, total)
         self._sync_sidebar_state_from_splitter()
 
-    def _close_model_panel(self) -> None:
-        if not self._is_model_panel_open():
+    def _close_conversation_list(self) -> None:
+        if not self._is_conversation_list_open():
             self._sync_sidebar_state_from_splitter()
             return
         total = self._splitter_total_size()
         self._snap_splitter(0, total)
         self._sync_sidebar_state_from_splitter()
 
-    def _on_panel_sidebar_toggled(self, panel_id: str, active: bool) -> None:
-        if panel_id != "models":
-            return
-        if active:
-            self._open_model_panel()
-        else:
-            self._close_model_panel()
-
     def _on_tab_splitter_moved(self, pos: int, _index: int) -> None:
         if self._splitter_guard:
             return
-        try:
-            sizes = self._tab_splitter.sizes()
-            if len(sizes) < 2:
-                return
-            left, right = int(sizes[0]), int(sizes[1])
-            total = left + right
-            if total <= 0:
-                return
-            if left >= self._left_stick_size:
-                return
-            if pos <= self._left_collapse_trigger:
-                self._snap_splitter(0, total)
-                return
-            if left < self._left_stick_size:
-                self._snap_splitter(self._left_stick_size, total)
-        except Exception:
-            self._splitter_guard = False
+        sizes = self._tab_splitter.sizes()
+        if sizes and sizes[0] > 0 and pos < self._left_collapse_trigger:
+            self._snap_splitter(0, sum(sizes))
         self._sync_sidebar_state_from_splitter()

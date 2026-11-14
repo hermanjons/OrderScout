@@ -1477,13 +1477,26 @@ class TestOrdersBehavioralE2E(IsolatedDbTestCase):
         line_id: int = 1,
         product_name: str = "Demo Urun",
         cancel_reason: str | None = None,
+        bind_snapshot: bool = False,
     ) -> None:
         with Session(get_engine(self.db_path)) as session:
+            scope = {}
+            if bind_snapshot:
+                order = session.exec(select(OrderData).where(OrderData.orderNumber == order_number)
+                                     .order_by(OrderData.lastModifiedDate.desc())).first()
+                self.assertIsNotNone(order)
+                scope = {"api_account_id": order.api_account_id, "order_data_pk": order.pk,
+                         "order_header_id": order.order_header_id}
+                package_id = order.id
+                stamp = order.lastModifiedDate
+            else:
+                package_id, stamp = 1, now_ms
             session.add(
                 OrderItem(
                     orderNumber=order_number,
-                    order_data_id=1,
-                    snapshotLastModifiedDate=now_ms,
+                    order_data_id=package_id,
+                    snapshotLastModifiedDate=stamp,
+                    **scope,
                     quantity=2,
                     productName=product_name,
                     merchantSku="SKU-BEHAVIORAL",
@@ -10982,7 +10995,7 @@ class TestOrdersBehavioralE2E(IsolatedDbTestCase):
 
     def test_order_profit_excel_export_executes_file_write_and_audit(self) -> None:
         now_ms = self._seed_ready_orders()
-        self._insert_order_item("ORD-MAHMUT-READY", now_ms + 2_000, product_name="Mahmut Test Urunu")
+        self._insert_order_item("ORD-MAHMUT-READY", now_ms + 2_000, product_name="Mahmut Test Urunu", bind_snapshot=True)
 
         with tempfile.TemporaryDirectory() as temp_dir:
             output_path = Path(temp_dir) / "mahmut-profit.xlsx"
@@ -11014,7 +11027,9 @@ class TestOrdersBehavioralE2E(IsolatedDbTestCase):
 
             workbook = load_workbook(output_path, read_only=True)
             try:
-                self.assertEqual(set(workbook.sheetnames), {"Ozet", "Satis", "Maliyetler"})
+                self.assertEqual({sheet.title for sheet in workbook if sheet.sheet_state == "visible"},
+                                 {"Ozet", "Satis", "Maliyetler"})
+                self.assertEqual(workbook["_OrderScout"].sheet_state, "hidden")
                 summary_rows = list(workbook["Ozet"].iter_rows(values_only=True))
                 self.assertIn(("Sipariş", "ORD-MAHMUT-READY"), summary_rows)
                 sales_rows = list(workbook["Satis"].iter_rows(values_only=True))
@@ -11024,8 +11039,8 @@ class TestOrdersBehavioralE2E(IsolatedDbTestCase):
 
     def test_followup_customer_refined_profit_excel_export_writes_that_order_only(self) -> None:
         now_ms = self._seed_ready_orders()
-        self._insert_order_item("ORD-MAHMUT-READY", now_ms + 2_000, product_name="Mahmut Test Urunu")
-        self._insert_order_item("ORD-AYSE-READY", now_ms + 3_000, product_name="Ayse Test Urunu")
+        self._insert_order_item("ORD-MAHMUT-READY", now_ms + 2_000, product_name="Mahmut Test Urunu", bind_snapshot=True)
+        self._insert_order_item("ORD-AYSE-READY", now_ms + 3_000, product_name="Ayse Test Urunu", bind_snapshot=True)
 
         listed = run_agent_turn("Kargoya hazir siparisleri getir", db_name=self.db_path)
         self.assertTrue(listed.success, listed.message)

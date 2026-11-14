@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from AI.runtime.listing_contracts import listing_read_tool
+
 from AI.runtime.contracts import AgentTool, OperationInputSource
 
 import html
@@ -3646,15 +3648,6 @@ def operations_prepare_manual_action(
         return Result.fail(map_error_to_message(exc), error=exc, close_dialog=False)
 
 
-def _stock_tx_delta(tx: Any) -> tuple[int, float]:
-    item_id = int(getattr(tx, "item_id", 0) or 0)
-    qty = _optional_float(getattr(tx, "qty", 0))
-    direction = _enum_text(getattr(tx, "direction", "")).casefold()
-    if direction.endswith("out"):
-        qty = -qty
-    return item_id, qty
-
-
 def _epoch_ms_for_day(day: date) -> tuple[int, int]:
     start_dt = datetime.combine(day, time.min, tzinfo=TZ_GMT3)
     end_dt = datetime.combine(day, time.max, tzinfo=TZ_GMT3)
@@ -3822,33 +3815,13 @@ def _record_scope_account_metadata(
 
     account_scopes: list[dict[str, Any]] = []
     environment_by_account: dict[str, str] = {}
+    from Account.processors.environment import account_environment_scope
+
     for account_pk in account_ids:
         account = accounts_by_pk.get(account_pk)
-        extra_config = (
-            dict(getattr(account, "extra_config", None) or {})
-            if account is not None
-            else {}
-        )
-        environment = _compact_text(
-            extra_config.get("environment")
-            or extra_config.get("api_environment")
-            or extra_config.get("stage")
-        ).casefold()
-        environment_source = "account.extra_config"
-        if environment in {"true", "1", "stage", "staging", "test"}:
-            environment = "stage"
-        elif environment in {"false", "0", "prod", "production", "live"}:
-            environment = "production"
-        elif _compact_text(getattr(account, "platform", "")).casefold() == "trendyol":
-            # The legacy Trendyol account/runtime uses the production catalog
-            # unless stage is explicitly selected in extra_config. Keeping the
-            # source makes the default auditable instead of silently returning
-            # an untraceable "unknown" scope.
-            environment = "production"
-            environment_source = "trendyol_catalog_default"
-        else:
-            environment = "unknown"
-            environment_source = "unresolved"
+        environment_scope = account_environment_scope(account)
+        environment = environment_scope["environment"]
+        environment_source = environment_scope["environment_source"]
         account_key = str(account_pk)
         environment_by_account[account_key] = environment
         account_scopes.append(
@@ -4115,6 +4088,8 @@ def orders_status_counts(
                 **meta,
                 "total_orders": total_orders,
                 "status_counts": dict(data.get("status_counts") or {}),
+                "status_rates": dict(data.get("status_rates") or {}),
+                "status_labels": dict(data.get("status_labels") or {}),
                 "tool": "orders.status_counts",
             },
         )
@@ -4191,6 +4166,10 @@ def orders_revenue_total(
                 "currency": currency,
                 "currencies": currencies,
                 "revenue_by_currency": revenue_by_currency,
+                "revenue_order_count": int(data.get("revenue_order_count") or 0),
+                "cancelled_orders": int(data.get("cancelled_orders") or 0),
+                "revenue_basis": data.get("revenue_basis"),
+                "excluded_revenue_statuses": list(data.get("excluded_revenue_statuses") or []),
                 "tool": "orders.revenue_total",
             },
         )
@@ -4237,6 +4216,12 @@ def recent_orders(
             db_name=db_name,
             requested_account_ids=api_account_ids,
         )
+        population_account_ids = list(data.pop("population_scope_account_ids", []) or [])
+        population_account_scopes, _, population_environment_by_account = _order_scope_account_metadata(
+            [{"api_account_id": account_id, "order_number": ""} for account_id in population_account_ids],
+            db_name=db_name,
+            requested_account_ids=api_account_ids,
+        )
         return Result.ok(
             f"Son {len(rows)} sipariş getirildi.",
             close_dialog=False,
@@ -4255,6 +4240,8 @@ def recent_orders(
                 "account_scopes": account_scopes,
                 "account_by_order": account_by_order,
                 "environment_by_account": environment_by_account,
+                "population_account_scopes": population_account_scopes,
+                "population_environment_by_account": population_environment_by_account,
                 "requested_api_account_ids": sorted(
                     int(value)
                     for value in list(api_account_ids or [])
@@ -5948,26 +5935,29 @@ def profit_estimate(
     api_account_ids: list[int] | None = None,
 ) -> Result:
     try:
-        orders, meta = _latest_orders(db_name=db_name, period=period, start_date=start_date, end_date=end_date, api_account_ids=api_account_ids)
-        revenue = sum(
-            _optional_float(getattr(row, "packageTotalPrice", None) or getattr(row, "totalPrice", None))
-            for row in orders
-            if not _is_cancelled_status(_status_text(row))
-        )
-        eligible_orders = [
-            row
-            for row in orders
-            if not _is_cancelled_status(_status_text(row))
-        ]
-        from Orders.views.actions import estimate_orders_profit_summary
+        from Finance.processors.profit import read_profit_estimate
 
-        summary_res = estimate_orders_profit_summary(
-            orders=eligible_orders,
-            db_name=db_name,
+        start_ms, end_ms, label = _period_range(period, start_date=start_date, end_date=end_date)
+        summary_res = read_profit_estimate(
+            db_name=db_name, start_ms=start_ms, end_ms=end_ms,
+            api_account_ids=api_account_ids,
         )
         if not summary_res.success:
             return summary_res
         summary = dict(summary_res.data or {})
+        account_scopes, account_by_order, environment_by_account = _order_scope_account_metadata(
+            list(summary.get("rows") or []), db_name=db_name,
+            requested_account_ids=summary.get("requested_api_account_ids"),
+        )
+        meta = {
+            "period": period or "today", "period_label": label,
+            "start_ms": start_ms, "end_ms": end_ms,
+            "simulated_excluded": int(summary.get("simulated_excluded") or 0),
+            "requested_api_account_ids": list(summary.get("requested_api_account_ids") or []),
+            "api_account_ids": list(summary.get("api_account_ids") or []),
+            "account_scopes": account_scopes, "account_by_order": account_by_order,
+            "environment_by_account": environment_by_account,
+        }
         estimated_profit = summary.get("estimated_profit")
         ready = bool(summary.get("estimated_profit_ready"))
         missing_reasons = [
@@ -5987,8 +5977,8 @@ def profit_estimate(
             close_dialog=False,
             data={
                 **meta,
-                "orders": len(eligible_orders),
-                "revenue": _money(revenue),
+                "orders": int(summary.get("order_count") or 0),
+                "revenue": _money(summary.get("revenue")),
                 "estimated_profit": _money(estimated_profit) if estimated_profit is not None else None,
                 "partial_estimated_profit": summary.get("partial_estimated_profit"),
                 "estimated_profit_ready": ready,
@@ -6037,6 +6027,7 @@ def finance_profit_amount(
         message,
         close_dialog=False,
         data={
+            **data,
             "period": data.get("period", period),
             "period_label": data.get("period_label", period),
             "amount": amount,
@@ -6080,117 +6071,20 @@ def stock_inventory_overview(*, db_name: str = DB_NAME, limit: int = 12) -> Resu
     return result
 
 
-def stock_items_list(*, db_name: str = DB_NAME, limit: int = 20) -> Result:
-    try:
-        limit = max(1, min(100, int(limit or 20)))
-        items = _domain_records(stock_repo.list_items(active_only=True, db_name=db_name))
-        txs = _domain_records(stock_repo.list_transactions(db_name=db_name))
-
-        balances: dict[int, float] = {}
-        for tx in txs:
-            item_id, qty = _stock_tx_delta(tx)
-            if item_id <= 0:
-                continue
-            balances[item_id] = balances.get(item_id, 0.0) + qty
-
-        rows: list[dict[str, Any]] = []
-        for item in sorted(items, key=lambda row: _compact_text(getattr(row, "name", "")).casefold()):
-            pk = int(getattr(item, "pk", 0) or 0)
-            rows.append(
-                {
-                    "sku": _compact_text(getattr(item, "sku", "")),
-                    "name": _compact_text(getattr(item, "name", "")),
-                    "barcode": _compact_text(getattr(item, "barcode", "")),
-                    "balance": _money(balances.get(pk, 0.0)),
-                    "unit": _compact_text(getattr(item, "unit", "")) or "adet",
-                    "min_stock": _money(getattr(item, "min_stock", None)),
-                    "category": _compact_text(getattr(item, "category", "")),
-                    "brand": _compact_text(getattr(item, "brand", "")),
-                }
-            )
-        return Result.ok(
-            f"{len(items)} aktif stok urunu listelendi.",
-            close_dialog=False,
-            data={"total": len(items), "items": rows[:limit], "tool": "stock.items_list"},
-        )
-    except Exception as exc:
-        return Result.fail(map_error_to_message(exc), error=exc, close_dialog=False)
+def stock_items_list(*, db_name: str = DB_NAME, limit: int = 20, offset: int = 0) -> Result:
+    from Stock.processors.item_queries import query_items_with_balances
+    result = query_items_with_balances(db_name=db_name, limit=limit, offset=offset)
+    if result.success:
+        result.data = {**result.data, "tool": "stock.items_list"}
+    return result
 
 
-def _stock_balances(*, db_name: str = DB_NAME) -> dict[int, float]:
-    txs = _domain_records(stock_repo.list_transactions(db_name=db_name))
-    balances: dict[int, float] = {}
-    for tx in txs:
-        item_id, qty = _stock_tx_delta(tx)
-        if item_id <= 0:
-            continue
-        balances[item_id] = balances.get(item_id, 0.0) + qty
-    return balances
-
-
-def stock_search(*, db_name: str = DB_NAME, query: str = "", limit: int = 10) -> Result:
-    try:
-        limit = max(1, min(50, int(limit or 10)))
-        clean_query = _search_text(query)
-        terms = [part for part in clean_query.replace("-", " ").replace("_", " ").split() if len(part) >= 2]
-        items = _domain_records(stock_repo.list_items(active_only=True, db_name=db_name))
-        balances = _stock_balances(db_name=db_name)
-
-        scored: list[tuple[int, Any]] = []
-        for item in items:
-            haystack = " ".join(
-                _search_text(part)
-                for part in (
-                    getattr(item, "sku", ""),
-                    getattr(item, "name", ""),
-                    getattr(item, "barcode", ""),
-                    getattr(item, "brand", ""),
-                    getattr(item, "category", ""),
-                    getattr(item, "sub_category", ""),
-                    getattr(item, "model_code", ""),
-                    getattr(item, "location_code", ""),
-                )
-                if part
-            )
-            score = 0
-            if clean_query:
-                sku = _search_text(getattr(item, "sku", ""))
-                barcode = _search_text(getattr(item, "barcode", ""))
-                if clean_query in {sku, barcode}:
-                    score += 100
-                if clean_query in haystack:
-                    score += 30
-                score += sum(4 for term in terms if term in haystack)
-                if score <= 0:
-                    continue
-            scored.append((score, item))
-        scored.sort(key=lambda pair: (pair[0], _compact_text(getattr(pair[1], "name", "")).casefold()), reverse=True)
-        rows = []
-        for _score, item in scored[:limit]:
-            pk = int(getattr(item, "pk", 0) or 0)
-            rows.append(
-                {
-                    "sku": _compact_text(getattr(item, "sku", "")),
-                    "name": _compact_text(getattr(item, "name", "")),
-                    "barcode": _compact_text(getattr(item, "barcode", "")),
-                    "balance": _money(balances.get(pk, 0.0)),
-                    "unit": _compact_text(getattr(item, "unit", "")) or "adet",
-                    "brand": _compact_text(getattr(item, "brand", "")),
-                    "category": _compact_text(getattr(item, "category", "")),
-                    "location_code": _compact_text(getattr(item, "location_code", "")),
-                }
-            )
-        message = f"{len(rows)} stok urunu bulundu."
-        if len(rows) == 1:
-            row = rows[0]
-            message = f"Stok urunu: {row.get('name') or '-'} | SKU {row.get('sku') or '-'} | bakiye {row.get('balance')} {row.get('unit') or 'adet'}."
-        return Result.ok(
-            message,
-            close_dialog=False,
-            data={"query": query, "count": len(rows), "items": rows, "tool": "stock.search"},
-        )
-    except Exception as exc:
-        return Result.fail(map_error_to_message(exc), error=exc, close_dialog=False)
+def stock_search(*, db_name: str = DB_NAME, query: str = "", limit: int = 10, offset: int = 0) -> Result:
+    from Stock.processors.item_queries import query_items_with_balances
+    result = query_items_with_balances(db_name=db_name, query=query, limit=limit, offset=offset)
+    if result.success:
+        result.data = {**result.data, "tool": "stock.search"}
+    return result
 
 
 _STOCK_ITEM_CREATE_POLICY = AgentOperationPolicy(
@@ -6258,6 +6152,11 @@ def orders_prepare_fetch(
                 close_dialog=False,
                 data={"valid": False, "api_account_ids": []},
             )
+        from Account.processors.access import validate_remote_account_access
+        access=validate_remote_account_access(api_account_ids=account_ids,db_name=str(db_name or DB_NAME))
+        if not access.success:
+            return Result.fail(access.message,close_dialog=False,data={**dict(access.data or {}),
+                'tool':'orders.fetch.prepare','alternative_read_operations':['orders.query','orders.snapshot','orders.summary']})
         payload: dict[str, Any] = {
             "api_account_ids": account_ids,
             "db_name": str(db_name or DB_NAME),
@@ -6391,17 +6290,8 @@ _RETURN_RESTORE_STALE_POLICY = AgentOperationPolicy(
 
 
 def _stock_item_summary_row(item: Any) -> dict[str, Any]:
-    return {
-        "id": int(getattr(item, "pk", 0) or 0),
-        "sku": _compact_text(getattr(item, "sku", "")),
-        "name": _compact_text(getattr(item, "name", "")),
-        "barcode": _compact_text(getattr(item, "barcode", "")),
-        "brand": _compact_text(getattr(item, "brand", "")),
-        "category": _compact_text(getattr(item, "category", "")),
-        "sub_category": _compact_text(getattr(item, "sub_category", "")),
-        "unit": _compact_text(getattr(item, "unit", "")) or "adet",
-        "is_active": bool(getattr(item, "is_active", True)),
-    }
+    from Stock.processors.item_updates import item_update_snapshot
+    return item_update_snapshot(item)
 
 
 def _stock_match_items(*, db_name: str = DB_NAME, query: str = "", limit: int = 5) -> list[Any]:
@@ -7289,59 +7179,6 @@ def labels_prepare_mark_orders_extracted(
         return Result.fail(map_error_to_message(exc), error=exc, close_dialog=False)
 
 
-def _order_item_export_line(row: Any) -> dict[str, Any]:
-    qty = int(getattr(row, "quantity", 0) or 0) or 1
-    unit_price = _money(getattr(row, "price", None) or getattr(row, "amount", None))
-    amount = _money(getattr(row, "lineGrossAmount", None) or getattr(row, "lineUnitPrice", None) or (unit_price * qty))
-    return {
-        "title": _compact_text(getattr(row, "productName", "")) or _compact_text(getattr(row, "merchantSku", "")) or "Urun",
-        "listing_title": _compact_text(getattr(row, "productName", "")),
-        "qty": qty,
-        "qty_text": str(qty),
-        "unit_price": unit_price,
-        "unit_price_text": f"{unit_price:.2f} TL",
-        "amount": amount,
-        "amount_text": f"{amount:.2f} TL",
-    }
-
-
-def _order_profit_export_payload(row: Any, item_rows: list[Any]) -> dict[str, Any]:
-    order_number = _compact_text(getattr(row, "orderNumber", ""))
-    lines = [_order_item_export_line(item) for item in item_rows]
-    sale_price = _order_total_price(row)
-    if lines:
-        line_total = sum(float(line.get("amount") or 0.0) for line in lines)
-        if line_total > 0:
-            sale_price = _money(line_total)
-    return {
-        "estimated_profit": None,
-        "estimated_profit_text": "-",
-        "estimated_profit_ready": False,
-        "estimated_profit_missing_reasons": ["Agent export icin tam kar hesap payloadu yerine siparis satis/kalem ozeti kullanildi."],
-        "estimated_profit_detail": {
-            "summary": {
-                "order_number": order_number,
-                "line_count": len(lines),
-                "line_count_text": str(len(lines)),
-                "item_quantity_total": sum(int(line.get("qty") or 0) for line in lines),
-                "item_quantity_total_text": str(sum(int(line.get("qty") or 0) for line in lines)),
-                "sale_price": sale_price,
-                "sale_price_text": f"{sale_price:.2f} TL",
-            },
-            "results": {
-                "sale_price": sale_price,
-                "sale_price_text": f"{sale_price:.2f} TL",
-                "total_costs": 0.0,
-                "total_costs_text": "0.00 TL",
-                "estimated_profit": None,
-                "estimated_profit_text": "-",
-            },
-            "lines": lines,
-            "applied_costs": [],
-        },
-    }
-
-
 def orders_prepare_export_profit_excel(
     *,
     db_name: str = DB_NAME,
@@ -7385,22 +7222,13 @@ def orders_prepare_export_profit_excel(
             order = matched[0]
             order_number = _compact_text(getattr(order, "orderNumber", ""))
             account_id = getattr(order, "api_account_id", None)
-            scoped_account_ids = [int(account_id)] if account_id not in (None, "") else None
-            item_result = orders_repo.list_order_items(
-                [order_number],
-                api_account_ids=scoped_account_ids,
-                db_name=db_name,
-            )
-            if not item_result.success:
-                return item_result
-            item_rows = list((item_result.data or {}).get("records") or [])
-            latest_items: dict[Any, Any] = {}
-            for item in item_rows:
-                key = getattr(item, "lineId", None) or getattr(item, "id", None) or getattr(item, "pk", None)
-                if key not in latest_items:
-                    latest_items[key] = item
-            export_payload = _order_profit_export_payload(order, list(latest_items.values()))
-            normalized_path = str(Path(clean_output_path).expanduser())
+            from Orders.processors.profit_export import read_order_profit_export_payload
+            profit_result = read_order_profit_export_payload(order=order, db_name=db_name)
+            if not profit_result.success:
+                return profit_result
+            export_payload = profit_result.data["estimated_profit_payload"]
+            from Orders.processors.profit_workbook import normalize_profit_output_path
+            normalized_path = str(normalize_profit_output_path(clean_output_path)) if clean_output_path else ""
             before = _order_query_row(order)
             payload = {
                 "order_number": order_number,
@@ -8012,16 +7840,11 @@ def returns_prepare_approve(
 
 
 def stock_item_count(*, db_name: str = DB_NAME) -> Result:
-    try:
-        rows = _domain_records(stock_repo.list_items(db_name=db_name))
-        active = sum(1 for row in rows if bool(getattr(row, "is_active", True)))
-        return Result.ok(
-            f"{active} aktif stok karti var.",
-            close_dialog=False,
-            data={"total": len(rows), "active": active, "count": active, "tool": "stock.item_count"},
-        )
-    except Exception as exc:
-        return Result.fail(map_error_to_message(exc), error=exc, close_dialog=False)
+    from Stock.processors.item_queries import read_item_counts
+    result = read_item_counts(db_name=db_name)
+    if result.success:
+        result.data = {**result.data, "tool": "stock.item_count"}
+    return result
 
 
 def stock_zero_or_negative_count(*, db_name: str = DB_NAME) -> Result:
@@ -8036,68 +7859,15 @@ def stock_zero_or_negative_count(*, db_name: str = DB_NAME) -> Result:
     )
 
 
-def listing_summary(*, db_name: str = DB_NAME, limit: int = 8) -> Result:
-    try:
-        limit = max(1, min(30, int(limit or 8)))
-        rows = _domain_records(listing_repo.list_products(db_name=db_name))
+def listing_summary(*, db_name: str = DB_NAME, limit: int = 8, api_account_ids: list[int] | None = None) -> Result:
+    from Listing.processors.catalog_queries import read_listing_summary
+    result = read_listing_summary(db_name=db_name, limit=limit, api_account_ids=api_account_ids)
+    if result.success:
+        result.data = {**result.data, "tool": "listing.summary"}
+    return result
 
-        active_rows = [row for row in rows if not bool(getattr(row, "archived", False))]
-        archived_rows = [row for row in rows if bool(getattr(row, "archived", False))]
-        on_sale_rows = [row for row in active_rows if bool(getattr(row, "on_sale", False))]
-        not_on_sale_rows = [row for row in active_rows if not bool(getattr(row, "on_sale", False))]
-        approved_rows = [row for row in active_rows if bool(getattr(row, "approved", False))]
-        unapproved_rows = [row for row in active_rows if getattr(row, "approved", None) is False]
-        locked_rows = [row for row in active_rows if bool(getattr(row, "locked", False))]
-        waiting_rows = [
-            row
-            for row in active_rows
-            if getattr(row, "approved", None) is False or bool(getattr(row, "locked", False))
-        ]
-        out_of_stock_rows = [
-            row
-            for row in active_rows
-            if _optional_float(getattr(row, "quantity", 0)) <= 0
-        ]
-        sample_rows = sorted(
-            active_rows,
-            key=lambda row: _optional_float(getattr(row, "sale_price", None) or getattr(row, "list_price", None)),
-        )[:limit]
-
-        return Result.ok(
-            f"Lokal kayda gore {len(rows)} ilan/urun kaydi var.",
-            close_dialog=False,
-            data={
-                "total_listings": len(rows),
-                "active_listings": len(active_rows),
-                "archived": len(archived_rows),
-                "on_sale": len(on_sale_rows),
-                "not_on_sale": len(not_on_sale_rows),
-                "approved": len(approved_rows),
-                "unapproved": len(unapproved_rows),
-                "locked": len(locked_rows),
-                "needs_attention": len(waiting_rows),
-                "out_of_stock": len(out_of_stock_rows),
-                "sample_listings": [
-                    {
-                        "title": _compact_text(getattr(row, "title", "")),
-                        "barcode": _compact_text(getattr(row, "barcode", "")),
-                        "stock_code": _compact_text(getattr(row, "stock_code", "")),
-                        "quantity": _money(getattr(row, "quantity", 0)),
-                        "sale_price": _money(getattr(row, "sale_price", None) or getattr(row, "list_price", None)),
-                        "on_sale": bool(getattr(row, "on_sale", False)),
-                        "approved": bool(getattr(row, "approved", False)),
-                    }
-                    for row in sample_rows
-                ],
-                "tool": "listing.summary",
-            },
-        )
-    except Exception as exc:
-        return Result.fail(map_error_to_message(exc), error=exc, close_dialog=False)
-
-
-def listing_counts(*, db_name: str = DB_NAME) -> Result:
-    result = listing_summary(db_name=db_name, limit=1)
+def listing_counts(*, db_name: str = DB_NAME, api_account_ids: list[int] | None = None) -> Result:
+    result = listing_summary(db_name=db_name, limit=1, api_account_ids=api_account_ids)
     if not result.success:
         return result
     data = dict(result.data or {})
@@ -8119,265 +7889,67 @@ def listing_counts(*, db_name: str = DB_NAME) -> Result:
     )
 
 
-def _listing_search_text(row: Any) -> str:
-    return " ".join(
-        _search_text(part)
-        for part in (
-            _compact_text(getattr(row, "title", "")),
-            _compact_text(getattr(row, "barcode", "")),
-            _compact_text(getattr(row, "stock_code", "")),
-            _compact_text(getattr(row, "product_id", "")),
-            _compact_text(getattr(row, "product_code", "")),
-        )
-        if part
-    )
-
-
 def _listing_match_rows(*, db_name: str = DB_NAME, query: str = "", limit: int = 5) -> tuple[str, list[Any]]:
-    limit = max(1, min(50, int(limit or 5)))
-    clean_query = _search_text(query)
-    query_terms = [part for part in clean_query.replace("-", " ").replace("_", " ").split() if len(part) >= 2]
-    rows = _domain_records(listing_repo.list_products(db_name=db_name))
-
-    active_rows = [row for row in rows if not bool(getattr(row, "archived", False))]
-    scored: list[tuple[int, Any]] = []
-    for row in active_rows:
-        haystack = _listing_search_text(row)
-        haystack_words = set(part for part in haystack.replace("-", " ").replace("_", " ").split() if part)
-        score = 0
-        barcode = _search_text(getattr(row, "barcode", ""))
-        stock_code = _search_text(getattr(row, "stock_code", ""))
-        product_id = _search_text(getattr(row, "product_id", ""))
-        product_code = _search_text(getattr(row, "product_code", ""))
-        if clean_query:
-            identifier_match = False
-            if clean_query in {barcode, stock_code, product_id, product_code}:
-                score += 100
-                identifier_match = True
-            for identifier in (barcode, stock_code, product_id, product_code):
-                if identifier and identifier in query_terms:
-                    score += 90
-                    identifier_match = True
-                elif identifier and identifier in clean_query:
-                    score += 90
-                    identifier_match = True
-            phrase_match = clean_query and clean_query in haystack
-            if clean_query and clean_query in haystack:
-                score += 30
-            term_matches = [
-                term
-                for term in query_terms
-                if (term in haystack if len(term) >= 3 else term in haystack_words)
-            ]
-            if len(query_terms) > 1 and not identifier_match and not phrase_match and len(term_matches) < len(query_terms):
-                continue
-            score += sum(5 if len(term) >= 3 else 4 for term in term_matches)
-            if score <= 0:
-                continue
-        scored.append((score, row))
-    if clean_query:
-        scored.sort(key=lambda item: (item[0], _optional_float(getattr(item[1], "quantity", 0))), reverse=True)
-        return query, [row for _score, row in scored[:limit]]
-    return query, sorted(active_rows, key=lambda row: _compact_text(getattr(row, "title", "")).casefold())[:limit]
+    from Listing.processors.catalog_queries import query_listing_products
+    result = query_listing_products(db_name=db_name, query=query, limit=limit)
+    return query, _domain_records(result)
 
 
 def _listing_detail(row: Any) -> dict[str, Any]:
-    return {
-        "title": _compact_text(getattr(row, "title", "")),
-        "barcode": _compact_text(getattr(row, "barcode", "")),
-        "stock_code": _compact_text(getattr(row, "stock_code", "")),
-        "product_id": _compact_text(getattr(row, "product_id", "")),
-        "product_code": _compact_text(getattr(row, "product_code", "")),
-        "brand": _compact_text(getattr(row, "brand", "")),
-        "category_name": _compact_text(getattr(row, "category_name", "")),
-        "quantity": _money(getattr(row, "quantity", 0)),
-        "sale_price": _money(getattr(row, "sale_price", None) or getattr(row, "list_price", None)),
-        "list_price": _money(getattr(row, "list_price", None)),
-        "approved": bool(getattr(row, "approved", False)),
-        "archived": bool(getattr(row, "archived", False)),
-        "on_sale": bool(getattr(row, "on_sale", False)),
-        "locked": bool(getattr(row, "locked", False)),
-        "product_url": _compact_text(getattr(row, "product_url", "")),
-        "stock_item_id": getattr(row, "stock_item_id", None),
-    }
+    from Listing.processors.catalog_queries import listing_product_detail
+    return listing_product_detail(row)
 
 
-def listing_title_lookup(*, db_name: str = DB_NAME, query: str = "", limit: int = 5) -> Result:
-    try:
-        query, matched = _listing_match_rows(db_name=db_name, query=query, limit=limit)
-        titles = [
-            {
-                "title": _compact_text(getattr(row, "title", "")),
-                "barcode": _compact_text(getattr(row, "barcode", "")),
-                "stock_code": _compact_text(getattr(row, "stock_code", "")),
-                "product_id": _compact_text(getattr(row, "product_id", "")),
-            }
-            for row in matched
-        ]
-        message = f"{len(titles)} ilan adi kaydi bulundu."
-        if len(titles) == 1:
-            message = f"Ilan adi: {titles[0].get('title') or '-'}."
-        return Result.ok(
-            message,
-            close_dialog=False,
-            data={"query": query, "count": len(titles), "titles": titles, "tool": "listing.title_lookup"},
-        )
-    except Exception as exc:
-        return Result.fail(map_error_to_message(exc), error=exc, close_dialog=False)
+def _listing_catalog_lookup(*, db_name, query, limit, offset, api_account_ids, tool, collection, fields=None) -> Result:
+    from Listing.processors.catalog_queries import read_listing_search
+    result = read_listing_search(db_name=db_name, query=query, limit=limit, offset=offset, api_account_ids=api_account_ids)
+    if not result.success:
+        return result
+    data = dict(result.data)
+    records = data.pop("results")
+    if fields is not None:
+        keys = ("listing_id", "api_account_id", "product_id", "currency", *fields)
+        records = [{key: row[key] for key in keys} for row in records]
+    return Result.ok(result.message, close_dialog=False, data={**data, collection: records, "tool": tool})
 
 
-def listing_search(*, db_name: str = DB_NAME, query: str = "", limit: int = 10) -> Result:
-    try:
-        query, matched = _listing_match_rows(db_name=db_name, query=query, limit=limit)
-        rows = [_listing_detail(row) for row in matched]
-        message = f"{len(rows)} ilan bulundu."
-        if len(rows) == 1:
-            row = rows[0]
-            message = (
-                f"1 ilan bulundu: {row.get('title') or '-'} | barkod {row.get('barcode') or '-'} | "
-                f"stok kodu {row.get('stock_code') or '-'} | fiyat {row.get('sale_price')} TL | adet {row.get('quantity')}."
-            )
-        elif rows:
-            first = rows[0]
-            message = f"{len(rows)} ilan bulundu. Ilk sonuc: {first.get('title') or '-'} | barkod {first.get('barcode') or '-'}."
-        return Result.ok(
-            message,
-            close_dialog=False,
-            data={"query": query, "count": len(rows), "results": rows, "tool": "listing.search"},
-        )
-    except Exception as exc:
-        return Result.fail(map_error_to_message(exc), error=exc, close_dialog=False)
+def listing_title_lookup(*, db_name: str = DB_NAME, query: str = "", limit: int = 5,
+                        offset: int = 0, api_account_ids: list[int] | None = None) -> Result:
+    return _listing_catalog_lookup(db_name=db_name, query=query, limit=limit, offset=offset,
+        api_account_ids=api_account_ids, tool="listing.title_lookup", collection="titles", fields=('title', 'barcode', 'stock_code'))
 
+def listing_search(*, db_name: str = DB_NAME, query: str = "", limit: int = 10,
+                   offset: int = 0, api_account_ids: list[int] | None = None) -> Result:
+    from Listing.processors.catalog_queries import read_listing_search
+    result = read_listing_search(db_name=db_name, query=query, limit=limit, offset=offset, api_account_ids=api_account_ids)
+    if result.success:
+        result.data = {**result.data, "tool": "listing.search"}
+    return result
 
-def listing_detail_lookup(*, db_name: str = DB_NAME, query: str = "", limit: int = 5) -> Result:
-    try:
-        query, matched = _listing_match_rows(db_name=db_name, query=query, limit=limit)
-        details = [_listing_detail(row) for row in matched]
-        message = f"{len(details)} ilan detay kaydi bulundu."
-        if len(details) == 1:
-            row = details[0]
-            message = (
-                f"Ilan detayi: {row.get('title') or '-'} | barkod {row.get('barcode') or '-'} | "
-                f"stok kodu {row.get('stock_code') or '-'} | fiyat {row.get('sale_price')} TL | adet {row.get('quantity')}."
-            )
-        return Result.ok(
-            message,
-            close_dialog=False,
-            data={"query": query, "count": len(details), "details": details, "tool": "listing.detail_lookup"},
-        )
-    except Exception as exc:
-        return Result.fail(map_error_to_message(exc), error=exc, close_dialog=False)
+def listing_detail_lookup(*, db_name: str = DB_NAME, query: str = "", limit: int = 5,
+                        offset: int = 0, api_account_ids: list[int] | None = None) -> Result:
+    return _listing_catalog_lookup(db_name=db_name, query=query, limit=limit, offset=offset,
+        api_account_ids=api_account_ids, tool="listing.detail_lookup", collection="details", fields=None)
 
+def listing_stock_lookup(*, db_name: str = DB_NAME, query: str = "", limit: int = 5,
+                        offset: int = 0, api_account_ids: list[int] | None = None) -> Result:
+    return _listing_catalog_lookup(db_name=db_name, query=query, limit=limit, offset=offset,
+        api_account_ids=api_account_ids, tool="listing.stock_lookup", collection="stocks", fields=('title', 'barcode', 'stock_code', 'quantity', 'on_sale', 'approved'))
 
-def listing_stock_lookup(*, db_name: str = DB_NAME, query: str = "", limit: int = 5) -> Result:
-    try:
-        query, matched = _listing_match_rows(db_name=db_name, query=query, limit=limit)
-        stocks = [
-            {
-                "title": _compact_text(getattr(row, "title", "")),
-                "barcode": _compact_text(getattr(row, "barcode", "")),
-                "stock_code": _compact_text(getattr(row, "stock_code", "")),
-                "quantity": _money(getattr(row, "quantity", 0)),
-                "on_sale": bool(getattr(row, "on_sale", False)),
-                "approved": bool(getattr(row, "approved", False)),
-            }
-            for row in matched
-        ]
-        message = f"{len(stocks)} ilan stok kaydi bulundu."
-        if len(stocks) == 1:
-            message = f"Ilan stogu: {stocks[0].get('quantity')} adet | {stocks[0].get('title') or '-'}."
-        return Result.ok(
-            message,
-            close_dialog=False,
-            data={"query": query, "count": len(stocks), "stocks": stocks, "tool": "listing.stock_lookup"},
-        )
-    except Exception as exc:
-        return Result.fail(map_error_to_message(exc), error=exc, close_dialog=False)
+def listing_status_lookup(*, db_name: str = DB_NAME, query: str = "", limit: int = 5,
+                        offset: int = 0, api_account_ids: list[int] | None = None) -> Result:
+    return _listing_catalog_lookup(db_name=db_name, query=query, limit=limit, offset=offset,
+        api_account_ids=api_account_ids, tool="listing.status_lookup", collection="statuses", fields=('title', 'barcode', 'stock_code', 'approved', 'archived', 'on_sale', 'locked', 'has_active_campaign'))
 
+def listing_url_lookup(*, db_name: str = DB_NAME, query: str = "", limit: int = 5,
+                        offset: int = 0, api_account_ids: list[int] | None = None) -> Result:
+    return _listing_catalog_lookup(db_name=db_name, query=query, limit=limit, offset=offset,
+        api_account_ids=api_account_ids, tool="listing.url_lookup", collection="urls", fields=('title', 'barcode', 'stock_code', 'product_url'))
 
-def listing_status_lookup(*, db_name: str = DB_NAME, query: str = "", limit: int = 5) -> Result:
-    try:
-        query, matched = _listing_match_rows(db_name=db_name, query=query, limit=limit)
-        statuses = [
-            {
-                "title": _compact_text(getattr(row, "title", "")),
-                "barcode": _compact_text(getattr(row, "barcode", "")),
-                "stock_code": _compact_text(getattr(row, "stock_code", "")),
-                "approved": bool(getattr(row, "approved", False)),
-                "archived": bool(getattr(row, "archived", False)),
-                "on_sale": bool(getattr(row, "on_sale", False)),
-                "locked": bool(getattr(row, "locked", False)),
-                "has_active_campaign": bool(getattr(row, "has_active_campaign", False)),
-            }
-            for row in matched
-        ]
-        message = f"{len(statuses)} ilan durum kaydi bulundu."
-        if len(statuses) == 1:
-            row = statuses[0]
-            message = (
-                f"Ilan durumu: onayli={row.get('approved')}, satista={row.get('on_sale')}, "
-                f"kilitli={row.get('locked')}, arsiv={row.get('archived')}."
-            )
-        return Result.ok(
-            message,
-            close_dialog=False,
-            data={"query": query, "count": len(statuses), "statuses": statuses, "tool": "listing.status_lookup"},
-        )
-    except Exception as exc:
-        return Result.fail(map_error_to_message(exc), error=exc, close_dialog=False)
-
-
-def listing_url_lookup(*, db_name: str = DB_NAME, query: str = "", limit: int = 5) -> Result:
-    try:
-        query, matched = _listing_match_rows(db_name=db_name, query=query, limit=limit)
-        urls = [
-            {
-                "title": _compact_text(getattr(row, "title", "")),
-                "barcode": _compact_text(getattr(row, "barcode", "")),
-                "stock_code": _compact_text(getattr(row, "stock_code", "")),
-                "product_url": _compact_text(getattr(row, "product_url", "")),
-            }
-            for row in matched
-        ]
-        message = f"{len(urls)} ilan link kaydi bulundu."
-        if len(urls) == 1:
-            message = f"Ilan linki: {urls[0].get('product_url') or 'Lokal kayitta link yok'}."
-        return Result.ok(
-            message,
-            close_dialog=False,
-            data={"query": query, "count": len(urls), "urls": urls, "tool": "listing.url_lookup"},
-        )
-    except Exception as exc:
-        return Result.fail(map_error_to_message(exc), error=exc, close_dialog=False)
-
-
-def listing_price_lookup(*, db_name: str = DB_NAME, query: str = "", limit: int = 5) -> Result:
-    try:
-        query, matched = _listing_match_rows(db_name=db_name, query=query, limit=limit)
-        prices = [
-            {
-                "title": _compact_text(getattr(row, "title", "")),
-                "barcode": _compact_text(getattr(row, "barcode", "")),
-                "stock_code": _compact_text(getattr(row, "stock_code", "")),
-                "sale_price": _money(getattr(row, "sale_price", None) or getattr(row, "list_price", None)),
-                "list_price": _money(getattr(row, "list_price", None)),
-                "quantity": _money(getattr(row, "quantity", 0)),
-                "approved": bool(getattr(row, "approved", False)),
-                "on_sale": bool(getattr(row, "on_sale", False)),
-            }
-            for row in matched
-        ]
-        message = f"{len(prices)} ilan fiyat kaydi bulundu."
-        if len(prices) == 1:
-            message = f"Ilan fiyati: {prices[0].get('sale_price')} TL | {prices[0].get('title') or '-'}."
-        return Result.ok(
-            message,
-            close_dialog=False,
-            data={"query": query, "count": len(prices), "prices": prices, "tool": "listing.price_lookup"},
-        )
-    except Exception as exc:
-        return Result.fail(map_error_to_message(exc), error=exc, close_dialog=False)
-
+def listing_price_lookup(*, db_name: str = DB_NAME, query: str = "", limit: int = 5,
+                        offset: int = 0, api_account_ids: list[int] | None = None) -> Result:
+    return _listing_catalog_lookup(db_name=db_name, query=query, limit=limit, offset=offset,
+        api_account_ids=api_account_ids, tool="listing.price_lookup", collection="prices", fields=('title', 'barcode', 'stock_code', 'sale_price', 'list_price', 'quantity', 'approved', 'on_sale'))
 
 def _listing_image_count(value: Any) -> int:
     if isinstance(value, list):
@@ -9021,61 +8593,16 @@ def listing_prepare_stock_update(
         return Result.fail(map_error_to_message(exc), error=exc, close_dialog=False)
 
 
-def listing_attention_summary(*, db_name: str = DB_NAME, limit: int = 12) -> Result:
-    try:
-        limit = max(1, min(50, int(limit or 12)))
-        rows = _domain_records(listing_repo.list_products(db_name=db_name))
+def listing_attention_summary(*, db_name: str = DB_NAME, limit: int = 12, offset: int = 0,
+                              api_account_ids: list[int] | None = None) -> Result:
+    from Listing.processors.catalog_queries import read_listing_attention
+    result = read_listing_attention(db_name=db_name, limit=limit, offset=offset, api_account_ids=api_account_ids)
+    if result.success:
+        result.data = {**result.data, "tool": "listing.attention"}
+    return result
 
-        active_rows = [row for row in rows if not bool(getattr(row, "archived", False))]
-        attention_rows: list[dict[str, Any]] = []
-        reason_counts: dict[str, int] = {}
-        for row in active_rows:
-            reasons: list[str] = []
-            if _optional_float(getattr(row, "quantity", 0)) <= 0:
-                reasons.append("out_of_stock")
-            if getattr(row, "approved", None) is False:
-                reasons.append("not_approved")
-            if bool(getattr(row, "locked", False)) or bool(getattr(row, "locked_by_unsupplied_reason", False)):
-                reasons.append("locked")
-            if not bool(getattr(row, "on_sale", False)):
-                reasons.append("not_on_sale")
-            if not reasons:
-                continue
-            for reason in reasons:
-                reason_counts[reason] = reason_counts.get(reason, 0) + 1
-            attention_rows.append(
-                {
-                    "title": _compact_text(getattr(row, "title", "")),
-                    "barcode": _compact_text(getattr(row, "barcode", "")),
-                    "stock_code": _compact_text(getattr(row, "stock_code", "")),
-                    "quantity": _money(getattr(row, "quantity", 0)),
-                    "sale_price": _money(getattr(row, "sale_price", None) or getattr(row, "list_price", None)),
-                    "approved": getattr(row, "approved", None),
-                    "on_sale": bool(getattr(row, "on_sale", False)),
-                    "locked": bool(getattr(row, "locked", False)) or bool(getattr(row, "locked_by_unsupplied_reason", False)),
-                    "archived": bool(getattr(row, "archived", False)),
-                    "reasons": reasons,
-                }
-            )
-        attention_rows.sort(key=lambda row: (len(row.get("reasons") or []), -_optional_float(row.get("quantity"))), reverse=True)
-        return Result.ok(
-            f"{len(attention_rows)} ilan dikkat istiyor.",
-            close_dialog=False,
-            data={
-                "total_listings": len(rows),
-                "active_listings": len(active_rows),
-                "attention_count": len(attention_rows),
-                "reason_counts": reason_counts,
-                "listings": attention_rows[:limit],
-                "tool": "listing.attention",
-            },
-        )
-    except Exception as exc:
-        return Result.fail(map_error_to_message(exc), error=exc, close_dialog=False)
-
-
-def listing_attention_count(*, db_name: str = DB_NAME) -> Result:
-    result = listing_attention_summary(db_name=db_name, limit=1)
+def listing_attention_count(*, db_name: str = DB_NAME, api_account_ids: list[int] | None = None) -> Result:
+    result = listing_attention_summary(db_name=db_name, limit=1, api_account_ids=api_account_ids)
     if not result.success:
         return result
     data = dict(result.data or {})
@@ -9585,78 +9112,13 @@ def finance_cashflow_summary(
 ) -> Result:
     try:
         start_ms, end_ms, label = _period_range(period, start_date=start_date, end_date=end_date)
-        finance_rows = _domain_records(finance_repo.list_records("transaction", db_name=db_name))
-        manual_rows = _domain_records(finance_repo.list_records("manual_transaction", db_name=db_name))
-        finance_rows = [
-            row for row in finance_rows
-            if (start_ms is None or int(getattr(row, "transactionDate", 0) or 0) >= int(start_ms))
-            and (end_ms is None or int(getattr(row, "transactionDate", 0) or 0) <= int(end_ms))
-        ]
-        manual_rows = [
-            row for row in manual_rows
-            if not bool(getattr(row, "isDeleted", False))
-            and (start_ms is None or int(getattr(row, "transactionDate", 0) or 0) >= int(start_ms))
-            and (end_ms is None or int(getattr(row, "transactionDate", 0) or 0) <= int(end_ms))
-        ]
-
-        totals_by_currency: dict[str, dict[str, Any]] = {}
-
-        def currency_totals(value: Any) -> dict[str, Any]:
-            currency = _compact_text(value).upper() or "UNSPECIFIED"
-            return totals_by_currency.setdefault(currency, {
-                "currency": currency,
-                "marketplace_credit": 0.0,
-                "marketplace_debt": 0.0,
-                "marketplace_net": 0.0,
-                "manual_in": 0.0,
-                "manual_out": 0.0,
-                "manual_by_category": {},
-            })
-
-        type_counts: dict[str, int] = {}
-        for row in finance_rows:
-            totals = currency_totals(getattr(row, "currency", ""))
-            totals["marketplace_credit"] += _optional_float(getattr(row, "credit", 0))
-            totals["marketplace_debt"] += _optional_float(getattr(row, "debt", 0))
-            totals["marketplace_net"] += _optional_float(getattr(row, "netAmount", 0))
-            tx_type = _compact_text(getattr(row, "transactionType", "")) or "unknown"
-            type_counts[tx_type] = type_counts.get(tx_type, 0) + 1
-
-        for row in manual_rows:
-            totals = currency_totals(getattr(row, "currency", ""))
-            amount = _optional_float(getattr(row, "amount", 0))
-            direction = _compact_text(getattr(row, "direction", "")).casefold()
-            category = _compact_text(getattr(row, "categoryName", None) or getattr(row, "categoryKey", None) or "uncategorized")
-            if direction in {"in", "income", "credit", "alacak", "gelir"}:
-                totals["manual_in"] += amount
-                categories = totals["manual_by_category"]
-                categories[category] = categories.get(category, 0.0) + amount
-            else:
-                totals["manual_out"] += amount
-                categories = totals["manual_by_category"]
-                categories[category] = categories.get(category, 0.0) - amount
-
-        if not totals_by_currency:
-            currency_totals("TRY")
-        currency_rows = []
-        for currency, totals in sorted(totals_by_currency.items()):
-            row = {
-                key: _money(totals[key])
-                for key in (
-                    "marketplace_credit", "marketplace_debt", "marketplace_net",
-                    "manual_in", "manual_out",
-                )
-            }
-            row["currency"] = currency
-            row["combined_net"] = _money(
-                totals["marketplace_net"] + totals["manual_in"] - totals["manual_out"]
-            )
-            row["manual_by_category"] = {
-                key: _money(value)
-                for key, value in totals["manual_by_category"].items()
-            }
-            currency_rows.append(row)
-        single = currency_rows[0] if len(currency_rows) == 1 and currency_rows[0]["currency"] != "UNSPECIFIED" else None
+        from Finance.processors.cashflow import read_cashflow_summary
+        result = read_cashflow_summary(db_name=db_name, start_ms=start_ms, end_ms=end_ms)
+        if not result.success:
+            return result
+        data = dict(result.data or {})
+        currency_rows = data["currency_totals"]
+        single = currency_rows[0] if data["currency"] is not None else None
         if single:
             message = f"{label} donemi net nakit hareketi {single['combined_net']:.2f} {single['currency']}."
         else:
@@ -9674,16 +9136,7 @@ def finance_cashflow_summary(
                 "period_label": label,
                 "start_ms": start_ms,
                 "end_ms": end_ms,
-                "currency": single["currency"] if single else None,
-                "currency_totals": currency_rows,
-                "marketplace_credit": single["marketplace_credit"] if single else None,
-                "marketplace_debt": single["marketplace_debt"] if single else None,
-                "marketplace_net": single["marketplace_net"] if single else None,
-                "manual_in": single["manual_in"] if single else None,
-                "manual_out": single["manual_out"] if single else None,
-                "combined_net": single["combined_net"] if single else None,
-                "transaction_type_counts": type_counts,
-                "manual_by_category": single["manual_by_category"] if single else {},
+                **data,
                 "tool": "finance.cashflow_summary",
             },
         )
@@ -9760,7 +9213,7 @@ def orders_item_sales_summary(
         _order_scope_account_metadata(
             [],
             db_name=db_name,
-            requested_account_ids=requested_account_ids,
+            requested_account_ids=requested_account_ids | set(data.get("scope_account_ids") or []),
         )
     )
     return Result.ok(
@@ -9873,6 +9326,7 @@ def available_tools() -> dict[str, AgentTool]:
         "orders.summary": AgentTool(
             name="orders.summary",
             description=("Sipariş adedi, iptal adedi, durum dağılımı ve tahmini ciro özeti verir. "
+                         "api_account_ids verilmezse tüm yerel mağazalar kapsanır; all_accounts parametresi yoktur. "
                          "Gerçek gözlemin sayısal start_ms/end_ms tarih sınırlarını, kaynak source_revision/source_snapshot_hash "
                          "ve hesap/döviz kapsamını döndürür. Önceki eş süreli dönem için bu gerçek tarih sınırlarından start_date/end_date vererek "
                          "ayrı okuma yap; last_14_days son 7 günü de içerir ve önceki 7 gün değildir. "
@@ -9884,6 +9338,7 @@ def available_tools() -> dict[str, AgentTool]:
                     "api_account_ids": {
                         "type": "array",
                         "items": {"type": "integer"},
+                        "description": "Yerel hesap pk değerleri. Atlanır veya boş bırakılırsa tüm mağazalar; tek mağaza için account_lookup sonucundaki pk kullanılır.",
                     },
                 },
                 "additionalProperties": False,
@@ -9896,7 +9351,9 @@ def available_tools() -> dict[str, AgentTool]:
                 "properties": {
                     "total_orders": {"type": "integer"},
                     "cancelled_orders": {"type": "integer"},
-                    "status_counts": {"type": "object"},
+                    "status_counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0, "x-measure-unit": "order"}},
+                    "status_rates": {"type": "object", "additionalProperties": {"type": "number", "x-measure-unit": "%"}},
+                    "status_labels": {"type": "object", "additionalProperties": {"type": "string"}},
                     "status_rates": {"type": "object"},
                     "dominant_status": {"type": "string"},
                     "dominant_status_count": {"type": "integer"},
@@ -9919,7 +9376,7 @@ def available_tools() -> dict[str, AgentTool]:
         ),
         "orders.recent": AgentTool(
             name="orders.recent",
-            description="Son siparişleri numara, müşteri, durum, tutar ve kalem sayısı bilgisiyle listeler.",
+            description="Son siparişleri numara, müşteri, durum, tutar ve kalem sayısı bilgisiyle listeler. api_account_ids atlanırsa tüm yerel mağazalar kapsanır; limit yalnız gösterilen örnekleri sınırlar.",
             parameters={
                 "type": "object",
                 "properties": {
@@ -10051,10 +9508,16 @@ def available_tools() -> dict[str, AgentTool]:
         ),
         "finance.profit_estimate": AgentTool(
             name="finance.profit_estimate",
-            description="Sipariş cirosu, komisyon, kargo faturası ve iadeye göre tahmini kâr hesaplar.",
-            parameters={"type": "object", "properties": common_period_schema, "additionalProperties": False},
+            description="Yerel siparişlerin tahmini kârını manuel Orders motoruyla hesaplar. api_account_ids ile mağaza seçilir; verilmezse tüm mağazalar kapsanır. Maliyet veya para birimi eksikse toplam kâr verilmez.",
+            parameters={"type": "object", "properties": {
+                **common_period_schema,
+                "api_account_ids": {"type": "array", "minItems": 1, "uniqueItems": True,
+                    "items": {"type": "integer", "minimum": 1},
+                    "description": "Yerel mağaza hesap kimlikleri; mağaza adını marketplaces.account_lookup ile çöz. Verilmezse tüm mağazalar."},
+            }, "additionalProperties": False},
             handler=profit_estimate,
             domain="finance",
+            canonical_callable="Finance.processors.profit.read_profit_estimate",
         ),
         "finance.cashflow_summary": AgentTool(
             name="finance.cashflow_summary",
@@ -10062,6 +9525,7 @@ def available_tools() -> dict[str, AgentTool]:
             parameters={"type": "object", "properties": common_period_schema, "additionalProperties": False},
             handler=finance_cashflow_summary,
             domain="finance",
+            canonical_callable="Finance.processors.cashflow.read_cashflow_summary",
             result_schema={
                 "type": "object", "additionalProperties": False,
                 "properties": {
@@ -10103,7 +9567,10 @@ def available_tools() -> dict[str, AgentTool]:
         ),
         "stock.low_stock": AgentTool(
             name="stock.low_stock",
-            description="Stock domainindeki minimum stok esigi veya sifir/negatif bakiye kuralina gore dusuk stok kartlarini listeler.",
+            description="Aktif stok kartlarinda minimum tanimliysa bakiyesi minimuma esit veya altinda olanlari; "
+                        "minimum tanimindan bagimsiz sifir/negatif bakiyeleri dusuk/kritik stok olarak listeler. "
+                        "Esit bakiyede gap=0 olabilir; bu kayit minimumun altinda degil, esigindedir. "
+                        "Emniyet/yeniden siparis alanlari bu hesaba katilmaz; bildirim veya otomatik siparis calistirildigini kanitlamaz.",
             parameters={
                 "type": "object",
                 "properties": {"limit": {"type": "integer", "minimum": 1, "maximum": 50}},
@@ -10114,6 +9581,9 @@ def available_tools() -> dict[str, AgentTool]:
             canonical_callable="Stock.processors.inventory_summary.read_low_stock_summary",
             result_schema={"type": "object", "properties": {
                 "total_low_stock": {"type": "integer"}, "threshold_rule": {"type": "string"},
+                "threshold_comparison": {"type": "string", "enum": ["less_than_or_equal"]},
+                "rule_description": {"type": "string"},
+                "low_stock_policy": {"type": "object"},
                 "tool": {"type": "string"}, "items": {"type": "array", "items": {
                     "type": "object", "properties": {**{key: {"type": "string"} for key in ("sku", "name", "unit")},
                         **{key: {"type": "number"} for key in ("balance", "threshold", "gap")}},
@@ -10163,28 +9633,8 @@ def available_tools() -> dict[str, AgentTool]:
                                 "top_balances", "zero_or_negative_items", "tool"],
             },
         ),
-        "listing.summary": AgentTool(
-            name="listing.summary",
-            description="Ilan/urun adedi, satista olanlar, onay bekleyenler ve stoksuz ilanlari ozetler.",
-            parameters={
-                "type": "object",
-                "properties": {"limit": {"type": "integer", "minimum": 1, "maximum": 30}},
-                "additionalProperties": False,
-            },
-            handler=listing_summary,
-            domain="listing",
-        ),
-        "listing.attention": AgentTool(
-            name="listing.attention",
-            description="Stoksuz, kilitli, onaysiz veya satis disi ilanlari nedenleriyle listeler.",
-            parameters={
-                "type": "object",
-                "properties": {"limit": {"type": "integer", "minimum": 1, "maximum": 50}},
-                "additionalProperties": False,
-            },
-            handler=listing_attention_summary,
-            domain="listing",
-        ),
+        "listing.summary": listing_read_tool('listing.summary', listing_summary),
+        "listing.attention": listing_read_tool('listing.attention', listing_attention_summary),
         "marketplaces.summary": AgentTool(
             name="marketplaces.summary",
             description="Aktif pazaryerlerini ve bagli hesaplari platform bazinda ozetler.",
@@ -10250,6 +9700,27 @@ def _period_tool_schema() -> dict[str, Any]:
         "start_date": {"type": "string", "description": "YYYY-MM-DD opsiyonel baslangic tarihi."},
         "end_date": {"type": "string", "description": "YYYY-MM-DD opsiyonel bitis tarihi."},
     }
+
+
+def _stock_query_result_schema() -> dict[str, Any]:
+    from Stock.processors.item_updates import THRESHOLD_FIELDS
+    item_fields = {
+        "item_id": {"type": "integer"},
+        **{key: {"type": "string"} for key in (
+            "sku", "name", "barcode", "unit", "brand", "category", "location_code",
+        )},
+        "balance": {"type": "number"},
+        **{name: {"type": ["number", "null"]} for name in THRESHOLD_FIELDS},
+    }
+    fields = {
+        "query": {"type": "string"}, "total": {"type": "integer"}, "count": {"type": "integer"},
+        "offset": {"type": "integer"}, "has_more": {"type": "boolean"}, "tool": {"type": "string"},
+        "items": {"type": "array", "items": {
+            "type": "object", "properties": item_fields, "required": list(item_fields),
+            "additionalProperties": False,
+        }},
+    }
+    return {"type": "object", "properties": fields, "required": list(fields), "additionalProperties": False}
 
 
 def registered_tools() -> dict[str, AgentTool]:
@@ -10653,7 +10124,7 @@ def registered_tools() -> dict[str, AgentTool]:
             domain="analysis",
             canonical_callable="AI.processors.tabular_analysis.analyze_observation_table",
             result_schema=tabular_analysis.TABULAR_ANALYSIS_OUTPUT_SCHEMA,
-            input_source_requirements=(OperationInputSource("sources[].result"),),
+            input_source_requirements=(OperationInputSource("sources[].result", result_path="tool_result"),),
         ),
         "analysis.calculate": AgentTool(
             name="analysis.calculate",
@@ -10713,11 +10184,13 @@ def registered_tools() -> dict[str, AgentTool]:
         "reports.build_snapshot": AgentTool(
             name="reports.build_snapshot",
             description=(
+                "Mevcut arac sonuclarindan genel tablo veya Excel icerigi hazirlar; musteri siparis listesi gibi ozel tablolari destekler. "
                 "Tamamlanmis adimlarin exact tool_result sonuclarini sources.result $from_step baglariyla alir. "
                 "Modelin sectigi sayfa, rows_path ve source_path sutunlariyla Core ReportSnapshot olusturur. "
                 "Dictionary dagilimlari icin rows_mode=object_entries ile key/value satirlarini sec; status/count alanlari uydurma. "
                 "Sayilar kaynaktan aynen kopyalanir; hesap, model rows veya formule izin verilmez. "
-                "Hypothesis/assumption/recommendation notlari ayri Model Notlari sayfasinda etiketlenir. Dosya yazmaz."
+                "Hypothesis/assumption/recommendation notlari ayri Model Notlari sayfasinda etiketlenir. "
+                "Dosya yazmaz; uretilen snapshot reports.xlsx.prepare aracina baglanabilir."
             ),
             parameters=report_builder.report_builder_parameters(),
             handler=reports_build_snapshot,
@@ -10768,6 +10241,8 @@ def registered_tools() -> dict[str, AgentTool]:
             description=(
                 "Kayitli atomik operasyonlarin gercek giris/cikti semalarini, domain, etki ve onay sozlesmelerini "
                 "kesfet. Query ile ara veya bos query+domains ile katalogda gez; has_more varsa next_offset ile devam et. "
+                "Noktali tam operasyon adi exact aranir; exact_match_found=false ise operations bostur. "
+                "suggested_operations yalniz alternatif isim/aciklamalardir; semalari yuklenmis sayilmaz. "
                 "Yalniz metadata okur; bulunan operasyonu calistirmaz veya yeni yetki vermez."
             ),
             parameters={
@@ -10799,6 +10274,10 @@ def registered_tools() -> dict[str, AgentTool]:
                 "unknown_domains": {"type": "array", "items": {"type": "string"}},
                 "available_operation_count": {"type": "integer"}, "returned_count": {"type": "integer"},
                 "offset": {"type": "integer"}, "next_offset": {"type": ["integer", "null"]},
+                "next_page_arguments": {"type": ["object", "null"]},
+                "lookup_mode": {"type": "string", "enum": ["exact", "search", "browse"]},
+                "exact_match_found": {"type": ["boolean", "null"]},
+                "suggested_operations": {"type": "array", "items": {"type": "object"}},
                 "has_more": {"type": "boolean"}, "discovery_grants_execution_permission": {"type": "boolean"},
             }},
         ),
@@ -10939,7 +10418,9 @@ def registered_tools() -> dict[str, AgentTool]:
                 "Exact marketplace hesaplarinin guncel siparis ve istege bagli iade "
                 "verilerini API'den cekme, yerel veritabanina kaydetme, yenileme ve "
                 "senkronize etme islemini dry-run approval olarak hazirlar; onaydan "
-                "once API veya DB islemi yapmaz."
+                "once API veya DB islemi yapmaz. Yalnız uzak pazaryeri senkronizasyonu içindir; "
+                "yerel siparişleri okumak için orders.query veya orders.snapshot kullanılır. "
+                "Yerel/demo hesaplarda ve eksik bağlantı yapılandırmasında onay hazırlanmaz."
             ),
             parameters={
                 "type": "object",
@@ -10983,7 +10464,7 @@ def registered_tools() -> dict[str, AgentTool]:
         ),
         "orders.status_counts": AgentTool(
             name="orders.status_counts",
-            description="Verilen donemde siparis durumlarini adet bazinda dondurur.",
+            description="Verilen dönemdeki sipariş durum dağılımını adet, yüzde ve manuel UI ile ortak durum etiketleriyle döndürür.",
             parameters={"type": "object", "properties": scoped_period_schema, "additionalProperties": False},
             handler=orders_status_counts,
             domain="orders",
@@ -10992,7 +10473,9 @@ def registered_tools() -> dict[str, AgentTool]:
                 "type": "object",
                 "properties": {
                     "total_orders": {"type": "integer"},
-                    "status_counts": {"type": "object"},
+                    "status_counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0, "x-measure-unit": "order"}},
+                    "status_rates": {"type": "object", "additionalProperties": {"type": "number", "x-measure-unit": "%"}},
+                    "status_labels": {"type": "object", "additionalProperties": {"type": "string"}},
                     "account_scopes": {"type": "array"},
                 },
             },
@@ -11007,7 +10490,7 @@ def registered_tools() -> dict[str, AgentTool]:
         ),
         "orders.revenue_total": AgentTool(
             name="orders.revenue_total",
-            description="Verilen donemde iptal disi siparislerin tahmini ciro toplamini dondurur.",
+            description="Verilen dönemde iptal dışı siparişlerin tahmini brüt tutarını döndürür. Cancelled hariçtir; iade/komisyon/kargo kesintileri uygulanmaz. api_account_ids verilmezse bütün yerel mağazalar kapsanır.",
             parameters={"type": "object", "properties": scoped_period_schema, "additionalProperties": False},
             handler=orders_revenue_total,
             domain="orders",
@@ -11017,6 +10500,10 @@ def registered_tools() -> dict[str, AgentTool]:
                 "properties": {
                     "total": {"type": "number"},
                     "estimated_revenue": {"type": "number"},
+                    "revenue_order_count": {"type": "integer"},
+                    "cancelled_orders": {"type": "integer"},
+                    "revenue_basis": {"type": "string"},
+                    "excluded_revenue_statuses": {"type": "array", "items": {"type": "string"}},
                     "currency": {"type": "string"},
                     "currencies": {"type": "array"},
                     "revenue_by_currency": {"type": "object"},
@@ -11033,6 +10520,9 @@ def registered_tools() -> dict[str, AgentTool]:
                 "Siparislerin en guncel urun kalemi snapshotlarini urun, SKU, barkod, "
                 "contentId veya productCode bazinda siparis edilen pazaryeri birimi, siparis sayisi ve brut tutarla "
                 "toplar; en cok satan urun ve secili siparis icerigi aggregate sorularinda kullanilir. "
+                "Varsayılan olarak Cancelled, Returned, UnDeliveredAndReturned ve UnSupplied hariçtir; "
+                "UnDelivered dahildir. Brüt kalem tutarı indirim öncesidir (line_gross_before_discounts). "
+                "api_account_ids atlanırsa bütün yerel mağazalar kapsanır. "
                 "quantity_unit=marketplace_item, OrderItem.quantity toplamidir; bir satir quantity=4 ise dort birimdir, "
                 "satir sayisi veya Stock fiziksel adet/kg birimi degildir. Gercek sayisal start_date_ms/end_date_ms "
                 "donem sinirlari bos donemde de doner; kaynak source_revision/source_snapshot_hash tasinir. "
@@ -11116,8 +10606,9 @@ def registered_tools() -> dict[str, AgentTool]:
             name="orders.item_sales_report",
             description=(
                 "Son uc hafta gibi bir tarih kapsami icin en cok satan urunleri canonical Orders verisinden toplar; "
-                "musteri PII icermeyen, hash'li ve immutable report_snapshot dondurur. Excel veya baska artifact "
-                "isteniyorsa ilk adim olarak kullan."
+                "musteri PII icermeyen, hash'li ve immutable report_snapshot dondurur. Urun satis ozeti "
+                "Excel'i icin kullan; musteriye ait siparis listesi bu urun ozetinden elde edilmez. "
+                "Mevcut siparis kayitlarindan ozel tablo icin reports.build_snapshot sozlesmesini kesfet."
             ),
             parameters={
                 "type": "object",
@@ -11229,7 +10720,11 @@ def registered_tools() -> dict[str, AgentTool]:
         ),
         "orders.lookup": AgentTool(
             name="orders.lookup",
-            description="Siparisi numara, paket, takip no, musteri veya kargo bilgisiyle arar.",
+            description="Find candidate local orders by identity or FUZZY text search. Text query matches ANY term "
+                        "across identity/customer/cargo fields: a shared surname can match other customers. "
+                        "It is not an exact customer filter and its total_count is not that customer's order count. "
+                        "For customer-specific counts or complete lists use orders.query with filters.customer. "
+                        "Returns at most 30 preview rows unless exact order_numbers are supplied; distinguish listed_count from total_count.",
             parameters={
                 "type": "object",
                 "properties": {
@@ -11243,6 +10738,10 @@ def registered_tools() -> dict[str, AgentTool]:
             handler=orders_lookup,
             domain="orders",
             canonical_callable="Orders.processors.agentic_repository.query_orders",
+            result_schema={"type": "object", "properties": {
+                "orders": {"type": "array"}, "total_count": {"type": "integer"},
+                "listed_count": {"type": "integer"}, "truncated": {"type": "boolean"},
+                "query_match_mode": {"type": "string"}, "account_scopes": {"type": "array"}}},
         ),
         "orders.full_context": AgentTool(
             name="orders.full_context",
@@ -11362,14 +10861,18 @@ def registered_tools() -> dict[str, AgentTool]:
         ),
         "orders.query": AgentTool(
             name="orders.query",
-            description="Siparisleri guvenli filtre, siralama, limit ve aggregate parametreleriyle sorgular; en yuksek tutar gibi top/rank sorularinda LLM'e secim birakmaz.",
+            description="Read locally stored orders with exact identity/account filters, sorting, paging or aggregates. "
+                        "Omit unused optional filters: every supplied filter is applied, including max_total_price=0 "
+                        "which means only zero-priced orders, not an unlimited price range. "
+                        "A zero result proves no matches only within the returned account/date/filter scope. "
+                        "For a specific order pass its complete order_numbers identity; for a customer use filters.customer.",
             parameters={
                 "type": "object",
                 "properties": {
                     **period_schema,
                     "order_numbers": {
                         "type": "array",
-                        "items": {"type": "string"},
+                        "items": {"type": "string", "minLength": 1, "pattern": "\\S"},
                         "minItems": 1,
                         "maxItems": 100,
                     },
@@ -11388,8 +10891,8 @@ def registered_tools() -> dict[str, AgentTool]:
                             "platform_code": {"type": "string"},
                             "source": {"type": "string"},
                             "customer": {"type": "string"},
-                            "min_total_price": {"type": "number"},
-                            "max_total_price": {"type": "number"},
+                            "min_total_price": {"type": "number", "description": "Inclusive lower price bound. Omit when unused."},
+                            "max_total_price": {"type": "number", "description": "Inclusive upper price bound; zero restricts to zero-priced orders. Omit for no upper bound."},
                             "exclude_cancelled": {"type": "boolean"},
                         },
                         "additionalProperties": False,
@@ -11419,8 +10922,8 @@ def registered_tools() -> dict[str, AgentTool]:
             result_schema={
                 "type": "object",
                 "properties": {
-                    "count": {"type": "integer"},
-                    "total_count": {"type": "integer"},
+                    "count": {"type": "integer", "x-measure-unit": "order"},
+                    "total_count": {"type": "integer", "x-measure-unit": "order"},
                     "orders": {"type": "array"},
                     "order_numbers": {
                         "type": "array",
@@ -11430,9 +10933,13 @@ def registered_tools() -> dict[str, AgentTool]:
                         "type": "array",
                         "items": {"type": "string"},
                     },
-                    "listed_count": {"type": "integer"},
-                    "status_counts": {"type": "object"},
+                    "listed_count": {"type": "integer", "x-measure-unit": "order"},
+                    "status_counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0, "x-measure-unit": "order"}},
                     "total_amount": {"type": "number"},
+                    "query_scope": {"type": "object", "description":
+                        "Actual SQL account predicate; account_scopes may list only accounts with returned matching rows.",
+                        "properties": {"account_filter_applied": {"type": "boolean"},
+                            "api_account_ids": {"type": "array", "items": {"type": "integer"}}}},
                     "account_scopes": {"type": "array"},
                     "environment_by_account": {"type": "object"},
                     "query_fingerprint": {"type": "string"},
@@ -11504,8 +11011,8 @@ def registered_tools() -> dict[str, AgentTool]:
             result_schema={
                 "type": "object",
                 "properties": {
-                    "total_count": {"type": "integer"},
-                    "status_counts": {"type": "object"},
+                    "total_count": {"type": "integer", "x-measure-unit": "order"},
+                    "status_counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0, "x-measure-unit": "order"}},
                     "status_counts_complete": {"type": "boolean"},
                     "final_statuses": {"type": "array"},
                     "sample_orders": {"type": "array"},
@@ -11627,7 +11134,12 @@ def registered_tools() -> dict[str, AgentTool]:
         ),
         "orders.export_profit_excel.prepare": AgentTool(
             name="orders.export_profit_excel.prepare",
-            description="Tek siparisin kar/satis ozetini Excel dosyasina aktarmak icin dry-run onay aksiyonu hazirlar; onay olmadan dosya yazmaz.",
+            description="Tek siparişin gerçek kâr motoruyla hesaplanmış özetini Excel'e aktarmak için onay teklifi hazırlar. "
+                        "Müşterinin sipariş listesi için genel Excel aracı değildir; bu tür tablolar için reports.build_snapshot sözleşmesini keşfet. "
+                        "Önce orders.query ile hedef siparişi okuyup doğrula; query bu gözlenen kapsamı daraltabilir. "
+                        "query düz arama metnidir, JSON filtre nesnesi değildir. "
+                        "Onay olmadan dosya yazmaz. Eksik maliyet/döviz verisinde kârın hesaplanamadığı açık kalır. "
+                        "Çıktı yolu .xlsx olarak normalleştirilir; oluşturulan dosyanın bütün hücreleri onaylanan hesaba göre okunup doğrulanır.",
             parameters={
                 "type": "object",
                 "properties": {
@@ -11640,7 +11152,7 @@ def registered_tools() -> dict[str, AgentTool]:
             },
             handler=orders_prepare_export_profit_excel,
             domain="orders",
-            canonical_callable="Orders.views.actions.action_export_order_profit_excel",
+            canonical_callable="Orders.processors.profit_export.read_order_profit_export_payload",
             read_only=True,
             destructive=False,
             risk_level="low",
@@ -11776,7 +11288,7 @@ def registered_tools() -> dict[str, AgentTool]:
         ),
         "returns.lookup": AgentTool(
             name="returns.lookup",
-            description="Iade/claim kaydini claim no, siparis no, takip no, musteri veya durum ile arar.",
+            description="İade kaydını claim no, sipariş no, takip no, müşteri veya durum metniyle arar. Statü filtresi ve en eski/en yeni sıralaması için returns.query kullan; serbest query metni yapılandırılmış statü filtresi değildir.",
             parameters={
                 "type": "object",
                 "properties": {
@@ -11792,7 +11304,7 @@ def registered_tools() -> dict[str, AgentTool]:
         ),
         "returns.query": AgentTool(
             name="returns.query",
-            description="Iadeleri guvenli filtre, siralama, limit ve aggregate parametreleriyle sorgular; onay bekleyen iade listesi gibi sorularda claim satirlarini dondurur.",
+            description="İadeleri statü filtresi, sıralama ve limit ile sorgular. En eski (oldest) aksiyon bekleyen iadeler için filters.status='WaitingInAction', sort='claim_date_asc', limit=3 kullanılabilir. Toplam sayı total_count, seçilen kayıtlar returns içindedir. Tüm dönemlerdeki açık iadeler için period='all'; mağaza için api_account_ids kullan.",
             parameters={
                 "type": "object",
                 "properties": {
@@ -11945,10 +11457,16 @@ def registered_tools() -> dict[str, AgentTool]:
         ),
         "finance.profit_amount": AgentTool(
             name="finance.profit_amount",
-            description="Verilen donemde tahmini kar tutarini tek sayi olarak dondurur.",
-            parameters={"type": "object", "properties": period_schema, "additionalProperties": False},
+            description="Yerel siparişlerin tahmini kârını tutar olarak döndürür. api_account_ids ile mağaza seçilir; verilmezse tüm mağazalar kapsanır. Eksik maliyet veya para biriminde tutar null olur.",
+            parameters={"type": "object", "properties": {
+                **period_schema,
+                "api_account_ids": {"type": "array", "minItems": 1, "uniqueItems": True,
+                    "items": {"type": "integer", "minimum": 1},
+                    "description": "Yerel mağaza hesap kimlikleri; mağaza adını marketplaces.account_lookup ile çöz. Verilmezse tüm mağazalar."},
+            }, "additionalProperties": False},
             handler=finance_profit_amount,
             domain="finance",
+            canonical_callable="Finance.processors.profit.read_profit_estimate",
         ),
         "finance.cashflow_net": AgentTool(
             name="finance.cashflow_net",
@@ -11991,31 +11509,48 @@ def registered_tools() -> dict[str, AgentTool]:
             parameters={"type": "object", "properties": {}, "additionalProperties": False},
             handler=stock_item_count,
             domain="stock",
+            canonical_callable="Stock.processors.item_queries.read_item_counts",
+            result_schema={"type": "object", "additionalProperties": False,
+                "properties": {"total": {"type": "integer"}, "active": {"type": "integer"},
+                               "count": {"type": "integer"}, "tool": {"type": "string"}},
+                "required": ["total", "active", "count", "tool"]},
         ),
         "stock.items_list": AgentTool(
             name="stock.items_list",
-            description="Aktif stok urunlerini SKU, ad, barkod ve bakiye bilgisiyle listeler.",
+            description="Aktif stok kartlarını SKU, ad, barkod, birim ve güncel bakiye ile sayfalar. "
+                        "Bakiyeler manuel stok ekranıyla aynı domain hesabıdır; kesirli miktarlar korunur. "
+                        "total tüm kart sayısı, count bu sayfadaki sayı; has_more=true ise offset ile devam et. "
+                        "min_stock=null eşik tanımlanmadığı anlamına gelir.",
             parameters={
                 "type": "object",
-                "properties": {"limit": {"type": "integer", "minimum": 1, "maximum": 100}},
+                "properties": {"limit": {"type": "integer", "minimum": 1, "maximum": 100},
+                               "offset": {"type": "integer", "minimum": 0}},
                 "additionalProperties": False,
             },
             handler=stock_items_list,
             domain="stock",
+            canonical_callable="Stock.processors.item_queries.query_items_with_balances",
+            result_schema=_stock_query_result_schema(),
         ),
         "stock.search": AgentTool(
             name="stock.search",
-            description="Stok kartini SKU, urun adi, barkod, marka, kategori veya lokasyon ile arar.",
+            description="Aktif stok kartlarını SKU, ad, barkod, marka, kategori, model veya lokasyonla arar. "
+                        "Türkçe harfleri normalleştirir; tam SKU/barkod eşleşmesi önceliklidir; sözcükler OR ile eşleşir. "
+                        "Sonuç güncel domain bakiyesidir. total tüm eşleşmeler, count sayfadaki sayı; "
+                        "has_more=true ise offset ile devam et. min_stock=null eşik tanımlanmadığını belirtir.",
             parameters={
                 "type": "object",
                 "properties": {
                     "query": {"type": "string"},
                     "limit": {"type": "integer", "minimum": 1, "maximum": 50},
+                    "offset": {"type": "integer", "minimum": 0},
                 },
                 "additionalProperties": False,
             },
             handler=stock_search,
             domain="stock",
+            canonical_callable="Stock.processors.item_queries.query_items_with_balances",
+            result_schema=_stock_query_result_schema(),
         ),
         "stock.item_create.prepare": AgentTool(
             name="stock.item_create.prepare",
@@ -12044,7 +11579,8 @@ def registered_tools() -> dict[str, AgentTool]:
         ),
         "stock.item_update.prepare": AgentTool(
             name="stock.item_update.prepare",
-            description="Stok karti alanlarini guncelleme icin dry-run onay teklifi hazirlar; DB yazimi yapmaz.",
+            description="Stok kartinin ad, SKU, barkod, marka veya kategori bilgisini guncelleme icin onay teklifi hazirlar; DB yazmaz. "
+                        "Minimum/maksimum ve yeniden siparis esikleri icin stock.thresholds.prepare sozlesmesini kesfet.",
             parameters={
                 "type": "object",
                 "properties": {
@@ -12074,41 +11610,9 @@ def registered_tools() -> dict[str, AgentTool]:
             handler=stock_zero_or_negative_count,
             domain="stock",
         ),
-        "listing.counts": AgentTool(
-            name="listing.counts",
-            description="Ilan toplam, aktif, satista, onayli ve stoksuz adetlerini dondurur.",
-            parameters={"type": "object", "properties": {}, "additionalProperties": False},
-            handler=listing_counts,
-            domain="listing",
-        ),
-        "listing.search": AgentTool(
-            name="listing.search",
-            description="Ilanlari urun adi, barkod, stok kodu veya urun kodu ile arar ve temel alanlari listeler.",
-            parameters={
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string"},
-                    "limit": {"type": "integer", "minimum": 1, "maximum": 50},
-                },
-                "additionalProperties": False,
-            },
-            handler=listing_search,
-            domain="listing",
-        ),
-        "listing.price_lookup": AgentTool(
-            name="listing.price_lookup",
-            description="Ilan fiyatini urun adi, barkod, stok kodu veya urun id ile arar.",
-            parameters={
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string"},
-                    "limit": {"type": "integer", "minimum": 1, "maximum": 20},
-                },
-                "additionalProperties": False,
-            },
-            handler=listing_price_lookup,
-            domain="listing",
-        ),
+        "listing.counts": listing_read_tool('listing.counts', listing_counts),
+        "listing.search": listing_read_tool('listing.search', listing_search),
+        "listing.price_lookup": listing_read_tool('listing.price_lookup', listing_price_lookup),
         "listing.update_price.prepare": AgentTool(
             name="listing.update_price.prepare",
             description="Riskli fiyat degisikligi icin dry-run onay teklifi hazirlar; gercek dis istek veya DB yazimi yapmaz.",
@@ -12213,83 +11717,12 @@ def registered_tools() -> dict[str, AgentTool]:
             requires_approval=True,
             action_type="prepare_write",
         ),
-        "listing.title_lookup": AgentTool(
-            name="listing.title_lookup",
-            description="Ilan adini/basligini barkod, stok kodu, urun id veya arama metni ile bulur.",
-            parameters={
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string"},
-                    "limit": {"type": "integer", "minimum": 1, "maximum": 20},
-                },
-                "additionalProperties": False,
-            },
-            handler=listing_title_lookup,
-            domain="listing",
-        ),
-        "listing.detail_lookup": AgentTool(
-            name="listing.detail_lookup",
-            description="Tekil ilan detayini ad, barkod, stok kodu, fiyat, durum, marka, kategori ve link alanlariyla bulur.",
-            parameters={
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string"},
-                    "limit": {"type": "integer", "minimum": 1, "maximum": 20},
-                },
-                "additionalProperties": False,
-            },
-            handler=listing_detail_lookup,
-            domain="listing",
-        ),
-        "listing.stock_lookup": AgentTool(
-            name="listing.stock_lookup",
-            description="Ilanin pazaryeri stok/adet bilgisini barkod, stok kodu, urun id veya ad ile bulur.",
-            parameters={
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string"},
-                    "limit": {"type": "integer", "minimum": 1, "maximum": 20},
-                },
-                "additionalProperties": False,
-            },
-            handler=listing_stock_lookup,
-            domain="listing",
-        ),
-        "listing.status_lookup": AgentTool(
-            name="listing.status_lookup",
-            description="Ilanin onay, satista, arsiv, kilit ve kampanya durumunu bulur.",
-            parameters={
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string"},
-                    "limit": {"type": "integer", "minimum": 1, "maximum": 20},
-                },
-                "additionalProperties": False,
-            },
-            handler=listing_status_lookup,
-            domain="listing",
-        ),
-        "listing.url_lookup": AgentTool(
-            name="listing.url_lookup",
-            description="Ilan linkini/product_url alanini barkod, stok kodu, urun id veya ad ile bulur.",
-            parameters={
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string"},
-                    "limit": {"type": "integer", "minimum": 1, "maximum": 20},
-                },
-                "additionalProperties": False,
-            },
-            handler=listing_url_lookup,
-            domain="listing",
-        ),
-        "listing.attention_count": AgentTool(
-            name="listing.attention_count",
-            description="Dikkat isteyen ilan adedini ve neden adetlerini dondurur.",
-            parameters={"type": "object", "properties": {}, "additionalProperties": False},
-            handler=listing_attention_count,
-            domain="listing",
-        ),
+        "listing.title_lookup": listing_read_tool('listing.title_lookup', listing_title_lookup),
+        "listing.detail_lookup": listing_read_tool('listing.detail_lookup', listing_detail_lookup),
+        "listing.stock_lookup": listing_read_tool('listing.stock_lookup', listing_stock_lookup),
+        "listing.status_lookup": listing_read_tool('listing.status_lookup', listing_status_lookup),
+        "listing.url_lookup": listing_read_tool('listing.url_lookup', listing_url_lookup),
+        "listing.attention_count": listing_read_tool('listing.attention_count', listing_attention_count),
         "marketplaces.active_count": AgentTool(
             name="marketplaces.active_count",
             description="Aktif pazaryeri adedini dondurur.",
@@ -12395,7 +11828,8 @@ def registered_tools() -> dict[str, AgentTool]:
         result_schema={"type": "object", "properties": {"cancelled": {"type": "boolean"}, "action_id": {"type": "string"},
                                                         "effect_executed": {"type": "boolean"}}})
     tools["orders.snapshot"] = AgentTool(name="orders.snapshot",
-        description="Read the COMPLETE sorted order dataset for a date/account/filter scope (up to 10,000 rows). "
+        description="Read the COMPLETE locally stored order dataset for a date/account/filter scope (up to 10,000 rows). "
+                    "Works with local/demo accounts without marketplace API credentials; no remote fetch or approval is needed. "
                     "One stable read; no pagination. Use for full year/order-list reports. Returned previews in model context "
                     "are only samples: bind the complete tool_result with reports.build_snapshot, rows_path=orders. "
                     "Does not build a report or create a file. Same Orders.views.actions operation available to manual UI.",
@@ -12407,7 +11841,12 @@ def registered_tools() -> dict[str, AgentTool]:
             "orders": {"type": "array", "items": {"type": "object", "properties": {
                 **{key: {"type": "string"} for key in ("order_number", "order_date", "status", "currency", "platform_code")},
                 "api_account_id": {"type": "integer"}, "total_price": {"type": "number"}, "item_count": {"type": "integer"}}}}}})
-    return {**atomics, **tools}
+    from AI.processors.conversation_memory import memory_tools
+    from AI.runtime.listing_stock_contracts import listing_stock_tools
+    from AI.runtime.stock_policy_contracts import stock_policy_tools
+    from AI.runtime.orders_monthly_contracts import monthly_order_summary_tool
+    monthly = monthly_order_summary_tool()
+    return {**atomics, **tools, **memory_tools(), **listing_stock_tools(), **stock_policy_tools(), monthly.name: monthly}
 
 
 def available_tools() -> dict[str, AgentTool]:

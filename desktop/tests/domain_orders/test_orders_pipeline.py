@@ -406,6 +406,65 @@ class TestOrdersPipeline(IsolatedDbTestCase):
             {1},
         )
 
+    def test_order_query_keeps_numeric_segments_inside_delimited_order_identifiers(self) -> None:
+        self._seed_account(1)
+        numbers = ["DEMO-202610-000001", "STORE_202610_000002", "MKT-202610-000003"]
+        for index, number in enumerate(numbers, start=1):
+            payload = self._sample_payload(account_pk=1)
+            payload["order_data_list"][0].update(id=1000+index, shipmentPackageId=1000+index,
+                orderNumber=number, customerFirstName="Deniz", customerLastName="Yıldız-demo")
+            payload["order_item_list"][0].update(id=1500+index, lineId=1500+index,
+                order_data_id=1000+index, orderNumber=number)
+            saved = orders_pipeline.save_orders_to_db(Result.ok(data=payload), db_name=self.db_path)
+            self.assertTrue(saved.success, saved.message)
+        for number in numbers:
+            with self.subTest(number=number):
+                for query in (number, f"Sipariş {number} detayları"):
+                    result = orders_agentic_repo.query_orders(query=query, api_account_ids=[1], db_name=self.db_path)
+                    self.assertTrue(result.success, result.message)
+                    self.assertEqual([row["order_number"] for row in result.data["orders"]], [number])
+                manual = orders_actions.action_load_order_snapshot(api_account_ids=[1],
+                    filters={"query": number}, db_name=self.db_path)
+                self.assertTrue(manual.success, manual.message)
+                self.assertEqual([row["order_number"] for row in manual.data["orders"]], [number])
+        missing = orders_agentic_repo.query_orders(query="DEMO-202610-999999", api_account_ids=[1], db_name=self.db_path)
+        self.assertTrue(missing.success, missing.message)
+        self.assertEqual(missing.data["count"], 0)
+
+    def test_order_query_zero_upper_price_bound_does_not_mean_unspecified(self) -> None:
+        self._seed_account(1)
+        payload = self._sample_payload(account_pk=1)
+        payload["order_data_list"][0].update(orderNumber="DEMO-202610-000001", packageTotalPrice=1414.92)
+        payload["order_item_list"][0]["orderNumber"] = "DEMO-202610-000001"
+        saved = orders_pipeline.save_orders_to_db(Result.ok(data=payload), db_name=self.db_path)
+        self.assertTrue(saved.success, saved.message)
+        for filters, expected in (({}, 1), ({"max_total_price": None}, 1), ({"max_total_price": 0}, 0)):
+            with self.subTest(filters=filters):
+                result = orders_agentic_repo.query_orders(order_numbers=["DEMO-202610-000001"],
+                    api_account_ids=[1], filters=filters, db_name=self.db_path)
+                self.assertTrue(result.success, result.message)
+                self.assertEqual(result.data["count"], expected)
+
+    def test_customer_query_has_no_matches_in_one_account_but_matches_another(self) -> None:
+        for account_id, first_name in ((1, "Deniz"), (2, "Ece")):
+            self._seed_account(account_id)
+            payload = self._sample_payload(account_pk=account_id)
+            number = f"DEMO-202610-{account_id:06d}"
+            payload["order_data_list"][0].update(id=1000+account_id, shipmentPackageId=1000+account_id,
+                orderNumber=number, customerFirstName=first_name, customerLastName="Yıldız-demo")
+            payload["order_item_list"][0].update(id=1500+account_id, lineId=1500+account_id,
+                order_data_id=1000+account_id, orderNumber=number)
+            saved = orders_pipeline.save_orders_to_db(Result.ok(data=payload), db_name=self.db_path)
+            self.assertTrue(saved.success, saved.message)
+        scoped = orders_agentic_repo.query_orders(api_account_ids=[1], filters={"customer": "ece yıldız"}, db_name=self.db_path)
+        global_result = orders_agentic_repo.query_orders(filters={"customer": "Ece Yıldız"}, db_name=self.db_path)
+        self.assertTrue(scoped.success and global_result.success)
+        self.assertEqual(scoped.data["count"], 0)
+        self.assertEqual(scoped.data["query_scope"], {"account_filter_applied": True, "api_account_ids": [1]})
+        self.assertEqual(global_result.data["query_scope"], {"account_filter_applied": False, "api_account_ids": []})
+        self.assertEqual([(row["api_account_id"], row["customer"]) for row in global_result.data["orders"]],
+                         [(2, "Ece Yıldız-demo")])
+
     def test_agentic_order_query_normalizes_canonical_snake_case_status(self) -> None:
         self._seed_account(1)
         statuses = (
@@ -3003,7 +3062,7 @@ class TestOrdersPipeline(IsolatedDbTestCase):
                  "save_return_claims_to_db",
                  return_value=Result.ok("saved", close_dialog=False, data={"changed": True}),
              ):
-            result = orders_actions.approve_return_claim.__wrapped__(order)
+            result = orders_actions.approve_return_claim(order)
 
         self.assertTrue(result.success, result.message)
         self.assertEqual(captured["claim_id"], "CLM-1001")

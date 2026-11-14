@@ -166,6 +166,33 @@ def _verified_reports(state: AgentSessionState) -> list[dict[str, Any]]:
     return reports
 
 
+def _observed_profit_export_snapshot(state, action):
+    """Bind a specialized export to its actual completed domain preparation."""
+    from Orders.processors.profit_workbook import build_profit_report_snapshot
+
+    payload = (action.get("arguments") or {}).get("payload")
+    if not isinstance(payload, dict):
+        return None
+    for step in state.completed_steps:
+        if (step.status != "completed" or step.verification_status not in {"observed", "verified"}
+                or step.tool_names != ["orders.export_profit_excel.prepare"]):
+            continue
+        result = (step.result_data or {}).get("tool_result") or {}
+        if not isinstance(result, dict):
+            continue
+        prepared = result.get("action") or {}
+        if (not isinstance(prepared, dict) or prepared.get("action_type") != "orders.action_export_order_profit_excel"
+                or (prepared.get("arguments") or {}).get("payload") != payload):
+            continue
+        try:
+            return build_profit_report_snapshot(order_number=payload.get("order_number", ""),
+                api_account_id=payload.get("api_account_id"),
+                estimated_profit_payload=payload.get("estimated_profit_payload"))
+        except (ValueError, TypeError, KeyError, AttributeError):
+            return None
+    return None
+
+
 def verified_export_report_receipts(state: AgentSessionState) -> list[dict[str, Any]]:
     """Match an executed, approved export and its recorded exact readback.
 
@@ -174,11 +201,13 @@ def verified_export_report_receipts(state: AgentSessionState) -> list[dict[str, 
     """
     from Core.processors.report_artifacts import ReportSnapshot
 
+    executions = [row for row in state.last_tool_results
+                  if isinstance(row, dict) and row.get("tool_names") == ["execute_approved_operation"]]
+    if not executions:
+        return []
     reports = {row["content_hash"]: row for row in _verified_reports(state)}
     receipts = []
-    for row in state.last_tool_results:
-        if not isinstance(row, dict) or row.get("tool_names") != ["execute_approved_operation"]:
-            continue
+    for row in executions:
         data = row.get("data") or {}
         if not isinstance(data, dict):
             continue
@@ -193,17 +222,27 @@ def verified_export_report_receipts(state: AgentSessionState) -> list[dict[str, 
         if not isinstance(action, dict) or not isinstance(action.get("arguments"), dict):
             continue
         payload = (action.get("arguments") or {}).get("payload") or {}
-        if not isinstance(payload, dict) or not isinstance(payload.get("report_snapshot"), dict):
+        if not isinstance(payload, dict):
             continue
-        try:
-            approved_snapshot = ReportSnapshot.from_dict(payload["report_snapshot"])
-            if payload["report_snapshot"].get("content_hash") != approved_snapshot.content_hash:
+        operation = action.get("action_type")
+        specialized_profit = operation == "orders.action_export_order_profit_excel"
+        if specialized_profit:
+            approved_snapshot = _observed_profit_export_snapshot(state, action)
+            if approved_snapshot is None:
                 continue
-        except (ValueError, TypeError, KeyError, AttributeError):
+            report = approved_snapshot.to_dict()
+        elif operation == "ai.action_export_report_snapshot_xlsx" and isinstance(payload.get("report_snapshot"), dict):
+            try:
+                approved_snapshot = ReportSnapshot.from_dict(payload["report_snapshot"])
+                if payload["report_snapshot"].get("content_hash") != approved_snapshot.content_hash:
+                    continue
+            except (ValueError, TypeError, KeyError, AttributeError):
+                continue
+        else:
             continue
-        expected_sheets = [{"name": sheet["name"], "row_count": sheet["row_count"],
-                            "headers": [column["label"] for column in sheet["columns"]]}
-                           for sheet in report["sheets"]] if report else []
+        expected_sheets = [{"name": sheet.name, "row_count": len(sheet.rows),
+                            "headers": [column.label for column in sheet.columns]}
+                           for sheet in approved_snapshot.sheets] if report else []
         audit_verify = audit.get("verify") or {}
         if not isinstance(audit_verify, dict):
             continue
@@ -214,9 +253,11 @@ def verified_export_report_receipts(state: AgentSessionState) -> list[dict[str, 
                 or not isinstance(verify.get("output_path"), str) or not verify["output_path"].strip()
                 or not isinstance(verify.get("file_sha256"), str) or not re.fullmatch(r"[0-9a-f]{64}", verify["file_sha256"])
                 or audit.get("status") != "success" or audit.get("execute_success") is not True
-                or audit.get("operation") != "ai.action_export_report_snapshot_xlsx"
-                or action.get("action_type") != "ai.action_export_report_snapshot_xlsx"
-                or not audit.get("approved_by") or data.get("result") != verify
+                or audit.get("operation") != operation
+                or not audit.get("approved_by")
+                or (not specialized_profit and data.get("result") != verify)
+                or (specialized_profit and (not isinstance(data.get("result"), dict)
+                    or any(data["result"].get(key) != value for key, value in verify.items())))
                 or approved_snapshot.content_hash != report["content_hash"]
                 or payload.get("output_path") != verify.get("output_path")
                 or any(audit_verify.get(key) != verify.get(key) for key in ("verified", "verified_by", "snapshot_id", "content_hash", "file_sha256", "size_bytes"))):

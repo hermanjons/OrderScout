@@ -465,18 +465,27 @@ def _balance_maps_from_latest_valuations(
     if not item_ids:
         return {}, {}, {}, {}, {}, {}
 
-    row_number = func.row_number().over(
-        partition_by=(StockTx.item_id, StockTx.warehouse_id),
-        order_by=(
+    pairs_query = select(StockTx.item_id, StockTx.warehouse_id).where(StockTx.item_id.in_(item_ids))
+    if warehouse_id is not None:
+        pairs_query = pairs_query.where(StockTx.warehouse_id == int(warehouse_id))
+    pairs = pairs_query.distinct().subquery()
+    # The item/warehouse/time index can find the newest movement directly for
+    # each pair. The grouping reads the index without ranking every movement.
+    latest_pk = (
+        select(StockTx.pk)
+        .where(
+            StockTx.item_id == pairs.c.item_id,
+            StockTx.warehouse_id.is_not_distinct_from(pairs.c.warehouse_id),
+        )
+        .order_by(
             StockTx.occurred_at.desc(),
             StockTx.created_at.desc(),
             StockTx.pk.desc(),
-        ),
-    ).label("row_number")
-    latest_base = select(StockTx.pk.label("tx_pk"), row_number).where(StockTx.item_id.in_(item_ids))
-    if warehouse_id is not None:
-        latest_base = latest_base.where(StockTx.warehouse_id == int(warehouse_id))
-    latest_subq = latest_base.subquery()
+        )
+        .limit(1)
+        .correlate(pairs)
+        .scalar_subquery()
+    )
     stmt = (
         select(
             StockTx.item_id,
@@ -486,8 +495,9 @@ def _balance_maps_from_latest_valuations(
             StockTx.currency,
             StockTx.unit_cost_input_mode,
         )
-        .join(latest_subq, StockTx.pk == latest_subq.c.tx_pk)
-        .where(latest_subq.c.row_number == 1)
+        .select_from(pairs)
+        .join(StockTx, StockTx.pk == latest_pk)
+        .order_by(pairs.c.item_id, pairs.c.warehouse_id)
     )
 
     on_hand_by_item: Dict[int, float] = {}
@@ -714,12 +724,22 @@ def create_item(
     except Exception as e:
         return _fail(StockError.db_error, e, "Stok kartı oluşturulamadı.")
 
-def update_item(pk: int, update_data: Dict[str, Any]) -> Result:
+def update_item(pk: int, update_data: Dict[str, Any], *, expected_values: Optional[Dict[str, Any]] = None) -> Result:
     try:
         if not pk:
             return Result.fail("Geçersiz id.", close_dialog=False)
 
         update_data = dict(update_data or {})
+        from Stock.processors.item_updates import normalize_threshold_updates
+        update_data.update(normalize_threshold_updates(update_data))
+        if expected_values is not None:
+            if not isinstance(expected_values, dict) or not expected_values or set(expected_values) - set(StockItem.model_fields):
+                return Result.fail("Stok kartı karşılaştırma alanları geçersiz.", close_dialog=False)
+            current = _get_record(StockItem, pk)
+            if current is None or any(getattr(current, name) != value for name, value in expected_values.items()):
+                return Result.fail("Stok kartı teklif hazırlandıktan sonra değişmiş; güncel kayıtla yeniden inceleme gerekir.",
+                    close_dialog=False, data={"reason": "stock_item_changed_since_prepare", "db_write_performed": False,
+                        "current_values": {name: getattr(current, name) for name in expected_values} if current else None})
         if "barcode" in update_data:
             incoming_barcode = update_data.get("barcode")
             incoming_barcode = str(incoming_barcode).strip() if incoming_barcode is not None else ""
@@ -742,10 +762,13 @@ def update_item(pk: int, update_data: Dict[str, Any]) -> Result:
 
         res = update_records(
             model=StockItem,
-            filters={"pk": pk},
+            filters={"pk": pk, **dict(expected_values or {})},
             update_data=update_payload,
             db_name=_database_name(),
         )
+        if res.success and expected_values is not None and (res.data or {}).get("affected") != 1:
+            return Result.fail("Stok kartı kaydetme sırasında değişmiş; eski teklif uygulanmadı.", close_dialog=False,
+                data={"reason": "stock_item_changed_since_prepare", "db_write_performed": False})
         if res.success:
             _emit_quick_access_change("items", 1)
             _emit_refresh()

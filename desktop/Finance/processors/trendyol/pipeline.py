@@ -5,7 +5,7 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict, Optional
 
-from sqlalchemy import func
+from sqlalchemy import func, null, or_
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
@@ -342,6 +342,7 @@ async def _fetch_finance_records(
             account_error_msg = ""
             fetched_records: list[dict[str, Any]] = []
             account_errors: list[dict[str, str]] = []
+            pagination_complete = False
 
             async with semaphore:
                 while pages_fetched < page_limit:
@@ -408,12 +409,27 @@ async def _fetch_finance_records(
 
                     total_pages = _extract_total_pages(payload if isinstance(payload, dict) else {})
                     if not content:
+                        pagination_complete = True
                         break
                     if total_pages is not None and page >= (total_pages - 1):
+                        pagination_complete = True
                         break
                     if len(content) < size:
+                        pagination_complete = True
                         break
                     page += 1
+
+                # Reaching the configured cap with a full page is a partial
+                # source, not successful completion. Automatic cursors must not
+                # skip the remaining finance transactions in that window.
+                if pages_fetched >= page_limit and not pagination_complete:
+                    account_failed = True
+                    account_error_msg = "Finans sayfa sınırına ulaşıldı; kaynak taraması tamamlanmadı."
+                    account_errors.append({
+                        "seller_id": seller_id,
+                        "company": _compact_text(account.get("comp_name")) or "-",
+                        "message": account_error_msg,
+                    })
 
             summary = (
                 {
@@ -779,6 +795,7 @@ async def sync_finance_for_accounts(
     page_size: int = TRENDYOL_FINANCE_DEFAULT_PAGE_SIZE,
     max_pages: int | None = TRENDYOL_FINANCE_DEFAULT_MAX_PAGES,
     progress_callback: Callable[[int, int], None] | None = None,
+    db_name: str = DB_NAME,
 ) -> Result:
     try:
         accounts = list(comp_api_account_list or [])
@@ -916,10 +933,10 @@ async def sync_finance_for_accounts(
             _emit(60 + int((idx / max(1, len(cargo_targets))) * 25))
 
         _emit(88)
-        tx_save = save_finance_transactions_to_db(all_transaction_records)
+        tx_save = save_finance_transactions_to_db(all_transaction_records, db_name=db_name)
         if not tx_save.success:
             return tx_save
-        cargo_save = save_finance_cargo_items_to_db(all_cargo_items)
+        cargo_save = save_finance_cargo_items_to_db(all_cargo_items, db_name=db_name)
         if not cargo_save.success:
             return cargo_save
         tx_count = len(transaction_keys)
@@ -1015,29 +1032,40 @@ def _cargo_item_to_dict(row: FinanceCargoInvoiceItem) -> dict[str, Any]:
     }
 
 
-def _matches_search(record: dict[str, Any], search_text: str) -> bool:
-    query = _compact_text(search_text).casefold()
-    if not query:
-        return True
-    haystack = " ".join(
-        _compact_text(record.get(key))
-        for key in (
-            "companyName",
-            "sellerAccountId",
-            "transactionType",
-            "description",
-            "orderNumber",
-            "shipmentPackageId",
-            "barcode",
-            "paymentOrderId",
-            "commissionInvoiceSerialNumber",
-            "invoiceSerialNumber",
-            "shipmentPackageType",
-            "storeName",
-            "storeAddress",
+_FINANCE_SEARCH_COLUMNS = (
+    "transactionType", "description", "orderNumber", "shipmentPackageId", "barcode",
+    "paymentOrderId", "commissionInvoiceSerialNumber", "invoiceSerialNumber",
+    "shipmentPackageType", "storeName", "storeAddress",
+)
+
+
+def _finance_search_contains(query: str, *values: Any) -> bool:
+    return query in " ".join(map(_compact_text, values)).casefold()
+
+
+def finance_company_account_filter(session: Session, account_column, company_name: str):
+    """Match exact folded company names while using the account ID index."""
+    connection = session.connection().connection.driver_connection
+    connection.create_function("finance_company_name", 1, lambda name: _compact_text(name).casefold(), deterministic=True)
+    company_ids = select(ApiAccount.pk).where(
+        func.finance_company_name(ApiAccount.comp_name) == _compact_text(company_name).casefold()
+    )
+    return account_column.in_(company_ids)
+
+
+def _filter_finance_read(session, stmt, model, *, company_name, search_text, limit):
+    if company_name:
+        stmt = stmt.where(finance_company_account_filter(session, model.api_account_id, company_name))
+    if search_text:
+        # SQLite's built-in LOWER only folds ASCII. Use the existing Unicode
+        # matching rule on the search columns before loading ORM records.
+        connection = session.connection().connection.driver_connection
+        connection.create_function("finance_search_contains", -1, _finance_search_contains, deterministic=True)
+        columns = [getattr(model, name, null()) for name in _FINANCE_SEARCH_COLUMNS]
+        stmt = stmt.outerjoin(ApiAccount, ApiAccount.pk == model.api_account_id).where(
+            func.finance_search_contains(search_text.casefold(), ApiAccount.comp_name, ApiAccount.account_id, *columns)
         )
-    ).casefold()
-    return query in haystack
+    return stmt.limit(limit) if limit is not None else stmt
 
 def get_finance_transactions_from_db(
     *,
@@ -1076,17 +1104,11 @@ def get_finance_transactions_from_db(
                 stmt = stmt.where(FinanceTransaction.transactionDate >= _as_int(start_ms))
             if end_ms not in (None, ""):
                 stmt = stmt.where(FinanceTransaction.transactionDate <= _as_int(end_ms))
-            if safe_limit is not None and not clean_company and not clean_search:
-                stmt = stmt.limit(safe_limit)
+            stmt = _filter_finance_read(session, stmt, FinanceTransaction, company_name=clean_company,
+                                        search_text=clean_search, limit=safe_limit)
             rows = session.exec(stmt).all() or []
 
         records = [_transaction_to_dict(row) for row in rows]
-        if clean_company:
-            records = [row for row in records if _compact_text(row.get("companyName")).casefold() == clean_company]
-        if clean_search:
-            records = [row for row in records if _matches_search(row, clean_search)]
-        if safe_limit is not None:
-            records = records[:safe_limit]
         return Result.ok(
             f"Finans hareketleri cekildi (toplam: {len(records)})",
             close_dialog=False,
@@ -1127,17 +1149,11 @@ def get_finance_cargo_invoice_transactions_from_db(
                 stmt = stmt.where(FinanceTransaction.transactionDate >= _as_int(start_ms))
             if end_ms not in (None, ""):
                 stmt = stmt.where(FinanceTransaction.transactionDate <= _as_int(end_ms))
-            if safe_limit is not None and not clean_company and not clean_search:
-                stmt = stmt.limit(safe_limit)
+            stmt = _filter_finance_read(session, stmt, FinanceTransaction, company_name=clean_company,
+                                        search_text=clean_search, limit=safe_limit)
             rows = session.exec(stmt).all() or []
 
         records = [_transaction_to_dict(row) for row in rows]
-        if clean_company:
-            records = [row for row in records if _compact_text(row.get("companyName")).casefold() == clean_company]
-        if clean_search:
-            records = [row for row in records if _matches_search(row, clean_search)]
-        if safe_limit is not None:
-            records = records[:safe_limit]
         return Result.ok(
             f"Kargo faturasi hareketleri cekildi (toplam: {len(records)})",
             close_dialog=False,
@@ -1175,17 +1191,11 @@ def get_finance_cargo_invoice_items_from_db(
                 clean_serials = [_compact_text(row) for row in invoice_serial_numbers if _compact_text(row)]
                 if clean_serials:
                     stmt = stmt.where(FinanceCargoInvoiceItem.invoiceSerialNumber.in_(clean_serials))
-            if safe_limit is not None and not clean_company and not clean_search:
-                stmt = stmt.limit(safe_limit)
+            stmt = _filter_finance_read(session, stmt, FinanceCargoInvoiceItem, company_name=clean_company,
+                                        search_text=clean_search, limit=safe_limit)
             rows = session.exec(stmt).all() or []
 
         records = [_cargo_item_to_dict(row) for row in rows]
-        if clean_company:
-            records = [row for row in records if _compact_text(row.get("companyName")).casefold() == clean_company]
-        if clean_search:
-            records = [row for row in records if _matches_search(row, clean_search)]
-        if safe_limit is not None:
-            records = records[:safe_limit]
         return Result.ok(
             f"Kargo fatura kalemleri cekildi (toplam: {len(records)})",
             close_dialog=False,
@@ -1202,14 +1212,12 @@ def get_finance_filter_metadata(db_name: str = DB_NAME) -> Result:
 
         engine = get_engine(db_name)
         with Session(engine) as session:
-            tx_count = int(session.exec(select(func.count(FinanceTransaction.pk))).one() or 0)
-            cargo_count = int(session.exec(select(func.count(FinanceCargoInvoiceItem.pk))).one() or 0)
-            min_date, max_date = session.exec(
-                select(
-                    func.min(FinanceTransaction.transactionDate),
-                    func.max(FinanceTransaction.transactionDate),
-                )
-            ).one()
+            tx_count = session.exec(select(func.count()).select_from(FinanceTransaction)).one()
+            cargo_count = session.exec(select(func.count()).select_from(FinanceCargoInvoiceItem)).one()
+            min_date, max_date = session.exec(select(
+                select(func.min(FinanceTransaction.transactionDate)).scalar_subquery(),
+                select(func.max(FinanceTransaction.transactionDate)).scalar_subquery(),
+            )).one()
             transaction_types = _clean_distinct(
                 session.exec(
                     select(FinanceTransaction.transactionType)
@@ -1226,23 +1234,15 @@ def get_finance_filter_metadata(db_name: str = DB_NAME) -> Result:
                     .distinct()
                 ).all()
             )
-            tx_companies = _clean_distinct(
+            companies = _clean_distinct(
                 session.exec(
                     select(ApiAccount.comp_name)
-                    .select_from(FinanceTransaction)
-                    .join(ApiAccount, FinanceTransaction.api_account_id == ApiAccount.pk)
                     .where(ApiAccount.comp_name.is_not(None))
                     .where(ApiAccount.comp_name != "")
-                    .distinct()
-                ).all()
-            )
-            cargo_companies = _clean_distinct(
-                session.exec(
-                    select(ApiAccount.comp_name)
-                    .select_from(FinanceCargoInvoiceItem)
-                    .join(ApiAccount, FinanceCargoInvoiceItem.api_account_id == ApiAccount.pk)
-                    .where(ApiAccount.comp_name.is_not(None))
-                    .where(ApiAccount.comp_name != "")
+                    .where(or_(
+                        select(FinanceTransaction.pk).where(FinanceTransaction.api_account_id == ApiAccount.pk).exists(),
+                        select(FinanceCargoInvoiceItem.pk).where(FinanceCargoInvoiceItem.api_account_id == ApiAccount.pk).exists(),
+                    ))
                     .distinct()
                 ).all()
             )
@@ -1253,7 +1253,7 @@ def get_finance_filter_metadata(db_name: str = DB_NAME) -> Result:
             "Finance filter metadata hazÄ±r.",
             close_dialog=False,
             data={
-                "company_names": sorted({*tx_companies, *cargo_companies}),
+                "company_names": companies,
                 "transaction_types": transaction_types,
                 "service_keys": service_keys,
                 "min_transaction_date": min_date_int,

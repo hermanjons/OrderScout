@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 APP_NAME = "OrderScout"
-APP_VERSION = os.getenv("ORDER_SCOUT_VERSION", "0.3.5")
+APP_VERSION = os.getenv("ORDER_SCOUT_VERSION", "0.3.6")
 
 
 # ==========================================================
@@ -100,13 +100,10 @@ DONATION_URL = os.getenv("ORDER_SCOUT_DONATION_URL", "").strip()
 # ==========================================================
 # Release surface feature visibility
 # ==========================================================
-# Domain code remains available; these switches only decide which unfinished
-# surfaces are exposed by the production shell during the manual-first release.
-# Show AI during source development/testing; keep packaged releases opt-in.
-_DEFAULT_AI_UI = "0" if bool(getattr(sys, "frozen", False)) else "1"
-ENABLE_AI_UI: bool = os.getenv("ENABLE_AI_UI", _DEFAULT_AI_UI) == "1"
-ENABLE_FINANCE_INVOICES_UI: bool = os.getenv("ENABLE_FINANCE_INVOICES_UI", "0") == "1"
-ENABLE_FINANCE_TRANSACTIONS_UI: bool = os.getenv("ENABLE_FINANCE_TRANSACTIONS_UI", "0") == "1"
+# Visibility switches for the desktop workspaces.
+ENABLE_AI_UI: bool = os.getenv("ENABLE_AI_UI", "1") == "1"
+ENABLE_FINANCE_INVOICES_UI: bool = os.getenv("ENABLE_FINANCE_INVOICES_UI", "1") == "1"
+ENABLE_FINANCE_TRANSACTIONS_UI: bool = os.getenv("ENABLE_FINANCE_TRANSACTIONS_UI", "1") == "1"
 
 # ==========================================================
 # Test Lab UI (internal QA tooling)

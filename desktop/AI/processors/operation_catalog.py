@@ -15,6 +15,7 @@ from AI.processors.manual_capabilities import (
     manual_read_blockers,
 )
 from AI.processors.tools import AgentTool, OperationInputSource, available_tools
+from AI.runtime.catalog import compact_operation_description
 
 
 _SUPERSEDED_MANUAL_CAPABILITIES = {
@@ -394,7 +395,21 @@ def discover_operation_catalog(
     }
     page_size = max(1, min(32, int(limit or 16)))
     start = max(0, int(offset or 0))
-    if _text(query):
+    clean_query = _text(query)
+    exact_lookup = clean_query in filtered or bool(re.fullmatch(
+        r"[A-Za-z_][A-Za-z0-9_-]*(?:\.[A-Za-z_][A-Za-z0-9_-]*)+", clean_query))
+    lookup_mode = "exact" if exact_lookup else "search" if clean_query else "browse"
+    suggestions = []
+    if exact_lookup:
+        # An operation ID is an identity lookup, not a bag of search tokens.
+        # Related producer names must never masquerade as the requested tool.
+        page = [filtered[clean_query]][start : start + page_size + 1] if clean_query in filtered else []
+        if clean_query not in filtered:
+            suggestions = [{"operation_id": entry.name,
+                "description": compact_operation_description(entry.description),
+                "owner_domain": entry.metadata.owner_domain}
+                for entry in retrieve_operation_candidates(clean_query, catalog=filtered, limit=3)]
+    elif clean_query:
         page = retrieve_operation_candidates(
             query, catalog=filtered, limit=page_size + 1, offset=start,
         )
@@ -403,7 +418,11 @@ def discover_operation_catalog(
     has_more = len(page) > page_size
     operations = [{"operation_id": entry.name, **entry.to_dict()} for entry in page[:page_size]]
     return {
-        "query": _text(query),
+        "query": clean_query,
+        "lookup_mode": lookup_mode,
+        "exact_match_found": clean_query in filtered if exact_lookup else None,
+        "suggested_operations": suggestions,
+        "suggestions_are_callable_contracts": False,
         "domains": sorted(clean_domains),
         "include_manual": bool(include_manual),
         "operations": operations,
@@ -413,6 +432,9 @@ def discover_operation_catalog(
         "returned_count": len(operations),
         "offset": start,
         "next_offset": start + len(operations) if has_more else None,
+        "next_page_arguments": {"query": _text(query), "domains": sorted(clean_domains),
+                                "include_manual": bool(include_manual), "limit": page_size,
+                                "offset": start + len(operations)} if has_more else None,
         "has_more": has_more,
         "discovery_grants_execution_permission": False,
     }

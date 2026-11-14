@@ -1315,16 +1315,8 @@ def _stock_item_by_sku(sku: str, *, db_name=None) -> dict[str, Any] | None:
         return None
     for row in list((result.data or {}).get("records") or []):
         if _compact_text(getattr(row, "sku", "")).casefold() == _compact_text(sku).casefold():
-            return {
-                "id": int(getattr(row, "pk", 0) or 0),
-                "sku": _compact_text(getattr(row, "sku", "")),
-                "name": _compact_text(getattr(row, "name", "")),
-                "barcode": _compact_text(getattr(row, "barcode", "")),
-                "brand": _compact_text(getattr(row, "brand", "")),
-                "category": _compact_text(getattr(row, "category", "")),
-                "unit": _compact_text(getattr(row, "unit", "")),
-                "is_active": bool(getattr(row, "is_active", True)),
-            }
+            from Stock.processors.item_updates import item_update_snapshot
+            return item_update_snapshot(row)
     return None
 
 
@@ -1417,17 +1409,22 @@ def execute_stock_item_create(
 def verify_stock_item_update(action: dict[str, Any]) -> Result:
     try:
         rows = action.get("rows") if isinstance(action, dict) else []
+        if not isinstance(rows, list) or not rows or any(not isinstance(row, dict) for row in rows):
+            return Result.fail("Doğrulanacak stok kartı yok.", close_dialog=False)
         verified_rows: list[dict[str, Any]] = []
         for row in [dict(item) for item in rows if isinstance(item, dict)]:
             after = dict(row.get("after") or {})
             sku = _compact_text(after.get("sku"))
-            record = _stock_item_by_sku(sku, db_name=_manual_payload_from_action(action).get("db_name"))
-            if record is None:
+            from Stock.processors.item_updates import read_item_update_snapshot
+            result = read_item_update_snapshot(item_id=int(row.get("id") or 0),
+                db_name=_manual_payload_from_action(action).get("db_name"))
+            if not result.success:
                 return Result.fail(f"Stok karti bulunamadi: {sku}", close_dialog=False)
+            record = result.data["record"]
             for key, expected in after.items():
                 if key in {"id"}:
                     continue
-                if key in record and record.get(key) != expected:
+                if key not in record or record[key] != expected:
                     return Result.fail(f"Verify alani eslesmedi: {sku}/{key}", close_dialog=False)
             verified_rows.append(record)
         return Result.ok(
@@ -1460,14 +1457,17 @@ def execute_stock_item_update(
             )
 
         rows = [dict(item) for item in list(action.get("rows") or []) if isinstance(item, dict)]
+        if action.get("tool") == "stock.thresholds.prepare" and (len(rows) != 1 or not rows[0].get("expected_values")):
+            return Result.fail("Stok eşiği teklifi tam kayıt karşılaştırması içermiyor.", close_dialog=False)
         for row in rows:
             item_id = int(row.get("id") or 0)
             changes = dict(row.get("changes") or {})
             update_data = {name: (change or {}).get("after") for name, change in changes.items() if isinstance(change, dict)}
             if item_id <= 0 or not update_data:
                 continue
+            comparison = {"expected_values": row["expected_values"]} if "expected_values" in row else {}
             result = _stock_call_in_db(_manual_payload_from_action(action).get("db_name") or stock_pipeline.DB_NAME,
-                                       stock_pipeline.update_item, pk=item_id, update_data=update_data)
+                                       stock_pipeline.update_item, pk=item_id, update_data=update_data, **comparison)
             if not result.success:
                 entry = {
                     "timestamp": _utcnow_iso(),
@@ -1901,39 +1901,16 @@ def verify_labels_mark_extracted(action: dict[str, Any], result: Result | None =
 
 
 def verify_order_profit_excel_export(action: dict[str, Any], result: Result | None = None) -> Result:
-    try:
-        payload = _manual_payload_from_action(action)
-        result_data = dict((result.data if result is not None and isinstance(result.data, dict) else {}) or {})
-        output_path = _compact_text(payload.get("output_path") or result_data.get("output_path"))
-        if not output_path:
-            for row in _action_rows(action):
-                file_info = dict(row.get("file") or {})
-                output_path = _compact_text(row.get("output_path") or file_info.get("path"))
-                if output_path:
-                    break
-        if not output_path:
-            return Result.fail("Excel export verify icin output_path bulunamadi.", close_dialog=False)
-        path = Path(output_path)
-        if not path.exists() or not path.is_file():
-            return Result.fail(
-                "Excel export verify dosyayi bulamadi.",
-                close_dialog=False,
-                data={"verified": False, "output_path": str(path)},
-            )
-        size_bytes = path.stat().st_size
-        if size_bytes <= 0:
-            return Result.fail(
-                "Excel export verify dosya bos gorundu.",
-                close_dialog=False,
-                data={"verified": False, "output_path": str(path), "size_bytes": size_bytes},
-            )
-        return Result.ok(
-            "Excel export dosya sistemi verify ile dogrulandi.",
-            close_dialog=False,
-            data={"verified": True, "output_path": str(path), "size_bytes": size_bytes, "verified_by": "filesystem"},
-        )
-    except Exception as exc:
-        return Result.fail(map_error_to_message(exc), error=exc, close_dialog=False)
+    from Orders.processors.profit_workbook import verify_order_profit_payload_xlsx
+    payload = _manual_payload_from_action(action)
+    # The approved arguments own both scope and data. A writer result or merely
+    # existing file cannot replace the immutable estimate being verified.
+    return verify_order_profit_payload_xlsx(
+        order_number=payload.get("order_number", ""),
+        api_account_id=payload.get("api_account_id"),
+        output_path=payload.get("output_path", ""),
+        estimated_profit_payload=payload.get("estimated_profit_payload"),
+    )
 
 
 def verify_report_snapshot_xlsx_export(
@@ -3815,7 +3792,12 @@ def verify_listing_manual_action(capability: ManualCapability, action: dict[str,
                     for row in list(payload.get("stock_items") or [])
                     if isinstance(row, dict) and ((row.get("stock_item_id") or row.get("id")) not in (None, ""))
                 }
-                ok = True
+                listing_row = next((row for row in products if int(getattr(row, "pk", 0) or 0) == listing_id), None)
+                expected_primary = next(iter(desired), None)
+                ok = (listing_row is not None
+                      and int(getattr(listing_row, "api_account_id", 0) or 0) == int(payload.get("api_account_id") or 0)
+                      and str(getattr(listing_row, "product_id", "")) == str(payload.get("product_id"))
+                      and getattr(listing_row, "stock_item_id", None) == expected_primary)
                 for stock_id, qty in desired.items():
                     latest_row = latest.get(stock_id)
                     ok = ok and latest_row is not None and _active_status(latest_row) and abs(float(getattr(latest_row, "qty", 0.0) or 0.0) - qty) < 0.0001
@@ -3826,7 +3808,8 @@ def verify_listing_manual_action(capability: ManualCapability, action: dict[str,
                     return Result.ok(
                         "Listing stock link DB verify ile dogrulandi.",
                         close_dialog=False,
-                        data={"verified": True, "verified_by": "db", "listing_id": listing_id, "stock_item_ids": sorted(desired.keys())},
+                        data={"verified": True, "verified_by": "db", "listing_id": listing_id,
+                              "stock_item_ids": sorted(desired.keys()), "primary_stock_item_id": expected_primary},
                     )
                 return Result.fail(
                     "Listing stock link verify tamamlanmadi.",
@@ -4672,7 +4655,12 @@ def execute_manual_read_action(
             return Result.fail(
                 f"Manuel read capability guvenli read executor icin uygun degil: {', '.join(reasons)}.",
                 close_dialog=False,
-                data={"capability": capability.to_dict(), "reasons": reasons},
+                data={"capability": capability.to_dict(), "reasons": reasons,
+                      "effect_executed": False,
+                      **({"next_operation": "operations.manual_action.prepare",
+                          "next_operation_executes": False,
+                          "repair_policy": "This capability writes data. Supply its exact required payload to the prepare operation for review; this read call created no proposal and performed no effect."}
+                         if capability.mode == "write" else {})},
             )
         action_payload = dict(payload or {})
         payload_guard = _required_payload_guard(capability, action_payload)

@@ -583,8 +583,11 @@ class TestAiChatTab(unittest.TestCase):
         self.assertTrue(selected.get("model_metadata", {}).get("capability_profile", {}).get("tool_calling"))
 
         tab._on_model_list_item_clicked(tab.model_list.item(0))
-        self.assertEqual(tab.model_list.count(), 1)
+        QApplication.processEvents()
+        self.assertTrue(tab.model_list.item(1).isHidden())
+        self.assertTrue(tab.model_list.item(2).isHidden())
         tab._on_model_list_item_clicked(tab.model_list.item(0))
+        QApplication.processEvents()
         self.assertEqual(tab.model_list.count(), 3)
 
     def test_advanced_settings_change_only_the_selected_chat_model_record(self) -> None:
@@ -661,6 +664,42 @@ class TestAiChatTab(unittest.TestCase):
         self.assertEqual(dialog._fields["temperature"].text(), "0.2")
         self.assertIn("num_gpu", dialog._fields)
         self.assertEqual(dialog.minimumHeight(), 590)
+
+    def test_local_setting_edits_are_replanned_off_thread_and_forwarded_to_runtime(self) -> None:
+        tab = AITab()
+        item = QListWidgetItem("Yerel model")
+        item.setData(Qt.ItemDataRole.UserRole, {
+            "_source_kind": "local_model", "repo_id": "fixture/4b", "filename": "4b.gguf",
+            "resource_plan": {"safe_to_run": True, "num_ctx": 8192, "max_tokens": 1024},
+        })
+        tab.model_list.addItem(item)
+        tab.model_list.setCurrentItem(item)
+        tab.composer.setPlainText("Merhaba")
+        expected_plan = {"safe_to_run": True, "profile": "quality", "num_ctx": 4096, "max_tokens": 1024}
+        plan = type("PreviewPlan", (), {"to_dict": lambda _self: dict(expected_plan)})()
+        with patch("AI.views.chat_tab.SyncWorker", _DeferredWorker), patch(
+            "AI.views.chat_tab.build_local_resource_plan", return_value=plan,
+        ) as planner:
+            tab._apply_advanced_model_settings(item, {"num_ctx": 4096, "performance_preset": "quality", "num_gpu": 0, "num_thread": "auto"})
+            worker = tab._resource_plan_worker
+            self.assertIsNotNone(worker)
+            planner.assert_not_called()
+            self.assertFalse(tab.btn_send.isEnabled())
+            self.assertEqual(item.data(Qt.ItemDataRole.UserRole)["runtime_config"]["num_gpu"], 0)
+            result = worker.func()
+            for callback in worker.result_ready.callbacks:
+                callback(result)
+            worker.started = False
+            for callback in worker.finished.callbacks:
+                callback()
+
+        requested = planner.call_args.args[0]
+        self.assertEqual(requested["runtime_config"]["num_ctx"], 4096)
+        self.assertEqual(requested["runtime_config"]["performance_preset"], "quality")
+        self.assertNotIn("num_thread", requested["runtime_config"])
+        self.assertNotIn("resource_plan", requested)
+        self.assertEqual(item.data(Qt.ItemDataRole.UserRole)["resource_plan"]["num_ctx"], 4096)
+        self.assertTrue(tab.btn_send.isEnabled())
 
     def test_advanced_popup_disables_unsupported_provider_settings_and_omits_them_on_apply(self) -> None:
         tab = AITab()
@@ -808,14 +847,14 @@ class TestAiChatTab(unittest.TestCase):
 
         self.assertTrue(tab.btn_send.isEnabled())
         self.assertTrue(tab.composer.isEnabled())
-        self.assertEqual(tab.btn_send.text(), "Yönlendir")
+        self.assertEqual(tab.btn_send.accessibleName(), "Yönlendir")
 
         tab._chat_worker = None
         tab._update_chat_controls()
 
         self.assertTrue(tab.btn_send.isEnabled())
         self.assertTrue(tab.composer.isEnabled())
-        self.assertEqual(tab.btn_send.text(), "Gönder")
+        self.assertEqual(tab.btn_send.accessibleName(), "Gönder")
 
 
     def test_agent_activity_is_visible_in_transcript(self) -> None:
@@ -869,10 +908,7 @@ class TestAiChatTab(unittest.TestCase):
         self.assertIn("orderscout://approval/cancel/", html_text)
         self.assertIn("background-color:#2563eb", html_text)
         self.assertIn("background-color:#ffffff", html_text)
-        self.assertTrue(
-            "background-color:#eef2f7" in html_text
-            or 'bgcolor="#eef2f7"' in html_text
-        )
+        self.assertNotIn("background-color:#eef2f7", html_text)
         self.assertIn("color:#c2410c", html_text)
         self.assertEqual(len(tab._approval_card_actions), 1)
         self.assertIn(tab._latest_approval_card_token, tab._approval_card_actions)
@@ -1469,7 +1505,7 @@ class TestAiChatTab(unittest.TestCase):
         self.assertEqual(data.get("answer"), projected_answer)
         self.assertIn("MDB (TRENDYOL / production)", data.get("answer") or "")
 
-    def test_response_progress_shell_shows_percent_state(self) -> None:
+    def test_response_status_is_inline_without_estimated_percentage(self) -> None:
         tab = AITab()
         self.addCleanup(tab.deleteLater)
         self.addCleanup(tab.close)
@@ -1477,14 +1513,12 @@ class TestAiChatTab(unittest.TestCase):
         self._app.processEvents()
 
         tab._start_chat_progress(estimated_seconds=30)
-        self.assertTrue(tab.chat_progress_shell.isVisible())
-        self.assertEqual(tab.chat_progress.value(), 4)
-        self.assertIn("4%", tab.chat_progress_percent.text())
-
-        tab._set_chat_progress(64, "Model cevabi uretiyor", percent_text="64% | 2s")
-        self.assertEqual(tab.chat_progress.value(), 64)
-        self.assertEqual(tab.chat_progress_percent.text(), "64% | 2s")
-        self.assertIn("Model", tab.chat_progress_label.text())
+        self.assertIn("Yanıt bekleniyor", tab.transcript.toPlainText())
+        self.assertIn("İşlem ayrıntıları", tab.transcript.toPlainText())
+        self.assertNotIn("%", tab.transcript.toPlainText())
+        self.assertFalse(tab.run_activity_panel.isVisible())
+        self.assertFalse(tab.chat_status.isVisible())
+        self.assertFalse(hasattr(tab, "chat_progress_shell"))
 
     def test_task_progress_is_rendered_in_chat_without_duplicate_activity(self) -> None:
         tab = AITab()
@@ -1492,22 +1526,22 @@ class TestAiChatTab(unittest.TestCase):
         self.addCleanup(tab.close)
         tab.show()
         self._app.processEvents()
-        tab._chat_progress_started_at = time.monotonic()
+        tab._start_chat_progress()
 
         tab._on_task_progress(24, "Adim 1/3: Kargoya hazir siparisleri kontrol ediyorum.")
         tab._on_task_progress(24, "Adim 1/3: Kargoya hazir siparisleri kontrol ediyorum.")
         tab._on_task_progress(46, "Adim 1/3 tamamlandi.")
 
         transcript = tab.transcript.toPlainText()
-        self.assertEqual(
-            transcript.count("Adim 1/3: Kargoya hazir siparisleri kontrol ediyorum."),
-            1,
-        )
+        self.assertNotIn("Kargoya hazir siparisleri kontrol ediyorum", transcript)
         self.assertIn("Adim 1/3 tamamlandi.", transcript)
-        self.assertEqual(tab.chat_progress.value(), 46)
-        self.assertIn("Adim 1/3 tamamlandi.", tab.chat_progress_label.text())
+        tab._on_transcript_anchor_clicked(QUrl("orderscout://activity/" + tab._activity_run_id))
+        self.assertTrue(tab.run_activity_panel.isVisible())
+        self.assertEqual(tab.run_activity_panel._messages, [
+            "Adim 1/3: Kargoya hazir siparisleri kontrol ediyorum.", "Adim 1/3 tamamlandi.",
+        ])
 
-    def test_response_progress_switches_to_busy_when_estimate_is_exceeded(self) -> None:
+    def test_elapsed_time_never_invents_a_new_work_phase(self) -> None:
         tab = AITab()
         self.addCleanup(tab.deleteLater)
         self.addCleanup(tab.close)
@@ -1516,13 +1550,16 @@ class TestAiChatTab(unittest.TestCase):
 
         tab._chat_worker = _RunningWorker()
         tab._start_chat_progress(estimated_seconds=8)
-        tab._chat_progress_started_at = time.monotonic() - 9
+        tab._activity_runs[tab._activity_run_id]["started_at"] = time.monotonic() - 90
 
         tab._advance_chat_progress()
 
-        self.assertEqual(tab.chat_progress.minimum(), 0)
-        self.assertEqual(tab.chat_progress.maximum(), 0)
-        self.assertIn("uzun", tab.chat_progress_label.text())
+        transcript = tab.transcript.toPlainText()
+        self.assertIn("90 sn", transcript)
+        self.assertIn("Yanıt bekleniyor", transcript)
+        self.assertNotIn("uzun", transcript)
+        self.assertNotIn("%", transcript)
+        tab._chat_worker = None
 
     def test_send_starts_progress_before_local_runtime_is_built(self) -> None:
         tab = AITab()
@@ -1558,8 +1595,8 @@ class TestAiChatTab(unittest.TestCase):
         self.assertEqual(worker.kwargs.get("source"), "local")
         self.assertEqual(worker.kwargs.get("progress_callback_kw"), "progress_callback")
         self.assertTrue(worker.progress.callbacks)
-        self.assertTrue(tab.chat_progress_shell.isVisible())
-        self.assertGreater(tab.chat_progress.value(), 0)
+        self.assertIn("Yanıt bekleniyor", tab.transcript.toPlainText())
+        self.assertFalse(tab.run_activity_panel.isVisible())
         self.assertFalse(tab.btn_send.isEnabled())
         self.assertTrue(tab.composer.isEnabled())
         self.assertFalse(tab.btn_pause_task.isHidden())
@@ -2779,7 +2816,8 @@ class TestAiChatTab(unittest.TestCase):
             tab._update_chat_controls()
 
         self.assertFalse(tab.btn_send.isEnabled())
-        self.assertIn("bloke", tab.composer_meta.text())
+        self.assertIn("Kaynak kontrolü gerekli", tab.composer_meta.text())
+        self.assertIn("OS koruma rezervi", tab.composer_meta.toolTip())
 
     def test_cloud_provider_without_default_model_disables_send_control(self) -> None:
         tab = AITab()
@@ -3561,7 +3599,9 @@ class TestAiChatTab(unittest.TestCase):
         self.assertEqual(active_action.get("action_type"), "labels.mark_orders_extracted_from_label_result")
         self.assertEqual(active_action.get("_agent_task_session_id"), "task-session-two-phase")
         transcript = tab.transcript.toPlainText()
-        self.assertIn("Gorev sonraki riskli adima ilerledi", transcript)
+        self.assertIn("Onay bekliyor", transcript)
+        self.assertTrue(any("Gorev sonraki riskli adima ilerledi" in message
+                            for message in tab._activity_runs[tab._activity_run_id]["messages"]))
         self.assertIn("Fis durumu onayi", transcript)
         self.assertIn("Simdi fis durumunu isaretlemek icin onayini bekliyorum", transcript)
         self.assertIn("verify: dogrulandi", transcript)

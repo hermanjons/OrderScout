@@ -121,7 +121,7 @@ def observed_entity_scope(result: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def source_path_value(value: Any, path: str) -> Any:
-    if not path:
+    if not path or path == ".":
         return value
     tokens = path.split(".") if not path.startswith("/") else [
         token.replace("~1", "/").replace("~0", "~") for token in path[1:].split("/")
@@ -133,5 +133,13 @@ def source_path_value(value: Any, path: str) -> Any:
         elif isinstance(current, (list, tuple)) and token.isdigit() and int(token) < len(current):
             current = current[int(token)]
         else:
+            # Preserve exact JSON Pointer keys first. A common caller spelling
+            # /field.child is an unambiguous dotted alias only if that exact
+            # pointer key is absent; never guess or substitute a source value.
+            if path.startswith("/") and "/" not in path[1:] and "." in path and path != "/.":
+                try:
+                    return source_path_value(value, path[1:])
+                except ValueError:
+                    pass
             raise ValueError(f"observation_projection_path_missing:{path}")
     return current

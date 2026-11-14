@@ -1145,7 +1145,7 @@ class TestAiPipeline(IsolatedDbTestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             settings_path = Path(tmp_dir) / "ai_config.json"
             model_path = Path(tmp_dir) / "gpt-oss-20b-q4_k_m.gguf"
-            model_path.write_bytes(b"fake")
+            model_path.write_bytes(b"GGUF\x03\x00\x00\x00" + b"\x00" * 16)
             record = {
                 "repo_id": "openai/gpt-oss-20b",
                 "filename": model_path.name,
@@ -1179,9 +1179,9 @@ class TestAiPipeline(IsolatedDbTestCase):
             self.assertEqual(config.get("runtime_strategy"), "llama_cpp")
             self.assertEqual(config.get("performance_preset"), "eco")
             self.assertEqual(config.get("reasoning_effort"), "low")
-            self.assertLessEqual(plan.get("num_ctx"), 768)
-            self.assertGreaterEqual(plan.get("max_tokens"), 256)
-            self.assertEqual(plan.get("num_gpu"), 4)
+            self.assertEqual(plan.get("num_ctx"), 2048)
+            self.assertEqual(plan.get("max_tokens"), 128)
+            self.assertLessEqual(plan.get("num_gpu"), 4)
             self.assertEqual(plan.get("runtime_strategy"), "llama_cpp")
             self.assertTrue(plan.get("use_mmap"))
 
@@ -1226,7 +1226,7 @@ class TestAiPipeline(IsolatedDbTestCase):
         self.assertEqual(str(detail.get("description")), "Local coding model.")
 
     def test_download_hf_model_file_saves_file_and_registers_db_record(self) -> None:
-        body = b"fake-model-binary"
+        body = b"GGUF\x03\x00\x00\x00" + b"\x00" * 16 + b"fake-model-binary"
         response = _FakeDownloadResponse(
             body,
             headers={
@@ -1319,7 +1319,7 @@ class TestAiPipeline(IsolatedDbTestCase):
 
     def test_download_can_pause_with_partial_file_and_resume_from_http_range(self) -> None:
         chunk_size = 1024 * 1024
-        first_chunk = b"a" * chunk_size
+        first_chunk = b"GGUF\x03\x00\x00\x00" + b"\x00" * 16 + b"a" * (chunk_size - 24)
         second_chunk = b"b" * chunk_size
         first_response = _FakeDownloadResponse(
             first_chunk + second_chunk,
@@ -1327,7 +1327,8 @@ class TestAiPipeline(IsolatedDbTestCase):
         )
         resume_response = _FakeDownloadResponse(
             second_chunk,
-            headers={"Content-Length": str(chunk_size)},
+            headers={"Content-Length": str(chunk_size),
+                     "Content-Range": f"bytes {chunk_size}-{chunk_size * 2 - 1}/{chunk_size * 2}"},
             status_code=206,
         )
         pause = {"requested": False}
@@ -1372,7 +1373,7 @@ class TestAiPipeline(IsolatedDbTestCase):
             )
 
     def test_delete_installed_model_removes_safe_file_db_record_and_runtime_config(self) -> None:
-        body = b"deletable-local-model"
+        body = b"GGUF\x03\x00\x00\x00" + b"\x00" * 16 + b"deletable-local-model"
         response = _FakeDownloadResponse(
             body,
             headers={"Content-Length": str(len(body))},
@@ -1459,12 +1460,12 @@ class TestAiPipeline(IsolatedDbTestCase):
 
         self.assertTrue(plan.safe_to_run)
         self.assertIn(plan.profile, {"disk_guarded_large_model", "survival_mmap_large_model"})
-        self.assertLessEqual(plan.num_ctx, 512)
-        self.assertLessEqual(plan.max_tokens, 256)
+        self.assertGreaterEqual(plan.num_ctx, 8192)
+        self.assertGreaterEqual(plan.max_tokens, 1024)
         self.assertGreater(plan.num_gpu, 0)
-        self.assertEqual(plan.keep_alive, "0s")
+        self.assertEqual(plan.keep_alive, "5m")
         self.assertIn(plan.process_priority, {"below_normal", "idle"})
-        self.assertTrue(plan.trim_working_set)
+        self.assertFalse(plan.trim_working_set)
         self.assertGreaterEqual(plan.startup_timeout_seconds, 180)
 
     def test_gpt_oss_20b_resource_plan_blocks_emergency_low_memory(self) -> None:
@@ -1486,8 +1487,8 @@ class TestAiPipeline(IsolatedDbTestCase):
 
         self.assertFalse(plan.safe_to_run)
         self.assertEqual(plan.profile, "blocked_insufficient_memory")
-        self.assertEqual(plan.process_priority, "idle")
-        self.assertTrue(plan.trim_working_set)
+        self.assertEqual(plan.process_priority, "below_normal")
+        self.assertFalse(plan.trim_working_set)
 
     def test_agent_llm_decision_selects_order_count_tool(self) -> None:
         def fake_planner(prompt: str) -> str:
@@ -11185,6 +11186,8 @@ class TestAiPipeline(IsolatedDbTestCase):
     def test_operation_coverage_report_tracks_manual_write_execute_surface(self) -> None:
         report = operation_runtime.operation_coverage_report()
         expected_orders_read_ids = {
+            "orders.action_load_order_data_freshness",
+            "orders.action_load_order_snapshot",
             "orders.action_list_item_balances",
             "orders.action_list_items",
             "orders.fetch_orders_all",
@@ -15171,7 +15174,7 @@ class TestAiPipeline(IsolatedDbTestCase):
         )
         with tempfile.TemporaryDirectory() as tmp_dir:
             model_path = Path(tmp_dir) / "Gemma-4-E4B-it-Q4_K_M.gguf"
-            model_path.write_bytes(b"fake")
+            model_path.write_bytes(b"GGUF\x03\x00\x00\x00" + b"\x00" * 16)
             plan = build_local_resource_plan(
                 {"repo_id": "jc-builds/Gemma-4-E4B-it-GGUF", "local_path": str(model_path)},
                 model_hint=str(model_path),
@@ -15186,14 +15189,14 @@ class TestAiPipeline(IsolatedDbTestCase):
                 self.assertGreaterEqual(startup_timeout, getattr(plan, "startup_timeout_seconds", 45))
                 return _Server()
 
-            def fake_builder(*, base_url, api_key, model, timeout=0, extra_headers=None, request_options=None):
-                self.assertEqual(base_url, "http://127.0.0.1:39111/v1")
+            def fake_builder(*, base_url, model, plan, record=None):
+                self.assertEqual(base_url, "http://127.0.0.1:39111")
                 self.assertEqual(model, model_path.name)
-                self.assertGreaterEqual((request_options or {}).get("max_tokens"), 128)
+                self.assertGreaterEqual(plan.max_tokens, 128)
 
                 def _client(_prompt: str) -> str:
                     return '{"mode":"tool","tool":"orders.summary","arguments":{"period":"today"}}'
-
+                _client.resource_plan = plan.to_dict()
                 return _client
 
             with patch("AI.processors.local_runtime.find_bundled_llama_server", return_value=str(Path(tmp_dir) / "llama-server.exe")), patch(
@@ -15203,7 +15206,7 @@ class TestAiPipeline(IsolatedDbTestCase):
                 "AI.processors.local_runtime._start_managed_llama_server",
                 side_effect=fake_start_server,
             ), patch(
-                "AI.processors.local_runtime.build_openai_compatible_client",
+                "AI.processors.local_runtime.build_local_http_client",
                 side_effect=fake_builder,
             ):
                 planner = local_runtime.build_local_planner_client(
@@ -15215,7 +15218,7 @@ class TestAiPipeline(IsolatedDbTestCase):
             self.assertEqual(getattr(planner, "runtime_name", ""), "llama_cpp_server")
             self.assertEqual(getattr(planner, "model_name", ""), str(model_path))
 
-    def test_local_prompt_compaction_keeps_instructions_and_latest_tail_in_context(self) -> None:
+    def test_local_prompt_compatibility_helper_never_silently_removes_input(self) -> None:
         prompt = (
             "SYSTEM-KURALLARI\n"
             "<history>"
@@ -15237,15 +15240,15 @@ class TestAiPipeline(IsolatedDbTestCase):
             max_tokens=384,
         )
 
-        self.assertTrue(metadata.get("prompt_compacted"))
-        self.assertLessEqual(len(compacted), metadata.get("prompt_max_input_chars"))
+        self.assertFalse(metadata.get("prompt_compacted"))
+        self.assertEqual(compacted, prompt)
         self.assertIn("SYSTEM-KURALLARI", compacted)
         self.assertIn("GUNCEL-ISTEK", compacted)
         self.assertIn("GUNCEL-ARAC-SONUCU", compacted)
         self.assertIn("eski-29", compacted)
-        self.assertNotIn("eski-0-", compacted)
+        self.assertIn("eski-0-", compacted)
 
-    def test_agent_tool_registry_exposes_only_local_read_tools(self) -> None:
+    def test_agent_tool_registry_exposes_reads_and_approval_gated_prepares(self) -> None:
         registry = available_tools()
 
         self.assertIn("orders.summary", registry)
@@ -15265,13 +15268,12 @@ class TestAiPipeline(IsolatedDbTestCase):
             self.assertTrue(tool.read_only)
             self.assertFalse(tool.destructive)
             if getattr(tool, "action_type", "") == "prepare_write":
+                self.assertTrue(tool.requires_approval, name)
                 continue
-            lowered = f"{name} {tool.description} {getattr(tool.handler, '__name__', '')}".casefold()
-            self.assertNotIn("fetch", lowered)
-            self.assertNotIn("api", lowered)
-            self.assertNotIn("delete", lowered)
-            self.assertNotIn("update_price", lowered)
-            self.assertNotIn("write", lowered)
+            # A local freshness read legitimately describes an API fetch cursor;
+            # prose keywords do not determine whether an operation has effects.
+            self.assertIn(tool.action_type, {"read", "control"}, name)
+            self.assertFalse(tool.requires_approval, name)
 
 
 if __name__ == "__main__":

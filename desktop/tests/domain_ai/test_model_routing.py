@@ -265,6 +265,25 @@ def test_live_gemini_catalog_applies_central_free_quality_order() -> None:
     assert route["models"][0]["quality_tier"] == 100
 
 
+def test_current_minimax_preference_uses_only_the_live_free_variant():
+    models = [{"id": model, "pricing": {"prompt": price, "completion": price},
+               "context_length": 1_000_000, "supported_parameters": ["tools", "tool_choice", "reasoning"]}
+              for model, price in [("nvidia/nemotron-3-ultra-550b-a55b:free", "0"),
+                                   ("minimax/minimax-m3.1-flash:free", "0"),
+                                   ("minimax/minimax-m3.1-flash", "0.00000015")]]
+    with patch.object(ai_pipeline.requests, "get", return_value=_Response({"data": models})):
+        result = ai_pipeline.list_provider_models(provider_code="openrouter", free_only=True)
+    assert result.success
+    route = result.data["free_model_test_route"]
+    assert route["model_ids"] == ["minimax/minimax-m3.1-flash:free", "nvidia/nemotron-3-ultra-550b-a55b:free"]
+    assert route["generated_from_live_catalog"]
+    assert route["models"][0]["native_tool_calling"]
+    assert route["models"][0]["quality_score"] == 0.0  # preference, not a fabricated benchmark
+    with patch.object(ai_pipeline.requests, "get", return_value=_Response({"data": models[:1]})):
+        removed = ai_pipeline.list_provider_models(provider_code="openrouter", free_only=True)
+    assert removed.data["free_model_test_route"]["model_ids"] == ["nvidia/nemotron-3-ultra-550b-a55b:free"]
+
+
 def test_acceptance_catalog_preserves_live_quality_route_order_without_secrets(
     tmp_path,
 ) -> None:

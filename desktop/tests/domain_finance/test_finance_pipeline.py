@@ -121,6 +121,33 @@ class FinancePipelineTests(IsolatedDbTestCase):
         self.assertTrue(dashboard_res.success, msg=dashboard_res.message)
         self.assertEqual(len(dashboard_res.data["transaction_table_rows"]), 2)
 
+    def test_finance_search_applies_unicode_company_and_literal_text_before_limit(self):
+        with Session(get_engine(self.db_path)) as session:
+            session.add_all([
+                ApiAccount(pk=1, account_id="seller-1", comp_name="Çığ Gıda", platform="trendyol"),
+                ApiAccount(pk=2, account_id="seller-2", comp_name="Başka Şirket", platform="trendyol"),
+            ])
+            session.commit()
+        saved = save_finance_transactions_to_db([
+            {
+                "_finance_service": "settlements", "_api_account_id": account_id,
+                "id": record_id, "transactionType": "Sale", "description": description,
+                "transactionDate": 1700000000000 + index, "orderNumber": "SIP-1",
+            }
+            for index, (record_id, account_id, description) in enumerate((
+                ("match", 1, "Ödeme %10"),
+                ("literal-mismatch", 1, "Ödeme X10"),
+                ("other-company", 2, "Ödeme %10"),
+            ))
+        ], db_name=self.db_path)
+        self.assertTrue(saved.success, saved.message)
+
+        result = get_finance_transactions_from_db(
+            db_name=self.db_path, company_name=" çığ gıda ", search_text="ödeme %10 sip-1", limit=1,
+        )
+        self.assertTrue(result.success, result.message)
+        self.assertEqual([row["recordId"] for row in result.data["records"]], ["match"])
+
     def test_finance_cargo_items_are_saved_and_filtered(self):
         self._seed_account()
 

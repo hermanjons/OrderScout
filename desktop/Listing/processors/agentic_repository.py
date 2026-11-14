@@ -5,16 +5,12 @@ from sqlmodel import Session, select
 from Core.utils.model_utils import get_engine
 from Feedback.processors.pipeline import Result, map_error_to_message
 from Listing.models.models import ListingProduct, ListingProductCostSnapshot, ListingProductStockSnapshot
+from Listing.processors.catalog_queries import read_listing_products
 from settings import DB_NAME
 
 
 def list_products(*, db_name: str = DB_NAME) -> Result:
-    try:
-        with Session(get_engine(db_name or DB_NAME)) as session:
-            rows = session.exec(select(ListingProduct)).all() or []
-        return Result.ok("Listing kayitlari getirildi.", close_dialog=False, data={"records": rows})
-    except Exception as exc:
-        return Result.fail(map_error_to_message(exc), error=exc, close_dialog=False)
+    return read_listing_products(db_name=db_name)
 
 
 def verification_bundle(*, db_name: str = DB_NAME) -> Result:

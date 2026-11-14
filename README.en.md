@@ -20,7 +20,7 @@ and charges still apply.
 - Product costs, commissions, cargo tariffs and profitability views.
 - Shipping label templates and document export.
 - Multiple company and marketplace accounts.
-- An experimental AI workspace with local and external provider options.
+- An experimental AI workspace, enabled in the Windows installer, with local and cloud model options.
 
 Trendyol is the active integration focus. Configuration for another marketplace
 does not imply a finished integration. See [project status](docs/project-status.md)
@@ -40,7 +40,9 @@ cd desktop
 ```
 
 For the packaged application, use the separate
-[download repository](https://github.com/hermanjons/OrderScout-releases/releases).
+[download repository](https://github.com/hermanjons/OrderScout-releases/releases/latest)
+and choose `OrderScout_Setup_x64.exe` for Windows 10 or 11 x64. In Model Hub,
+download a local GGUF model or add your own cloud provider account.
 
 ## Privacy and security
 
@@ -52,7 +54,8 @@ marketplace. External AI features may send relevant business data to your chosen
 provider.
 
 [Setup](docs/setup.md) · [Architecture](docs/architecture.md) ·
-[Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md)
+[Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md) ·
+[Windows build](docs/windows-build.md)
 
 ## License
 

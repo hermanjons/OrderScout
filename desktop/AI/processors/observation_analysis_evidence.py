@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from AI.processors.observation_projection import source_path_value, source_projection_hash
-from AI.processors.analysis_operations import calculate_observations
+from AI.processors.observation_projection import source_projection_hash
+from AI.processors.analysis_operations import calculate_observations, resolve_observed_operand
 from AI.processors.session_state import AgentSessionState
 from Core.processors.verified_calculations import evaluate_verified_calculation, evaluate_verified_comparison
 
@@ -87,7 +87,7 @@ def verified_observation_calculations(state: AgentSessionState) -> list[dict[str
                             or not isinstance(result, dict)
                             or receipt.get("source_result_hash") != source_projection_hash(result)):
                         raise ValueError("analysis_source_receipt_not_bound")
-                    value = source_path_value(result, receipt.get("path", ""))
+                    value, _ = resolve_observed_operand(result, receipt.get("path", ""))
                     if value != receipt.get("value"):
                         raise ValueError("analysis_operand_receipt_drift")
                     operands.append({"value": value, "label": f"{receipt['source_step_id']}:{receipt['path']}",

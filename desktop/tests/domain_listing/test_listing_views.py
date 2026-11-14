@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from unittest import TestCase
 from unittest.mock import patch
 
-from PyQt6.QtCore import QPoint, QRect, Qt
+from PyQt6.QtCore import QObject, QPoint, QRect, Qt, pyqtSignal
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication, QLabel, QFrame, QWidget
 
@@ -140,72 +140,25 @@ class TestListingViews(TestCase):
         self.assertEqual(listing_views._listing_fetch_percent(2, 4), 50)
         self.assertEqual(listing_views._listing_fetch_percent(4, 4), 100)
 
-    def test_listing_fetch_progress_waits_for_save_before_showing_100(self) -> None:
-        class FakeProgressButton:
-            def __init__(self) -> None:
-                self.progress_values: list[int] = []
+    def test_listing_tab_has_no_manual_fetch_or_auto_toggle(self) -> None:
+        tab = listing_views.ListingTab()
+        self.addCleanup(tab.close)
+        self.addCleanup(tab.deleteLater)
+        self.assertFalse(hasattr(tab, "fetch_button"))
+        self.assertFalse(hasattr(tab, "auto_fetch_toggle"))
+        tab._on_background_status("listing", "Yerel kayıtlar yenilendi. Son kontrol: 10:20:30")
+        self.assertIn("10:20:30", tab.status_label.text())
 
-            def setProgress(self, value: int) -> None:
-                self.progress_values.append(int(value))
-
-        button = FakeProgressButton()
-        fake_tab = SimpleNamespace(
-            _fetch_progress_actual=0,
-            _fetch_progress_display=0,
-            fetch_button=button,
-        )
-
-        listing_views.ListingTab._set_fetch_progress_actual(fake_tab, 100)
-        self.assertEqual(button.progress_values[-1], 99)
-
-        listing_views.ListingTab._set_fetch_progress_actual(fake_tab, 40)
-        self.assertEqual(button.progress_values, [99])
-
-    def test_listing_fetch_button_waits_for_db_save_before_reenable(self) -> None:
-        class FakeProgressButton:
-            def __init__(self) -> None:
-                self.enabled = False
-                self.progress_values: list[int] = []
-                self.failed = False
-                self.reset_called = False
-
-            def setEnabled(self, enabled: bool) -> None:
-                self.enabled = bool(enabled)
-
-            def setProgress(self, value: int) -> None:
-                self.progress_values.append(int(value))
-
-            def fail(self) -> None:
-                self.failed = True
-
-            def reset(self) -> None:
-                self.reset_called = True
-
-        button = FakeProgressButton()
-        fake_tab = SimpleNamespace(
-            _fetch_from_auto_repeat=True,
-            _fetch_waiting_for_save=True,
-            _fetch_failed=False,
-            _fetch_progress_actual=100,
-            _fetch_progress_display=100,
-            fetch_button=button,
-            _stop_fetch_progress=lambda: None,
-        )
-        fake_tab._set_fetch_progress_actual = lambda value: button.setProgress(int(value))
-        fake_tab._reset_fetch_button_after_success = lambda: listing_views.ListingTab._reset_fetch_button_after_success(fake_tab)
-
-        listing_views.ListingTab._on_worker_finished(fake_tab)
-        self.assertFalse(button.enabled)
-        self.assertTrue(fake_tab._fetch_waiting_for_save)
-
-        listing_views.ListingTab._finish_fetch_progress(fake_tab, success=True)
-        self.assertFalse(button.enabled)
-        self.assertFalse(fake_tab._fetch_waiting_for_save)
-        self.assertEqual(button.progress_values[-1], 100)
-
-        listing_views.ListingTab._reset_fetch_button_after_success(fake_tab)
-        self.assertTrue(button.enabled)
-        self.assertTrue(button.reset_called)
+    def test_listing_background_notification_marks_loaded_window_stale(self) -> None:
+        calls = []
+        tab = listing_views.ListingTab()
+        self.addCleanup(tab.close)
+        self.addCleanup(tab.deleteLater)
+        tab.list_window = SimpleNamespace(mark_stale=lambda: calls.append(True))
+        tab._on_background_refreshed("orders", {})
+        self.assertEqual(calls, [])
+        tab._on_background_refreshed("listing", {"mode": "local"})
+        self.assertEqual(calls, [True])
 
     def test_listing_uses_core_resettable_splitter(self) -> None:
         self.assertIs(listing_views.ResettableSplitter, core_views.ResettableSplitter)
@@ -716,6 +669,46 @@ class TestListingViews(TestCase):
                 window.close()
                 window.deleteLater()
                 self._app.processEvents()
+
+    def test_listing_filters_coalesce_and_only_display_the_latest_search(self) -> None:
+        workers = []
+
+        class DeferredWorker(QObject):
+            result_ready = pyqtSignal(object)
+            finished = pyqtSignal()
+
+            def __init__(self, callback, *, parent, **params):
+                super().__init__(parent)
+                self.params = params
+                if callback is listing_manager_window._prepare_filtered_listing_payload:
+                    workers.append(self)
+
+            def start(self):
+                pass
+
+            def finish(self, title):
+                self.result_ready.emit(listing_manager_window.Result.ok(
+                    "ok", data={"items": [{"api_account_id": 1, "productId": title, "title": title}]},
+                ))
+                self.finished.emit()
+
+        window = listing_manager_window.ListingManagerWindow()
+        try:
+            with patch.object(listing_manager_window, "SyncWorker", DeferredWorker):
+                for query in ("ilk", "ara", "son"):
+                    window.search_input.setText(query)
+                    window.apply_db_filters()
+                self.assertEqual(len(workers), 1)
+                workers[0].finish("ilk")
+                self.assertEqual(window.list_widget.filtered_items, [])
+                self.assertEqual(len(workers), 2)
+                self.assertEqual(workers[1].params["query_params"]["search"], "son")
+                workers[1].finish("son")
+                self.assertEqual([row["title"] for row in window.list_widget.filtered_items], ["son"])
+        finally:
+            window.close()
+            window.deleteLater()
+            self._app.processEvents()
 
     def test_open_profit_detail_reuses_cached_estimation_without_recompute(self) -> None:
         window = listing_manager_window.ListingManagerWindow()

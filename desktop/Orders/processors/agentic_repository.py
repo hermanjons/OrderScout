@@ -16,9 +16,10 @@ from Core.utils.contact_utils import normalize_contact_address
 from Core.utils.model_utils import get_engine
 from Feedback.processors.pipeline import Result, map_error_to_message
 from Marketplaces.constants.catalog_constants import canonical_platform_code
-from Marketplaces.processors.catalog import normalize_marketplace_environment
+from Account.processors.environment import resolve_account_environment
 from Orders.constants import ORDER_FINAL_STATUS_CODES
 from Orders.models.trendyol.models import OrderData, OrderHeader, OrderItem, ReturnClaim
+from Orders.processors.statuses import order_status_label_for_code
 from Orders.processors.trendyol.pipeline import (
     get_latest_order_items_by_numbers,
     get_latest_orders_filtered,
@@ -624,6 +625,7 @@ def summarize_orders(
             end_ms=end_date_ms,
             api_account_ids=api_account_ids,
             db_name=db_name,
+            summary_only=True,
         )
         if not latest.success:
             return latest
@@ -726,6 +728,8 @@ def summarize_orders(
                 "total_orders": total_orders,
                 "cancelled_orders": cancelled_count,
                 "estimated_revenue": round(estimated_revenue, 2),
+                "revenue_basis": "non_cancelled_order_totals",
+                "excluded_revenue_statuses": ["Cancelled"],
                 "currency": currency,
                 "currencies": currencies or [currency],
                 "revenue_by_currency": {
@@ -733,6 +737,7 @@ def summarize_orders(
                     for code, value in sorted(revenue_by_currency.items())
                 },
                 "status_counts": status_counts,
+                "status_labels": {status: order_status_label_for_code(status) for status in status_counts},
                 # These are canonical derived indicators, calculated beside
                 # their source aggregates.  The AI layer can therefore explain
                 # a broad analysis request without inventing arithmetic in a
@@ -1135,6 +1140,7 @@ def summarize_returns(
             end_ms=end_date_ms,
             api_account_ids=api_account_ids,
             db_name=db_name,
+            summary_only=True,
         )
         if not latest.success:
             return latest
@@ -1481,6 +1487,10 @@ def list_recent_orders(
                     for row in rows
                     if row["order_number"]
                 ],
+                "population_scope_account_ids": sorted({
+                    int(row.api_account_id) for row in source_rows
+                    if getattr(row, "api_account_id", None) is not None
+                }),
                 "listed_count": len(rows),
                 "total_count": len(source_rows),
                 "truncated": len(rows) < len(source_rows),
@@ -1566,11 +1576,15 @@ def query_orders(
         # Identity-looking tokens create a strict lookup boundary. Extract them
         # from the normalized raw sentence so ordinary words are never joined
         # into one synthetic identifier (for example "show delivered order").
+        # A delimited identifier with digits stays whole regardless of prefix;
+        # treating its date/sequence pieces as separate IDs loses real matches
+        # or admits unrelated orders sharing only one piece.
         normalized_query = _normalized_key(clean_query)
         query_identifiers = [
             _search_key(value)
             for value in re.findall(
-                r"\b(?:ord|order)[-_]?[a-z0-9_-]+\b|\b\d{6,}\b",
+                r"\b(?:ord|order)[-_]?[a-z0-9_-]+\b|"
+                r"\b(?=[a-z0-9_-]*\d)[a-z0-9]+(?:[-_][a-z0-9]+)+\b|\b\d{6,}\b",
                 normalized_query,
             )
         ]
@@ -1765,6 +1779,8 @@ def query_orders(
                 "query": clean_query,
                 "order_numbers": requested_numbers,
                 "filters": clean_filters,
+                "query_match_mode": "identity_boundary" if query_identifiers else "any_text_term" if terms else "no_text_query",
+                "query_scope": dict((latest.data or {}).get("query_scope") or {}),
                 "sort": clean_sort,
                 "mode": clean_mode,
                 "count": len(scored),
@@ -2668,6 +2684,8 @@ def summarize_order_item_sales(
                         "order_count": 0,
                         "matched_order_count": 0,
                         "population_order_count": 0,
+                        "scope_account_ids": sorted(set(accounts)),
+                        "amount_basis": "line_gross_before_discounts",
                         "gross_amount_by_currency": {},
                         "total_gross_amount": 0.0,
                         "currency": "",
@@ -2855,6 +2873,8 @@ def summarize_order_item_sales(
                 ),
                 "matched_order_count": len(matched_order_keys),
                 "population_order_count": len(eligible_keys),
+                "scope_account_ids": sorted({int(key[0]) for key in (matched_order_keys if identity_filters else eligible_keys) if key[0] is not None}),
+                "amount_basis": "line_gross_before_discounts",
                 "gross_amount_by_currency": gross_amount_by_currency,
                 "total_gross_amount": (
                     gross_amount_by_currency[single_currency]
@@ -3282,14 +3302,7 @@ def target_account_ids(kind: str, tokens: list[Any], *, db_name: str = DB_NAME) 
         account_id = _text(getattr(account, "account_id", ""))
         if not account_id:
             return Result.fail(f"Hedef kaydin staging account kimligi bulunamadi: {_text(token)}", close_dialog=False)
-        extra_config = dict(getattr(account, "extra_config", None) or {})
-        environments.add(
-            normalize_marketplace_environment(
-                extra_config.get("environment")
-                or extra_config.get("api_environment")
-                or "production"
-            )
-        )
+        environments.add(resolve_account_environment(account))
         resolved.add(account_id)
         verified.append(_text(token))
     return Result.ok(

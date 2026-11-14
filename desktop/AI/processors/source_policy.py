@@ -15,6 +15,7 @@ SOURCE_POLICIES = (ALLOW_FRESH, EXISTING_ONLY)
 _CURRENT = ContextVar("orderscout_source_policy", default=ALLOW_FRESH)
 _TRANSFORMS = frozenset({
     "approvals.cancel",
+    "conversation.read", "observations.read",
     "operations.discover", "artifacts.read", "analysis.calculate", "analysis.table",
     "reports.build_snapshot", "reports.xlsx.prepare", "web.research_report",
     "web.research_report_xlsx.prepare",

@@ -1,6 +1,20 @@
 # Finance Goals
 
-Updated: 2026-07-17
+## 20 Ekim 2026 ortak nakit hareketi hesabı
+
+`cashflow.read_cashflow_summary` tarih, silinme ve döviz kurallarının sahibidir.
+AI adapter'ı dönem girdisini çözüp domain sonucunu taşır. Manuel finans
+özetleriyle ortak `transaction_amount_totals` primitive'i kullanılır. Hatalar
+boş başarıya çevrilmez. Çoklu/belirsiz döviz tek tutara indirgenmez; kayıtlı
+hareket neti banka bakiyesi değildir. Bu kapsamın kanıtı
+`../../AI/docs/atomic_domain_operations_2026_10_20.md` altındadır. Genel Finance
+kabulü açık kalır.
+
+Kâr motorunun gerektirdiği maliyet ve tarife katalog okumaları, kabul/override
+kuralları korunarak `catalog_reads` içine taşındı. Manuel actions aynı domain
+işlemlerine delege eder; katalog cache'i bu processor'ın sorumluluğundadır.
+
+Updated: 2026-10-20
 
 Parent contracts: `../../Core/docs/domain_goals_contract.md`,
 `../../AI/docs/goals.md`

@@ -28,9 +28,8 @@ $env:ENABLE_AI_UI = "0"
 $env:ENABLE_TEST_LAB_UI = "0"
 ```
 
-Kaynak çalıştırmada AI ve Test Lab görünür olabilir; paketlenmiş sürümde
-varsayılan olarak gizlenir. Görünürlük, bir özelliğin kabul testlerinden geçtiği
-veya tüm entegrasyonların tamamlandığı anlamına gelmez.
+AI sekmesi kaynak çalıştırmada ve Windows paketinde varsayılan olarak açıktır.
+Test Lab, Windows paketinde varsayılan olarak gizlidir.
 
 ## API bilgileri
 

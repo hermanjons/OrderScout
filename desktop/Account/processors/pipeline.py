@@ -374,6 +374,15 @@ async def _check_company_api_health_async(
             return Result.fail("Satıcı ID boş olamaz.", close_dialog=False)
 
         extra = dict(extra_config or {})
+        from Account.processors.environment import resolve_account_environment
+
+        if resolve_account_environment({"platform": platform_code, "extra_config": extra}) == "local":
+            return Result.ok(
+                "Yerel hesap için pazaryeri bağlantı kontrolü atlandı.",
+                close_dialog=False,
+                data={"platform": platform_code, "environment": "local", "skipped": True,
+                      "network_request_performed": False, "remote_connection_verified": False},
+            )
         environment_key = normalize_marketplace_environment(
             environment
             or extra.get("environment")

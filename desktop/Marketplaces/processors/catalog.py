@@ -1265,7 +1265,7 @@ def marketplace_finance_service_options(value: object, *, include_all: bool = Tr
         for service_key, payload in services.items()
         if str(service_key).strip()
     ]
-    return ([("TÃ¼mÃ¼", "")] + options) if include_all else options
+    return ([("Tümü", "")] + options) if include_all else options
 
 
 def marketplace_finance_transaction_types(value: object, service_key: object | None = None) -> list[str]:

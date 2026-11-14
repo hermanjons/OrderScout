@@ -5,7 +5,7 @@ from typing import Any, Optional
 from datetime import datetime
 from collections import OrderedDict
 
-from PyQt6.QtCore import Qt, QDateTime, QDate, QTime, QAbstractListModel, QModelIndex, QSize, QEvent, QRect, pyqtSignal, QTimer, QSignalBlocker
+from PyQt6.QtCore import Qt, QDateTime, QDate, QTime, QAbstractListModel, QModelIndex, QSize, QEvent, QRect, pyqtSignal, QThread, QTimer, QSignalBlocker
 from PyQt6.QtGui import QPainter, QColor, QPen, QFont, QPixmap, QDoubleValidator, QIcon
 import json
 from PyQt6.QtWidgets import (
@@ -27,6 +27,7 @@ from Core.views import (
 )
 from Core.views.tab_widgets import DashboardHeroCard
 from Core.threads.sync_worker import SyncWorker
+from Feedback.processors.pipeline import Result
 from settings import ASSETS_DIR
 from Stock.signals.signals import stock_signals
 
@@ -541,6 +542,8 @@ def _first_image_path(value: Any) -> str:
 class FullscreenDialog(QDialog):
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
+        self._dialog_closing = False
+        self._pending_dialog_result: int | None = None
         self.setObjectName("StockRoot")
         self.setStyleSheet(MODERN_LIGHT_QSS)
         self.setWindowFlag(Qt.WindowType.Window, True)
@@ -550,6 +553,44 @@ class FullscreenDialog(QDialog):
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
         self.setModal(True)
         self.setSizeGripEnabled(True)
+
+    def _defer_close(self, result: int) -> bool:
+        if self._pending_dialog_result is not None:
+            return True
+        workers = [worker for worker in self.findChildren(QThread) if worker.isRunning()]
+        if not workers:
+            return False
+        self._pending_dialog_result = result
+        self.setEnabled(False)
+        for worker in workers:
+            worker.finished.connect(self._finish_deferred_close)
+        QTimer.singleShot(0, self._finish_deferred_close)
+        return True
+
+    def _finish_deferred_close(self) -> None:
+        result = self._pending_dialog_result
+        if result is None or any(worker.isRunning() for worker in self.findChildren(QThread)):
+            return
+        self._pending_dialog_result = None
+        self.setEnabled(True)
+        super().done(result)
+
+    def closeEvent(self, event) -> None:
+        self._dialog_closing = True
+        if self._defer_close(QDialog.DialogCode.Rejected):
+            event.ignore()
+            return
+        super().closeEvent(event)
+
+    def done(self, result: int) -> None:
+        self._dialog_closing = True
+        if not self._defer_close(result):
+            super().done(result)
+
+    def showEvent(self, event) -> None:
+        if self._pending_dialog_result is None:
+            self._dialog_closing = False
+        super().showEvent(event)
 
     def open_full(self):
         self.showMaximized()
@@ -573,8 +614,15 @@ class FullscreenDialog(QDialog):
 # =========================================================
 
 def _load_stock_items_snapshot() -> dict[str, Any]:
-    items_result = action_list_items(only_active=False)
     balances_result = action_list_item_balances(warehouse_id=None, only_active=False)
+    if balances_result.success:
+        records = sorted(
+            (row["item"] for row in balances_result.data["records"]),
+            key=lambda item: (item.name or "", item.sku or "", item.pk),
+        )
+        items_result = Result.ok("Stok kartları okundu.", close_dialog=False, data={"records": records})
+    else:
+        items_result = action_list_items(only_active=False)
     return {
         "items_result": items_result,
         "balances_result": balances_result,

@@ -9,6 +9,7 @@ from Core.processors.credential_store import (
     resolve_secret,
 )
 from Marketplaces.processors.catalog import normalize_marketplace_environment
+from Account.processors.environment import resolve_account_environment
 
 
 def _account_field(account: Any, name: str, default: Any = None) -> Any:
@@ -22,6 +23,10 @@ def trendyol_account_client_kwargs(account: Any) -> dict[str, Any]:
 
     extra = _account_field(account, "extra_config", None)
     extra_config = dict(extra or {}) if isinstance(extra, Mapping) else {}
+    environment = resolve_account_environment(account, default="production")
+    if environment == "local":
+        raise ValueError("Local marketplace accounts cannot use a remote API client.")
+    environment = normalize_marketplace_environment(environment)
     api_key = str(_account_field(account, "api_key", "") or "").strip()
     api_secret = str(_account_field(account, "api_secret", "") or "").strip()
     supplier_id = str(
@@ -39,11 +44,6 @@ def trendyol_account_client_kwargs(account: Any) -> dict[str, Any]:
         reference,
         api_key,
         companion_value=api_secret,
-    )
-    environment = normalize_marketplace_environment(
-        extra_config.get("environment")
-        or extra_config.get("api_environment")
-        or "production"
     )
     if not supplier_id:
         raise ValueError("Trendyol seller/supplier ID is required.")

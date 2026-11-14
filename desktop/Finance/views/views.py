@@ -1,35 +1,29 @@
 from __future__ import annotations
 
 import os
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import Qt, QSignalBlocker, QTimer
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import (
     QFrame,
-    QHBoxLayout,
     QLabel,
     QScrollArea,
-    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
 
+from Core.services.business_refresh import business_refresh_signals
 from Account.signals.signals import account_signals
-from Core.threads.async_worker import AsyncWorker
 from Core.threads.sync_worker import SyncWorker
 from Core.views import (
     ActionPulseButton,
     BadgeButton,
-    CircularProgressButton,
     FlowLayout,
-    NumberStepper,
     QuickAccessSection,
     RECORD_WORKSPACE_STYLE as FINANCE_STYLE,
-    RecordWorkspaceCardRecord as OrdersStyleCardRecord,
-    RecordWorkspaceListWidget as OrdersStyleListWidget,
     RecordWorkspaceSplitShell,
-    SwitchButton,
 )
+from Core.views import RecordWorkspaceCardRecord as OrdersStyleCardRecord, RecordWorkspaceListWidget as OrdersStyleListWidget
 from Core.views.tab_widgets import DashboardHeroCard
 from Feedback.processors.pipeline import MessageHandler, Result, map_error_to_message
 from settings import (
@@ -74,11 +68,9 @@ class FinanceTab(QWidget):
         self.transactions_window = None
         self._brand_dialog = None
         self._company_dialog = None
-        self._worker: AsyncWorker | None = None
         self._summary_worker: SyncWorker | None = None
         self._summary_refresh_pending = False
         self._left_stick_size = 520
-        self._auto_fetch_interval = 120
         self._summary_bootstrapped = False
         self._quick_badges = {
             "cost_items": 0,
@@ -97,8 +89,8 @@ class FinanceTab(QWidget):
         root.setSpacing(10)
 
         hero = DashboardHeroCard(
-            title="Finans / Veri Çekme",
-            subtitle="Finans verilerini çek ve veritabanına kaydet.",
+            title="Finans",
+            subtitle="Kayıtlar arka planda otomatik güncellenir.",
         )
         root.addWidget(hero)
 
@@ -121,7 +113,7 @@ class FinanceTab(QWidget):
         self._panel_sidebar.add_panel_button(
             "fetch",
             "",
-            tooltip="Veri çekme paneli",
+            tooltip="Otomatik güncelleme durumu",
             icon_path=str(ASSETS_DIR / "veri-cekme.png"),
             shape="circular",
             icon_scale=1.28,
@@ -135,7 +127,7 @@ class FinanceTab(QWidget):
         panel_layout = QVBoxLayout(panel_card)
         panel_layout.setContentsMargins(14, 12, 14, 12)
         panel_layout.setSpacing(10)
-        panel_layout.addWidget(QLabel("Veri Çekme Paneli", objectName="SectionTitle"))
+        panel_layout.addWidget(QLabel("Otomatik Güncelleme", objectName="SectionTitle"))
 
         self.no_company_card = QFrame(self)
         self.no_company_card.setObjectName("QuickCard")
@@ -163,46 +155,7 @@ class FinanceTab(QWidget):
         self.company_list.companies_loaded.connect(lambda *_args: self._refresh_company_list_state())
         panel_layout.addWidget(self.company_list)
 
-        self.fetch_button = CircularProgressButton("Veri Çek", size_scale=1.2)
-        self.fetch_button.clicked.connect(self._on_fetch_clicked)
-        panel_layout.addWidget(self.fetch_button, alignment=Qt.AlignmentFlag.AlignHCenter)
-        self.fetch_button.setRepeatInterval(self._auto_fetch_interval)
-
-        auto_card = QFrame(self)
-        auto_card.setObjectName("QuickCard")
-        auto_card.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
-        auto_card_layout = QHBoxLayout(auto_card)
-        auto_card_layout.setContentsMargins(10, 8, 10, 8)
-        auto_card_layout.setSpacing(10)
-
-        auto_label = QLabel("Oto Çekim", objectName="Muted")
-        self.auto_fetch_toggle = SwitchButton()
-        self.auto_fetch_toggle.setChecked(False)
-        self.auto_fetch_toggle.clicked.connect(self._toggle_auto_fetch)
-
-        self.auto_fetch_minutes = NumberStepper(minimum=2, maximum=120, step=1)
-        self.auto_fetch_minutes.setValue(2)
-        self.auto_fetch_minutes.setEnabled(False)
-        self.auto_fetch_minutes.setFixedWidth(90)
-        self.auto_fetch_minutes.valueChanged.connect(self._on_auto_fetch_minutes_changed)
-
-        unit_label = QLabel("dk", objectName="Muted")
-        unit_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
-
-        time_inline = QHBoxLayout()
-        time_inline.setContentsMargins(0, 0, 0, 0)
-        time_inline.setSpacing(6)
-        time_inline.addWidget(self.auto_fetch_minutes)
-        time_inline.addWidget(unit_label)
-
-        auto_card_layout.addWidget(auto_label)
-        auto_card_layout.addLayout(time_inline)
-        auto_card_layout.addWidget(self.auto_fetch_toggle)
-        auto_card_layout.addStretch(1)
-        panel_layout.addWidget(auto_card)
-        self.auto_fetch_card = auto_card
-
-        self.status_label = QLabel("Henüz veri çekilmedi.", objectName="Muted")
+        self.status_label = QLabel("Otomatik güncelleme hazır.", objectName="Muted")
         self.status_label.setWordWrap(True)
         panel_layout.addWidget(self.status_label)
         panel_layout.addStretch(1)
@@ -295,6 +248,34 @@ class FinanceTab(QWidget):
         account_signals.company_changed.connect(self._on_companies_changed)
         stock_signals.quick_access_changed.connect(self._on_stock_quick_access_changed)
         self._apply_quick_access_badges()
+        business_refresh_signals.status_changed.connect(self._on_background_status)
+        business_refresh_signals.refreshed.connect(self._on_background_refreshed)
+        self.status_label.setText(business_refresh_signals.statuses.get("finance", "Otomatik güncelleme hazır."))
+
+    def _refresh_company_list_state(self, *, reload_companies: bool = False):
+        if reload_companies:
+            self.company_list.reload_companies()
+            return
+        has_companies = self.company_list.count() > 0
+        self.no_company_card.setVisible(not has_companies)
+        self.company_list.setVisible(has_companies)
+        for index in range(self.company_list.count()):
+            widget = self.company_list.itemWidget(self.company_list.item(index))
+            control = getattr(widget, "right_widget", None)
+            if control is not None:
+                control.hide()
+
+    def _on_background_status(self, domain: str, message: str) -> None:
+        if domain == "finance":
+            self.status_label.setText(message)
+
+    def _on_background_refreshed(self, domain: str, payload: object) -> None:
+        if domain != "finance":
+            return
+        self._refresh_summary_async()
+        for window in (self.invoices_window, self.transactions_window):
+            if window is not None and window.isVisible():
+                window.reload_from_db()
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
@@ -352,40 +333,6 @@ class FinanceTab(QWidget):
         finally:
             self._refresh_company_list_state(reload_companies=True)
 
-    def _refresh_company_list_state(self, *, reload_companies: bool = False) -> None:
-        try:
-            if reload_companies:
-                self.company_list.reload_companies()
-                return
-            has_companies = self.company_list.count() > 0
-            self.no_company_card.setVisible(not has_companies)
-            self.company_list.setVisible(has_companies)
-            self.fetch_button.setVisible(has_companies)
-            self.auto_fetch_card.setVisible(has_companies)
-            self.fetch_button.setEnabled(has_companies)
-            if not has_companies:
-                if self.auto_fetch_toggle.isChecked():
-                    with QSignalBlocker(self.auto_fetch_toggle):
-                        self.auto_fetch_toggle.setChecked(False)
-                self.auto_fetch_minutes.setEnabled(False)
-                self.fetch_button.stopRepeat()
-                self.status_label.setText(
-                    "Henüz ekli şirket yok. Şirket ekleyerek finans verisi çekmeye başlayabilirsin."
-                )
-                return
-
-            if self.auto_fetch_toggle.isChecked():
-                self.auto_fetch_minutes.setEnabled(True)
-            else:
-                self.auto_fetch_minutes.setEnabled(False)
-
-            if (
-                self.status_label.text().strip()
-                == "Henüz ekli şirket yok. Şirket ekleyerek finans verisi çekmeye başlayabilirsin."
-            ):
-                self.status_label.setText("Henüz veri çekilmedi.")
-        except Exception:
-            return
 
     def _refresh_cost_items_summary(self) -> None:
         from Finance.views.actions import load_finance_cost_items
@@ -512,104 +459,6 @@ class FinanceTab(QWidget):
             return
         self._increment_quick_badge(norm, delta)
 
-    def _on_fetch_clicked(self) -> None:
-        from Finance.views.actions import action_sync_finance_for_company_pks
-
-        if self._worker is not None:
-            return
-        if self.company_list.count() <= 0:
-            self._refresh_company_list_state(reload_companies=True)
-            MessageHandler.show(
-                self,
-                Result.fail("Kayıtlı şirket bulunamadı. Önce şirket eklemelisin."),
-                only_errors=True,
-            )
-            return
-
-        selected_company_pks = self.company_list.get_selected_company_pks()
-        if not selected_company_pks:
-            MessageHandler.show(
-                self,
-                Result.fail("Hiçbir şirket seçilmedi.", close_dialog=False),
-                only_errors=True,
-            )
-            return
-
-        self.fetch_button.setEnabled(False)
-        self.fetch_button.setRunningText("Veri\nçekiliyor...")
-        self.fetch_button.start()
-        self.status_label.setText("Finans verileri çekiliyor...")
-
-        kwargs = {
-            "page_size": 500,
-            "max_pages": 20,
-        }
-        self._worker = AsyncWorker(action_sync_finance_for_company_pks, selected_company_pks, parent=self, kwargs=kwargs)
-        self._worker.progress_changed.connect(self._on_worker_progress)
-        self._worker.result_ready.connect(self._on_worker_result)
-        self._worker.finished.connect(self._on_worker_finished)
-        self._worker.start()
-
-    def _on_worker_progress(self, current: int, total: int) -> None:
-        try:
-            total_safe = max(int(total), 1)
-            percent = int((int(current) / total_safe) * 100)
-            self.fetch_button.setProgress(percent)
-        except Exception:
-            return
-
-    def _on_worker_result(self, result: Result) -> None:
-        if not isinstance(result, Result):
-            result = Result.fail("Beklenmeyen worker sonucu.", close_dialog=False)
-        if not result.success:
-            self.fetch_button.fail()
-            self.status_label.setText(f"Hata: {result.message}")
-            MessageHandler.show(self, result, only_errors=True)
-            return
-
-        data = result.data or {}
-        counts = data.get("counts", {}) or {}
-        db_counts = data.get("db_counts", {}) or {}
-        errors = list(data.get("errors", []) or [])
-        self.status_label.setText(
-            "Finans verileri güncellendi. "
-            f"Fatura: {counts.get('cargo_invoices', 0)} | "
-            f"Kalem: {counts.get('cargo_items', 0)} | "
-            f"Yeni kayıt: {db_counts.get('cargo_items', 0)}"
-        )
-        if errors:
-            self.status_label.setText(self.status_label.text() + f" | Uyarı: {len(errors)}")
-        self.fetch_button.setProgress(100)
-
-    def _on_worker_finished(self) -> None:
-        self.fetch_button.clearRunningText()
-        self.fetch_button.setEnabled(True)
-        self._worker = None
-
-    def _toggle_auto_fetch(self) -> None:
-        try:
-            if self.auto_fetch_toggle.isChecked():
-                self.auto_fetch_minutes.setEnabled(True)
-                self._on_auto_fetch_minutes_changed(self.auto_fetch_minutes.value())
-                self.fetch_button.enableRepeat(True)
-                mins = self.auto_fetch_minutes.value()
-                self.status_label.setText(f"Oto Çekim aktif ({mins} dk).")
-            else:
-                self.auto_fetch_minutes.setEnabled(False)
-                self.fetch_button.stopRepeat()
-                self.status_label.setText("Oto Çekim durduruldu.")
-        except Exception:
-            return
-
-    def _on_auto_fetch_minutes_changed(self, value: int) -> None:
-        try:
-            mins = max(2, int(value))
-            self._auto_fetch_interval = mins * 60
-            self.fetch_button.setRepeatInterval(self._auto_fetch_interval)
-            if self.auto_fetch_toggle.isChecked():
-                self.status_label.setText(f"Oto Çekim aktif ({mins} dk).")
-        except Exception:
-            return
 
     def open_cost_items_window(self) -> None:
         try:

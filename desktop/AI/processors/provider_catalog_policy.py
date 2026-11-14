@@ -7,7 +7,7 @@ from typing import Any
 GEMINI_PRICING_SOURCE_URL = "https://ai.google.dev/gemini-api/docs/pricing"
 GEMINI_PRICING_REVIEWED_AT = "2026-07-21"
 FREE_MODEL_QUALITY_POLICY_SOURCE = "orderscout_user_selected_free_model_policy"
-FREE_MODEL_QUALITY_POLICY_REVIEWED_AT = "2026-07-27"
+FREE_MODEL_QUALITY_POLICY_REVIEWED_AT = "2026-10-20"
 
 # The Gemini models endpoint does not expose billing-tier metadata.  Keep the
 # conservative, reviewed policy in one place: an unknown model must never be
@@ -66,6 +66,8 @@ _PROVIDER_FREE_MODEL_QUALITY_TIERS: dict[str, dict[str, int]] = {
         "gemma-4-26b-a4b-it": 45,
     },
     "openrouter": {
+        # User's current test preference; this is not an AA benchmark score.
+        "minimax/minimax-m3.1-flash:free": 110,
         "nvidia/nemotron-3-ultra-550b-a55b:free": 100,
         "nvidia/nemotron-3-super-120b-a12b:free": 90,
         "google/gemma-4-31b-it:free": 80,

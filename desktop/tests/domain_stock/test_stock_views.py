@@ -4,6 +4,7 @@ import inspect
 import os
 from datetime import datetime
 from pathlib import Path
+from threading import Event
 from types import SimpleNamespace
 from unittest import TestCase
 from unittest.mock import patch
@@ -63,6 +64,40 @@ class TestStockViews(TestCase):
         widget.close()
         widget.deleteLater()
         self._app.processEvents()
+
+    def test_stock_dialog_finishes_close_after_its_active_worker(self) -> None:
+        dialog = stock_views.FullscreenDialog()
+        self.addCleanup(self._cleanup_dialog, dialog)
+        entered, release = Event(), Event()
+        completed = []
+        dialog.finished.connect(completed.append)
+
+        def read():
+            entered.set()
+            release.wait(3)
+
+        worker = stock_views.SyncWorker(read, parent=dialog)
+        dialog.show()
+        worker.start()
+        try:
+            self.assertTrue(entered.wait(1))
+            self.assertFalse(dialog.close())
+            self.assertEqual(completed, [])
+        finally:
+            release.set()
+            self.assertTrue(worker.wait(2000))
+            self._app.processEvents()
+        self.assertEqual(completed, [QDialog.DialogCode.Rejected])
+        self.assertFalse(dialog.isVisible())
+
+    def test_stock_cards_closed_before_initial_load_do_not_start_a_worker(self) -> None:
+        dialog = stock_item_manager_dialog_module.StockItemManagerDialog()
+        self.addCleanup(self._cleanup_dialog, dialog)
+        with patch.object(stock_item_manager_dialog_module, "SyncWorker") as worker:
+            dialog.show()
+            dialog.close()
+            self._app.processEvents()
+            worker.assert_not_called()
 
     def test_same_display_cost_ignores_float_tail_when_ui_text_matches(self) -> None:
         self.assertTrue(stock_views._same_display_cost(23.602, 23.6020000001))

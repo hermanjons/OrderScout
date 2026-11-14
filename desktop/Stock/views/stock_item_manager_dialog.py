@@ -2152,6 +2152,8 @@ class StockItemManagerDialog(FullscreenDialog):
         keep_selected_id: Optional[int] = None,
         keep_bulk_selected_ids: Optional[list[int]] = None,
     ):
+        if self._dialog_closing:
+            return
         if keep_selected_id is None:
             keep_selected_id = self.items_list.selected_item_id()
         if keep_bulk_selected_ids is None:
@@ -2165,7 +2167,7 @@ class StockItemManagerDialog(FullscreenDialog):
         self._refresh_worker = worker
 
         def _after(result):
-            if seq != self._refresh_seq:
+            if seq != self._refresh_seq or self._dialog_closing:
                 return
             try:
                 self.items_list.set_items([], keep_selected_id=None, keep_bulk_selected_ids=keep_bulk_ids)
@@ -2310,6 +2312,9 @@ class StockItemManagerDialog(FullscreenDialog):
                 self._set_items_list_loading(False)
 
         def _on_finished():
+            if self._refresh_worker is worker:
+                self._refresh_worker = None
+            worker.deleteLater()
             if seq == self._refresh_seq:
                 self._set_items_list_loading(False)
 
