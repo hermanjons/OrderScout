@@ -79,6 +79,8 @@ def execute_tool_call(state, step, tool, *, db_name, client, persist, root, prog
             "checkpoint": checkpoint}
     if tool.name == "approvals.cancel":
         invocation["runtime_context"] = {"state": state}
+    if tool.name in {"conversation.read", "observations.read"}:
+        invocation["runtime_context"] = {"state": state}
     result = tool.handler(**invocation)
     if not isinstance(result, Result):
         raise TypeError("canonical_tool_did_not_return_Result")

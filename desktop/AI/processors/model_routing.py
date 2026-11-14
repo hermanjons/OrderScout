@@ -204,6 +204,10 @@ def build_free_model_test_route(
                         for value in list(record.get("supported_parameters") or [])
                         if _text(value)
                     ],
+                    # Candidate output_tokens may be a host ranking default.
+                    # Only catalogue evidence is a hard provider output limit.
+                    "output_token_limit": record.get("output_token_limit"),
+                    "top_provider": dict(record.get("top_provider") or {}),
                     "supported_generation_methods": [
                         _text(value)
                         for value in list(record.get("supported_generation_methods") or [])

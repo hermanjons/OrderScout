@@ -22,7 +22,6 @@ class SyncWorker(QThread):
         worker.finished.connect(...)
         worker.start()
     """
-    finished = pyqtSignal()
     result_ready = pyqtSignal(object)
     progress = pyqtSignal(int, str)  # (percent, message) - opsiyonel
 
@@ -66,5 +65,3 @@ class SyncWorker(QThread):
             msg = msg or str(e) or "Bilinmeyen hata"
 
             self.result_ready.emit(Result.fail(msg, error=e, close_dialog=False))
-        finally:
-            self.finished.emit()

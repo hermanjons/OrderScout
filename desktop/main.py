@@ -147,6 +147,15 @@ def _cli_router() -> bool:
         _run_update_runner_mode(sys.argv[idx + 1])
         return True
 
+    if "--smoke-windows-release" in sys.argv:
+        from Testing.processors.windows_release_smoke import run
+
+        args = sys.argv[sys.argv.index("--smoke-windows-release") + 1:]
+        if len(args) != 1:
+            raise SystemExit("--smoke-windows-release requires a new output directory")
+        run(args[0])
+        return True
+
     if "--smoke-stock-dialogs" in sys.argv:
         idx = sys.argv.index("--smoke-stock-dialogs")
         report_path = ""

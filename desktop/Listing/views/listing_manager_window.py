@@ -700,15 +700,6 @@ def _prepare_listing_items_for_view(
     return prepared_items
 
 
-def _to_optional_number(value: Any) -> Optional[float]:
-    if value is None or value == "":
-        return None
-    try:
-        return float(value)
-    except Exception:
-        return None
-
-
 def _apply_listing_view_filters(
     items: list[dict[str, Any]] | None,
     *,
@@ -716,10 +707,6 @@ def _apply_listing_view_filters(
     approval_val: str,
     campaign_val: str,
     lock_val: str,
-    stock_min: Optional[float],
-    stock_max: Optional[float],
-    price_min: Optional[float],
-    price_max: Optional[float],
 ) -> list[dict[str, Any]]:
     if not items:
         return []
@@ -732,8 +719,6 @@ def _apply_listing_view_filters(
     want_campaign_on = campaign_val == "campaign_on"
     filter_lock = lock_val in ("locked_on", "locked_off")
     want_locked = lock_val == "locked_on"
-    filter_stock = stock_min is not None or stock_max is not None
-    filter_price = price_min is not None or price_max is not None
 
     filtered_items: list[dict[str, Any]] = []
     for item in items:
@@ -762,26 +747,6 @@ def _apply_listing_view_filters(
         if filter_lock and bool(item.get("locked")) != want_locked:
             continue
 
-        if filter_stock:
-            qty = _to_optional_number(item.get("quantity"))
-            if qty is None:
-                continue
-            if stock_min is not None and qty < stock_min:
-                continue
-            if stock_max is not None and qty > stock_max:
-                continue
-
-        if filter_price:
-            price = _to_optional_number(item.get("salePrice"))
-            if price is None:
-                price = _to_optional_number(item.get("listPrice"))
-            if price is None:
-                continue
-            if price_min is not None and price < price_min:
-                continue
-            if price_max is not None and price > price_max:
-                continue
-
         filtered_items.append(item)
 
     return filtered_items
@@ -793,12 +758,19 @@ def _prepare_filtered_listing_payload(
     filter_params: dict[str, Any],
     enrichment_context: dict[str, Any],
 ) -> Result:
-    res = action_get_listings_from_db(**dict(query_params or {}))
+    query_params = dict(query_params)
+    view_filters = dict(filter_params)
+    for field, prefix in (("quantity_bounds", "stock"), ("price_bounds", "price")):
+        bounds = view_filters.pop(f"{prefix}_min"), view_filters.pop(f"{prefix}_max")
+        if bounds != (None, None):
+            query_params[field] = bounds
+    res = action_get_listings_from_db(**query_params)
     if not res.success:
         return res
     items = (res.data or {}).get("items", []) or []
+    filtered_items = _apply_listing_view_filters(items, **view_filters)
     prepared_items = _prepare_listing_items_for_view(
-        items,
+        filtered_items,
         account_name_map=enrichment_context.get("account_name_map"),
         account_logo_map=enrichment_context.get("account_logo_map"),
         account_platform_map=enrichment_context.get("account_platform_map"),
@@ -811,11 +783,10 @@ def _prepare_filtered_listing_payload(
         cargo_tariffs=enrichment_context.get("cargo_tariffs"),
         sync_cost_snapshot=False,
     )
-    filtered_items = _apply_listing_view_filters(prepared_items, **dict(filter_params or {}))
     return Result.ok(
         "İlanlar hazırlandı.",
         close_dialog=False,
-        data={"items": filtered_items},
+        data={"items": prepared_items},
     )
 
 
@@ -3444,10 +3415,11 @@ class ListingListWidget(QListView):
         self.viewport().setCursor(Qt.CursorShape.ArrowCursor)
         super().leaveEvent(event)
 
-    def set_items(self, items: list[dict]):
+    def set_items(self, items: list[dict], *, preserve_page: bool = False):
         self.items = items if isinstance(items, list) else list(items or [])
         self.filtered_items = self.items
-        self.current_page = 1
+        if not preserve_page or not self.items:
+            self.current_page = 1
         self._build_page()
 
     def refresh_record(self, record: dict | None) -> bool:
@@ -5522,11 +5494,13 @@ class ListingManagerWindow(QWidget):
         self._image_inflight: set[str] = set()
         self._pending_refresh = False
         self._filter_seq = 0
+        self._filter_pending = False
         self._last_filter_signature: tuple[object, ...] | None = None
         self._pending_verifications: dict[str, float] = {}
         self._pending_local_cost_refresh_keys: set[tuple[int, str]] = set()
         self._active_local_workers: list[SyncWorker] = []
         self._cache_worker: Optional[SyncWorker] = None
+        self._cache_reload_pending = False
         self._filter_worker: Optional[SyncWorker] = None
         self._brand_worker: Optional[SyncWorker] = None
         self._cost_save_worker: Optional[SyncWorker] = None
@@ -5940,6 +5914,12 @@ class ListingManagerWindow(QWidget):
             pass
 
     def closeEvent(self, event):
+        self._filter_pending = False
+        self._filter_seq += 1
+        self._cache_reload_pending = False
+        self._cache_load_seq += 1
+        if self._cache_worker is not None:
+            self._pending_refresh = True
         try:
             self._filter_timer.stop()
         except Exception:
@@ -6367,36 +6347,41 @@ class ListingManagerWindow(QWidget):
         self._refresh_account_filter_widgets()
 
     def _load_cached_products(self):
+        if self._cache_worker is not None:
+            self._cache_reload_pending = True
+            return
         self._cache_load_seq += 1
         seq = self._cache_load_seq
         self._set_list_loading(True, LISTING_LIST_LOADING_TEXT)
-        self._cache_worker = SyncWorker(_load_listing_cache_payload, parent=self)
-        self._register_local_worker(self._cache_worker)
+        worker = SyncWorker(_load_listing_cache_payload, parent=self)
+        self._cache_worker = worker
 
         def _on_cache_loaded(res: Result):
-            if seq != self._cache_load_seq:
+            if seq != self._cache_load_seq or self._cache_reload_pending:
                 return
             if not res.success:
                 MessageHandler.show(self, res, only_errors=True)
                 self._set_list_loading(False)
                 return
             self._apply_listing_cache_payload(res.data or {})
-            self._pending_refresh = False
-            self._last_filter_signature = None
+            self._pending_refresh = True
             self._brand_source_key = None
+            self._filter_timer.stop()
             self.apply_db_filters()
 
         def _on_cache_finished():
-            if seq == self._cache_load_seq:
-                self._cache_worker = None
+            self._cache_worker = None
+            worker.deleteLater()
+            if self._cache_reload_pending:
+                self._cache_reload_pending = False
+                self._load_cached_products()
 
-        self._cache_worker.result_ready.connect(_on_cache_loaded)
-        self._cache_worker.finished.connect(_on_cache_finished)
-        self._cache_worker.start()
+        worker.result_ready.connect(_on_cache_loaded)
+        worker.finished.connect(_on_cache_finished)
+        worker.start()
 
     def _request_catalog_refresh(self) -> None:
         self._pending_refresh = True
-        self._last_filter_signature = None
         self._brand_source_key = None
         if not self._cache_loaded:
             return
@@ -6415,6 +6400,10 @@ class ListingManagerWindow(QWidget):
                 self.brand_filter.setSelectedTexts(keep)
 
     def apply_db_filters(self):
+        if self._filter_worker is not None:
+            self._filter_seq += 1
+            self._filter_pending = True
+            return
         force_refresh = bool(self._pending_refresh)
         self._pending_refresh = False
 
@@ -6516,6 +6505,7 @@ class ListingManagerWindow(QWidget):
             self._update_counts()
             self._update_pagination_ui()
             self._sync_mode_guidance_state()
+            self._set_list_loading(False)
             return
 
         self._filter_seq += 1
@@ -6531,25 +6521,14 @@ class ListingManagerWindow(QWidget):
             "price_min": price_min,
             "price_max": price_max,
         }
-        enrichment_context = {
-            "account_name_map": self._account_name_map,
-            "account_logo_map": self._account_logo_map,
-            "account_platform_map": self._account_platform_map,
-            "stock_item_label_map": self._stock_item_label_map,
-            "stock_cost_map": self._stock_cost_map,
-            "stock_vat_rate_map": self._stock_vat_rate_map,
-            "stock_cost_meta_map": self._stock_cost_meta_map,
-            "stock_dimension_map": self._stock_dimension_map,
-            "cost_items_cache": self._cost_items_cache,
-            "cargo_tariffs": self._cargo_tariffs_cache,
-        }
-        self._filter_worker = SyncWorker(
+        worker = SyncWorker(
             _prepare_filtered_listing_payload,
             parent=self,
             query_params=params,
             filter_params=filter_params,
-            enrichment_context=enrichment_context,
+            enrichment_context=self._build_listing_enrichment_context(),
         )
+        self._filter_worker = worker
 
         brand_key = (tuple(sorted(acc_ids or [])), status_val)
         brand_params = {
@@ -6566,39 +6545,50 @@ class ListingManagerWindow(QWidget):
                     return
 
                 items = (res.data or {}).get("items", []) or []
-                self.list_widget.set_items(items)
+                self.list_widget.set_items(items, preserve_page=filter_signature == self._last_filter_signature)
                 self._last_filter_signature = filter_signature
                 self._update_counts()
-                self._update_pagination_ui()
                 self._sync_mode_guidance_state()
-                self._cancel_image_worker()
-                self._enqueue_images(self.list_widget.get_current_page_items())
             finally:
                 self._set_list_loading(False)
 
         def _on_filter_finished():
-            if seq == self._filter_seq:
+            self._filter_worker = None
+            worker.deleteLater()
+            if self._filter_pending:
+                self._filter_pending = False
+                self.apply_db_filters()
+            elif seq == self._filter_seq:
                 self._set_list_loading(False)
 
-        self._filter_worker.result_ready.connect(_on_filtered)
-        self._filter_worker.finished.connect(_on_filter_finished)
-        self._filter_worker.start()
+        worker.result_ready.connect(_on_filtered)
+        worker.finished.connect(_on_filter_finished)
+        worker.start()
 
         if self._brand_source_key == brand_key:
             return
         self._brand_source_key = brand_key
-        self._brand_worker = SyncWorker(action_get_listing_brands_from_db, parent=self, **brand_params)
+        brand_worker = SyncWorker(action_get_listing_brands_from_db, parent=self, **brand_params)
+        self._brand_worker = brand_worker
+        self._register_local_worker(brand_worker)
 
         def _on_brands(res: Result):
-            if seq != self._filter_seq:
+            if brand_key != self._brand_source_key:
                 return
             if not res.success:
+                self._brand_source_key = None
                 return
             brands = (res.data or {}).get("brands", []) or []
             self._refresh_brand_filter(brands)
 
-        self._brand_worker.result_ready.connect(_on_brands)
-        self._brand_worker.start()
+        def _on_brands_finished():
+            if self._brand_worker is brand_worker:
+                self._brand_worker = None
+            brand_worker.deleteLater()
+
+        brand_worker.result_ready.connect(_on_brands)
+        brand_worker.finished.connect(_on_brands_finished)
+        brand_worker.start()
 
     def _schedule_filter(self):
         self._filter_timer.start()

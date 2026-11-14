@@ -295,6 +295,13 @@ def action_inventory_overview(*, db_name=None, limit=12) -> Result:
     return read_inventory_overview(limit=limit, **({"db_name": db_name} if db_name else {}))
 
 
+def action_list_items_with_balances(*, db_name=None, query="", limit=20, offset=0,
+                                    only_active=True, warehouse_id=None) -> Result:
+    from Stock.processors.item_queries import query_items_with_balances
+    return query_items_with_balances(db_name=db_name, query=query, limit=limit, offset=offset,
+                                    only_active=only_active, warehouse_id=warehouse_id)
+
+
 def action_low_stock_summary(*, db_name=None, limit=10) -> Result:
     from Stock.processors.inventory_summary import read_low_stock_summary
     return read_low_stock_summary(limit=limit, **({"db_name": db_name} if db_name else {}))

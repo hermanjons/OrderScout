@@ -28,6 +28,22 @@ def _sources():
     ]
 
 
+def test_root_projection_alias_is_consistent_and_literal_dot_key_remains_addressable():
+    data={"count":6,".":"literal dot key"}
+    assert source_path_value(data,"") is data
+    assert source_path_value(data,".") is data
+    assert source_path_value(data,"/.")=="literal dot key"
+
+
+def test_mixed_path_alias_resolves_existing_value_and_exact_pointer_keys_take_priority():
+    data={"status_counts":{"Delivered":3}}
+    assert source_path_value(data,"/status_counts.Delivered")==3
+    assert source_path_value(data,"/status_counts/Delivered")==3
+    literal={**data,"status_counts.Delivered":99}
+    assert source_path_value(literal,"/status_counts.Delivered")==99
+    with pytest.raises(ValueError):source_path_value(data,"/status_counts.Missing")
+
+
 def _sheets():
     return [
         {"name": "Sales", "source_id": "sales", "rows_path": "products", "columns": [
@@ -42,6 +58,19 @@ def _sheets():
             {"key": "balance", "label": "Known balance", "source_path": "balance", "data_type": "number"},
         ]},
     ]
+
+
+def test_note_reference_error_exposes_bound_aliases_and_repairs_without_refetching_sources():
+    sources = _sources()
+    notes = [{"kind": "assumption", "text": "A labelled model note", "source_ids": ["sales_read"]}]
+    failed = tools.reports_build_snapshot(title="Report", sources=sources, sheets=_sheets(), notes=notes)
+    assert not failed.success
+    diagnostic = failed.data["projection_diagnostic"]
+    assert diagnostic["reason_code"] == "report_note_source_not_bound"
+    assert diagnostic["note_index"] == 0 and diagnostic["available_source_ids"] == ["sales", "movements"]
+    notes[0]["source_ids"] = [diagnostic["available_source_ids"][0]]
+    repaired = tools.reports_build_snapshot(title="Report", sources=sources, sheets=_sheets(), notes=notes)
+    assert repaired.success
 
 
 def test_projection_copies_multiple_domain_rows_and_labels_model_inference():

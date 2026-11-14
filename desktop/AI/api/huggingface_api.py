@@ -72,7 +72,7 @@ def fetch_model_details(repo_id: str) -> Result:
     clean_repo_id = str(repo_id or "").strip()
     if not clean_repo_id:
         return Result.fail("Model repo id bos olamaz.", close_dialog=False)
-    return _request_json(f"{HF_API_BASE}/models/{clean_repo_id}")
+    return _request_json(f"{HF_API_BASE}/models/{clean_repo_id}", params={"blobs": "true"})
 
 
 def build_model_download_url(repo_id: str, filename: str, *, revision: str = "main") -> str:

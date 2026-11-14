@@ -80,6 +80,10 @@ def run_pair(tmp_path, monkeypatch):
     ("Nasılsın başkan?", "İyiyim başkan, senden ne haber?"),
     ("Ne yapabilirsin?", "Kayıtlarını inceleyip uygun araçlarla rapor hazırlayabilirim."),
     ("Hangi mağazayı kastettiğimi bilmiyorsan sor", "Hangi mağazayı incelememi istersin?"),
+    ("tamam", "Anladım, konuşmaya devam edebiliriz."),
+    ("olur", "İstediğin konuyu birlikte inceleyebiliriz."),
+    ("hayır", "Peki, o öneriyi geçelim."),
+    ("dur", "Buradayım; yeni talimatını bekliyorum."),
 ])
 def test_natural_answer_is_shared_and_never_replaced_by_a_template(run_pair, message, answer):
     ui, headless = run_pair(message, [answer])

@@ -169,6 +169,10 @@ class GenericProcessRunner(QObject):
 
         if is_frozen():
             program = sys.executable
+            if sys.platform == "win32":
+                worker_program = os.path.join(os.path.dirname(program), "OrderScoutWorker.exe")
+                if os.path.isfile(worker_program):
+                    program = worker_program
             args = self.frozen_args_builder(self.target)
         else:
             program = self._python_executable_dev()

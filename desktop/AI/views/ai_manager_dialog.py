@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import shutil
+from AI.processors.local_storage import model_download_capacity
 from pathlib import Path
 from threading import Event
 from typing import Any, Optional
@@ -31,6 +33,7 @@ from PyQt6.QtWidgets import (
     QStackedLayout,
     QTableWidget,
     QTableWidgetItem,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -85,7 +88,7 @@ def _asset_path(filename: str, fallback: str = "") -> str:
 
 
 def _ai_icon_path() -> str:
-    return _asset_path("ai-icon-search.png", "orderscout-logo.png")
+    return _asset_path(ai_ui.AI_BRAND_ICON_NAME, "orderscout-logo.png")
 
 
 def _mask_api_key(value: Any) -> str:
@@ -392,7 +395,7 @@ class AIManagerDialog(QDialog):
         title = QLabel("AI Model Hub")
         title.setObjectName("HubTitle")
         header_layout.addWidget(title)
-        subtitle = QLabel("Yalnız provider bağlantıları ve yerel model indirmeleri")
+        subtitle = QLabel("Bağlantılar, yüklü modeller ve indirmeler")
         subtitle.setObjectName("Muted")
         header_layout.addWidget(subtitle)
         header_layout.addStretch(1)
@@ -421,7 +424,7 @@ class AIManagerDialog(QDialog):
                     "panel_id": "new",
                     "text": "",
                     "tooltip": ai_ui.AI_MANAGER_SIDEBAR_NEW_TOOLTIP,
-                    "icon_path": _asset_path("yeni-kayit.png", "ai-icon-search.png"),
+                    "icon_path": _asset_path("yeni-kayit.png", ai_ui.AI_BRAND_ICON_NAME),
                     "shape": "circular",
                     "icon_scale": 1.28,
                 },
@@ -429,7 +432,7 @@ class AIManagerDialog(QDialog):
                     "panel_id": "edit",
                     "text": "",
                     "tooltip": ai_ui.AI_MANAGER_SIDEBAR_EDIT_TOOLTIP,
-                    "icon_path": _asset_path("duzenleme-icon.png", "ai-icon-search.png"),
+                    "icon_path": _asset_path("duzenleme-icon.png", ai_ui.AI_BRAND_ICON_NAME),
                     "shape": "circular",
                     "icon_scale": 1.28,
                 },
@@ -437,7 +440,7 @@ class AIManagerDialog(QDialog):
                     "panel_id": "bulk",
                     "text": "",
                     "tooltip": ai_ui.AI_MANAGER_SIDEBAR_BULK_TOOLTIP,
-                    "icon_path": _asset_path("toplu-secim (2).png", "ai-icon-search.png"),
+                    "icon_path": _asset_path("toplu-secim (2).png", ai_ui.AI_BRAND_ICON_NAME),
                     "shape": "circular",
                     "icon_scale": 1.28,
                 },
@@ -495,13 +498,16 @@ class AIManagerDialog(QDialog):
         self._workspace.filters_card.hide()
         self._workspace.footer_bar.hide()
         self.hub_scope_note = QLabel(
-            "Bu ekrandan kaldırılanlar: aktif model seçimi, free/paid filtreleme, "
-            "reasoning/zekâ seviyesi, fallback, context ve runtime ayarları. "
-            "Bunların tamamı Chat ekranındaki Model seçimi panelindedir."
+            "Modeli indir veya bağlantını ekle. Aktif model, reasoning/zekâ seviyesi "
+            "ve çalışma ayarları Chat ekranındaki Model seçimi panelindedir."
         )
         self.hub_scope_note.setObjectName("SummaryBanner")
         self.hub_scope_note.setWordWrap(True)
         self._workspace.records_card.body_layout.addWidget(self.hub_scope_note)
+        # Local models use the primary workspace; the left panel is their inspector.
+        self.local_search_panel.setParent(self._workspace.records_card.body_host)
+        self._workspace.records_card.body_layout.addWidget(self.local_search_panel, 1)
+        self.local_search_panel.hide()
 
         self._workspace_adapter = AIWorkspaceBehaviorAdapter(self)
         self._workspace_behavior = self._workspace.create_behavior_controller(adapter=self._workspace_adapter)
@@ -652,7 +658,7 @@ class AIManagerDialog(QDialog):
             "new",
             "",
             tooltip=ai_ui.AI_MANAGER_SIDEBAR_NEW_TOOLTIP,
-            icon_path=_asset_path("yeni-kayit.png", "ai-icon-search.png"),
+            icon_path=_asset_path("yeni-kayit.png", ai_ui.AI_BRAND_ICON_NAME),
             shape="circular",
             icon_scale=1.28,
         )
@@ -660,7 +666,7 @@ class AIManagerDialog(QDialog):
             "edit",
             "",
             tooltip=ai_ui.AI_MANAGER_SIDEBAR_EDIT_TOOLTIP,
-            icon_path=_asset_path("duzenleme-icon.png", "ai-icon-search.png"),
+            icon_path=_asset_path("duzenleme-icon.png", ai_ui.AI_BRAND_ICON_NAME),
             shape="circular",
             icon_scale=1.28,
         )
@@ -668,7 +674,7 @@ class AIManagerDialog(QDialog):
             "bulk",
             "",
             tooltip=ai_ui.AI_MANAGER_SIDEBAR_BULK_TOOLTIP,
-            icon_path=_asset_path("toplu-secim (2).png", "ai-icon-search.png"),
+            icon_path=_asset_path("toplu-secim (2).png", ai_ui.AI_BRAND_ICON_NAME),
             shape="circular",
             icon_scale=1.28,
         )
@@ -906,15 +912,35 @@ class AIManagerDialog(QDialog):
         layout.setSpacing(10)
 
         self.local_search_panel = QWidget(host)
-        search_layout = QVBoxLayout(self.local_search_panel)
+        local_layout = QVBoxLayout(self.local_search_panel)
+        local_layout.setContentsMargins(0, 0, 0, 0)
+        local_layout.setSpacing(10)
+        self.local_library_tabs = QTabWidget(self.local_search_panel)
+        self.local_library_tabs.setObjectName("LocalLibraryTabs")
+        self.local_library_tabs.setStyleSheet(
+            "QTabWidget::pane { border: 0; } "
+            "QTabBar::tab { padding: 10px 12px; color: #64748B; border-bottom: 2px solid transparent; } "
+            "QTabBar::tab:selected { color: #1D4ED8; border-bottom: 2px solid #2563EB; font-weight: 700; }"
+        )
+        discover_panel = QWidget()
+        search_layout = QVBoxLayout(discover_panel)
         search_layout.setContentsMargins(0, 0, 0, 0)
         search_layout.setSpacing(10)
+        self.local_library_tabs.addTab(discover_panel, "Keşfet ve indir")
+        installed_panel = QWidget()
+        installed_layout = QVBoxLayout(installed_panel)
+        installed_layout.setContentsMargins(0, 6, 0, 0)
+        installed_layout.setSpacing(10)
+        self.local_library_tabs.addTab(installed_panel, "Yüklü modeller · 0")
+        local_layout.addWidget(self.local_library_tabs)
 
-        provider_key = QLabel(ai_ui.AI_MANAGER_PROVIDER_LABEL, objectName="FieldKey")
         self.local_provider_combo = SwitchSelectWidget(multi=False, include_all=False, empty_text="Seçiniz")
         self.local_provider_combo.addItem(ai_ui.AI_MANAGER_HF_PROVIDER_TEXT, ai_ui.AI_MANAGER_HF_PROVIDER_VALUE)
-        search_layout.addWidget(provider_key)
-        search_layout.addWidget(self.local_provider_combo)
+        self.local_provider_combo.hide()
+        discover_hint = QLabel("Hugging Face üzerinde GGUF model ara. Dosya boyutu ve kaynak planını indirirken karşılaştır.")
+        discover_hint.setObjectName("Muted")
+        discover_hint.setWordWrap(True)
+        search_layout.addWidget(discover_hint)
 
         search_row = QHBoxLayout()
         search_row.setSpacing(8)
@@ -922,7 +948,8 @@ class AIManagerDialog(QDialog):
         self.search_input.setObjectName("Search")
         self.search_input.setPlaceholderText(ai_ui.AI_MANAGER_HF_SEARCH_PLACEHOLDER)
         self.search_input.returnPressed.connect(self._start_search)
-        self.sort_combo = SwitchSelectWidget(title="Sıralama", multi=False, include_all=False, empty_text="Seçiniz")
+        self.sort_combo = QComboBox()
+        self.sort_combo.setObjectName("Combo")
         self.sort_combo.addItem(ai_ui.AI_MANAGER_SORT_BEST_TEXT, ai_ui.AI_MANAGER_SORT_BEST_VALUE)
         self.sort_combo.addItem(ai_ui.AI_MANAGER_SORT_DOWNLOADS_TEXT, ai_ui.AI_MANAGER_SORT_DOWNLOADS_VALUE)
         self.sort_combo.addItem(ai_ui.AI_MANAGER_SORT_LIKES_TEXT, ai_ui.AI_MANAGER_SORT_LIKES_VALUE)
@@ -931,24 +958,29 @@ class AIManagerDialog(QDialog):
         self.btn_search.setObjectName("Primary")
         self.btn_search.clicked.connect(self._start_search)
         search_row.addWidget(self.search_input, 1)
-        search_row.addWidget(self.sort_combo)
         search_row.addWidget(self.btn_search)
         search_layout.addLayout(search_row)
+
+        sort_row = QHBoxLayout()
+        sort_row.addWidget(self.sort_combo)
+        sort_row.addStretch(1)
+        search_layout.addLayout(sort_row)
 
         self._search_status = QLabel(ai_ui.AI_MANAGER_HF_SEARCH_READY_TEXT)
         self._search_status.setObjectName("Muted")
         search_layout.addWidget(self._search_status)
+        self._search_status.hide()
 
         self.results_status = QLabel(ai_ui.AI_MANAGER_RESULTS_WAITING_TEXT)
-        self.results_status.setObjectName("SmallPill")
+        self.results_status.setObjectName("Muted")
         search_layout.addWidget(self.results_status)
 
         self.results_list = QListWidget()
         self.results_list.setObjectName("ModelResults")
         self.results_list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
-        self.results_list.setMinimumHeight(190)
+        self.results_list.setMinimumHeight(160)
         self.results_list.itemSelectionChanged.connect(self._on_result_selected)
-        search_layout.addWidget(self.results_list)
+        search_layout.addWidget(self.results_list, 1)
 
         self.local_model_summary = QLabel(ai_ui.AI_MANAGER_MODEL_SUMMARY_EMPTY_TEXT)
         self.local_model_summary.setObjectName("SummaryBanner")
@@ -958,7 +990,29 @@ class AIManagerDialog(QDialog):
         search_layout.addWidget(QLabel(ai_ui.AI_MANAGER_DOWNLOADABLE_FILE_LABEL, objectName="FieldKey"))
         self.file_combo = QComboBox()
         self.file_combo.setObjectName("Combo")
+        self.file_combo.currentIndexChanged.connect(self._update_download_file_plan)
         search_layout.addWidget(self.file_combo)
+        self.local_file_plan = QLabel("Bir model ve dosya seçin.")
+        self.local_file_plan.setObjectName("Muted")
+        self.local_file_plan.setWordWrap(True)
+        self.local_selection_name = QLabel("Model kaynak planı", objectName="SectionTitle")
+        self.local_selection_name.setWordWrap(True)
+        layout.addWidget(self.local_selection_name)
+        layout.addWidget(self.local_file_plan)
+
+        location_row = QHBoxLayout()
+        location_row.addWidget(QLabel("İndirme klasörü", objectName="FieldKey"))
+        location_row.addStretch(1)
+        self.btn_local_choose_root = QPushButton("Değiştir")
+        self.btn_local_choose_root.setObjectName("Ghost")
+        self.btn_local_choose_root.clicked.connect(self._on_choose_root)
+        location_row.addWidget(self.btn_local_choose_root)
+        layout.addLayout(location_row)
+        self.local_download_root_label = QLabel("Klasör yükleniyor…")
+        self.local_download_root_label.setObjectName("Muted")
+        self.local_download_root_label.setWordWrap(True)
+        self.local_download_root_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        layout.addWidget(self.local_download_root_label)
 
         local_actions = QHBoxLayout()
         local_actions.setSpacing(8)
@@ -977,8 +1031,8 @@ class AIManagerDialog(QDialog):
         self.btn_open_model_page.clicked.connect(self._open_model_page)
         local_actions.addWidget(self.btn_download, 1)
         local_actions.addWidget(self.btn_pause_download)
-        local_actions.addWidget(self.btn_open_model_page)
         search_layout.addLayout(local_actions)
+        search_layout.addWidget(self.btn_open_model_page, 0, Qt.AlignmentFlag.AlignLeft)
 
         self.download_stage = QLabel(ai_ui.AI_MANAGER_DOWNLOAD_WAITING_TEXT)
         self.download_stage.setObjectName("Muted")
@@ -986,23 +1040,45 @@ class AIManagerDialog(QDialog):
         self.download_progress.setMinimum(0)
         self.download_progress.setMaximum(100)
         self.download_progress.setValue(0)
-        search_layout.addWidget(self.download_stage)
-        search_layout.addWidget(self.download_progress)
-        search_layout.addWidget(QLabel("YÜKLÜ YEREL MODELLER", objectName="FieldKey"))
+        # Progress stays visible when users inspect the installed library mid-download.
+        local_layout.insertWidget(0, self.download_stage)
+        local_layout.insertWidget(1, self.download_progress)
+        self.local_library_hint = QLabel("İndirilen modeller burada görünür. Sohbette kullanmak için Chat ekranından seçin.")
+        self.local_library_hint.setObjectName("Muted")
+        self.local_library_hint.setWordWrap(True)
+        installed_layout.addWidget(self.local_library_hint)
         self.installed_local_list = QListWidget()
         self.installed_local_list.setObjectName("ModelResults")
-        self.installed_local_list.setMinimumHeight(90)
-        self.installed_local_list.setMaximumHeight(150)
+        self.installed_local_list.setMinimumHeight(260)
+        self.installed_local_list.setWordWrap(True)
+        self.installed_local_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.installed_local_list.itemSelectionChanged.connect(
             self._update_local_delete_button
         )
-        search_layout.addWidget(self.installed_local_list)
+        installed_layout.addWidget(self.installed_local_list, 1)
+        self.installed_local_detail = QLabel("Bir model seçin.")
+        self.installed_local_detail.setObjectName("Muted")
+        self.installed_local_detail.setWordWrap(True)
+        self.installed_local_detail.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        installed_layout.addWidget(self.installed_local_detail)
+        installed_actions = QHBoxLayout()
+        refresh_local = QPushButton("Yenile")
+        refresh_local.setObjectName("Ghost")
+        refresh_local.clicked.connect(self._refresh_library)
+        installed_actions.addWidget(refresh_local)
+        open_local = QPushButton("Klasörü aç")
+        open_local.setObjectName("Ghost")
+        open_local.clicked.connect(self._open_current_root)
+        installed_actions.addWidget(open_local)
+        installed_actions.addStretch(1)
         self.btn_delete_local_model = QPushButton("Seçili yerel modeli sil")
         self.btn_delete_local_model.setObjectName("SoftDanger")
         self.btn_delete_local_model.setEnabled(False)
         self.btn_delete_local_model.clicked.connect(self._delete_selected_local_model)
-        search_layout.addWidget(self.btn_delete_local_model)
-        layout.addWidget(self.local_search_panel)
+        installed_actions.addWidget(self.btn_delete_local_model)
+        installed_layout.addLayout(installed_actions)
+        layout.addStretch(1)
+        self.local_library_tabs.currentChanged.connect(self._on_local_library_tab_changed)
 
         self.local_config_panel = QWidget(host)
         config_layout = QVBoxLayout(self.local_config_panel)
@@ -1451,6 +1527,12 @@ class AIManagerDialog(QDialog):
             self.left_panel_title.setText(ai_ui.AI_MANAGER_LEFT_BULK_TITLE)
             self.left_panel_hint.setText(ai_ui.AI_MANAGER_LEFT_BULK_HINT)
             self.entry_tabs_frame.setVisible(False)
+            self.local_search_panel.hide()
+            self.records_list.show()
+            self.hub_scope_note.show()
+            self._workspace.records_card.title_label.setText("Bağlı kaynaklar")
+            self._workspace.editor_action_bar.hide()
+            self._workspace.editor_actions_host.hide()
             self._update_bulk_panel_state()
 
         self._update_provider_buttons()
@@ -1469,13 +1551,25 @@ class AIManagerDialog(QDialog):
         self.btn_entry_cloud.setChecked(kind == "cloud")
         self.btn_entry_local.setChecked(kind == "local")
         self.entry_stack.setCurrentIndex(0 if kind == "cloud" else 1)
+        if hasattr(self, "hub_scope_note"):
+            self.records_list.setVisible(kind == "cloud")
+            self.hub_scope_note.setVisible(kind == "cloud")
+            self.local_search_panel.setVisible(kind == "local")
+            self._workspace.records_card.title_label.setText("Yerel model kütüphanesi" if kind == "local" else "Bağlı kaynaklar")
+            self._workspace.records_card.subtitle_label.setText(
+                "Yüklü modelleri inceleyin veya yeni bir GGUF dosyası indirin."
+                if kind == "local" else "Credential durumu ve yerel indirme kataloğu. Model seçimi Chat ekranındadır."
+            )
         # Local download owns its action inside the download form. Keeping the
         # generic record save bar visible here creates a second disabled action
         # with no distinct meaning.
         self._workspace.editor_action_bar.setVisible(kind == "cloud")
+        self._workspace.editor_actions_host.setVisible(kind == "cloud" and self._provider_mode != "bulk")
         if kind == "local":
             self._set_local_form_mode("search")
+            self._on_local_library_tab_changed()
         self._update_provider_buttons()
+        self._refresh_left_panel_header()
 
     def _set_combo_data(self, combo: QComboBox, value: Any) -> None:
         target = str(value or "").strip()
@@ -1630,6 +1724,7 @@ class AIManagerDialog(QDialog):
 
             self._settings = dict((result.data or {}).get("settings") or {})
             self.download_root_value.setText(_safe_text(self._settings.get("download_root"), "-"))
+            self._sync_local_download_location()
             self._set_header_status(ai_ui.AI_MANAGER_READY_TEXT)
 
         def _finished() -> None:
@@ -1699,8 +1794,8 @@ class AIManagerDialog(QDialog):
         return RecordWorkspaceCardRecord(
             orderNumber="local:library",
             title="Yerel model indirmeleri",
-            subtitle=f"{ready_count} model hazır · Hugging Face araması",
-            extra="Yerel indirme kataloğunu aç; model ve runtime ayarlarını Chat ekranında yap.",
+            subtitle=f"{ready_count} model yüklü · Hugging Face araması",
+            extra="Yüklü modelleri incele veya yeni bir GGUF dosyası indir. Çalışma ayarları Chat ekranındadır.",
             logo_path=_ai_icon_path(),
             payload={
                 "kind": "local_library",
@@ -1839,6 +1934,10 @@ class AIManagerDialog(QDialog):
         if not hasattr(self, "left_panel_title"):
             return
         mode = str(self._provider_mode or "new").lower()
+        if getattr(self, "_entry_kind", "cloud") == "local" and mode != "bulk":
+            self.left_panel_title.setText("Model ayrıntıları")
+            self.left_panel_hint.setText("Kaynak planını inceleyin ve indirme klasörünü seçin.")
+            return
         if mode == "new":
             self.left_panel_title.setText("Yeni kaynak")
             self.left_panel_hint.setText("Cloud API hesabı bağla veya yerel model indir.")
@@ -1876,7 +1975,7 @@ class AIManagerDialog(QDialog):
             downloads = _safe_int(record.get("downloads"))
             likes = _safe_int(record.get("likes"))
             summary = _safe_text(record.get("description"), "")
-            item = QListWidgetItem(f"{repo_id}\nDownloads: {downloads} | Likes: {likes}\n{summary}")
+            item = QListWidgetItem(f"{repo_id}\n{downloads:,} indirme · {likes:,} beğeni" + (f"\n{summary[:180]}" if summary else ""))
             item.setData(Qt.ItemDataRole.UserRole, record)
             self.results_list.addItem(item)
             if repo_id and repo_id == current_repo:
@@ -1962,11 +2061,17 @@ class AIManagerDialog(QDialog):
             return
 
         self.download_stage.setText(ai_ui.AI_MANAGER_MODEL_DETAIL_LOADING_TEXT)
+        self._selected_detail = {}
+        self.file_combo.clear()
         self.btn_download.setEnabled(False)
         self.btn_open_model_page.setEnabled(False)
         self._detail_worker = SyncWorker(ai_actions.action_get_hf_model_details, repo_id, parent=self)
 
         def _done(result: Result) -> None:
+            current = self.results_list.currentItem()
+            payload = current.data(Qt.ItemDataRole.UserRole) if current is not None else None
+            if isinstance(payload, dict) and _safe_text(payload.get("repo_id"), "") != repo_id:
+                return
             if not result.success:
                 MessageHandler.show(self, result, only_errors=True)
                 self.download_stage.setText(ai_ui.AI_MANAGER_MODEL_DETAIL_FAILED_TEXT)
@@ -1976,18 +2081,10 @@ class AIManagerDialog(QDialog):
             detail = dict((result.data or {}).get("detail") or {})
             self._selected_detail = detail
             repo_text = _safe_text(detail.get("repo_id"))
-            desc_text = _safe_text(detail.get("description"), ai_ui.AI_MANAGER_DETAIL_NO_DESCRIPTION_TEXT)
+            desc_text = _safe_text(detail.get("description"), ai_ui.AI_MANAGER_DETAIL_NO_DESCRIPTION_TEXT)[:280]
             files = list(detail.get("files") or [])
             capabilities = ", ".join(self._derive_capabilities(detail)) or ai_ui.AI_MANAGER_DETAIL_NO_CAPABILITY_TEXT
-            self.local_model_summary.setText(
-                ai_ui.AI_MANAGER_DETAIL_SUMMARY_TEMPLATE.format(
-                    repo_id=repo_text,
-                    downloads=_safe_int(detail.get("downloads")),
-                    likes=_safe_int(detail.get("likes")),
-                    capabilities=capabilities,
-                    description=desc_text,
-                )
-            )
+            self.local_model_summary.setText(f"{repo_text}\n{capabilities}\n{desc_text[:140]}")
 
             self.file_combo.clear()
             for file_row in files:
@@ -1999,15 +2096,30 @@ class AIManagerDialog(QDialog):
                 )
                 self.file_combo.addItem(label, file_row)
 
+            recommended_index = next(
+                (index for index, row in enumerate(files) if bool(row.get("recommended"))
+                 or (row.get("resource_plan") or {}).get("suitability") == "recommended"),
+                0,
+            )
+            if self.file_combo.count():
+                self.file_combo.setCurrentIndex(recommended_index)
+
             has_files = self.file_combo.count() > 0
             self.btn_download.setEnabled(has_files)
             self.btn_open_model_page.setEnabled(bool(repo_text))
             self.download_stage.setText(
                 ai_ui.AI_MANAGER_MODEL_READY_TEXT if has_files else ai_ui.AI_MANAGER_NO_DOWNLOADABLE_FILE_TEXT
             )
+            self._update_download_file_plan()
 
         def _finished() -> None:
             self._detail_worker = None
+            # A rapid selection change must eventually show the latest row's details.
+            item = self.results_list.currentItem()
+            payload = item.data(Qt.ItemDataRole.UserRole) if item is not None else None
+            latest = _safe_text(payload.get("repo_id"), "") if isinstance(payload, dict) else ""
+            if latest and latest != repo_id:
+                self._load_detail(latest)
 
         self._detail_worker.result_ready.connect(_done)
         self._detail_worker.finished.connect(_finished)
@@ -2019,7 +2131,95 @@ class AIManagerDialog(QDialog):
         self.file_combo.clear()
         self.btn_download.setEnabled(False)
         self.btn_open_model_page.setEnabled(False)
-        self.download_progress.setValue(0)
+        self._update_download_file_plan()
+
+    @staticmethod
+    def _local_plan_text(plan: dict[str, Any]) -> str:
+        if not plan:
+            return "Çalıştırma uyumluluğu henüz hesaplanmadı; indirmek modelin bu cihazda çalışacağını doğrulamaz."
+        suitability = str(plan.get("suitability") or "")
+        if not bool(plan.get("safe_to_run", True)) or suitability == "blocked":
+            title = "Bu kaynak planıyla başlatılamaz"
+        elif suitability == "slow" or bool(plan.get("requires_paging")):
+            title = "Çalışabilir · yanıtlar yavaş olabilir"
+        elif suitability == "recommended":
+            title = "Bu cihaz için önerilen"
+        else:
+            title = "Kaynak planı hazır"
+        capacity = str(plan.get("capacity_label") or plan.get("reason") or "").strip()
+        if suitability == "recommended" and plan.get("capacity_label"):
+            title, capacity = str(plan["capacity_label"]), ""
+        context = _safe_int(plan.get("num_ctx"))
+        output = _safe_int(plan.get("max_tokens"))
+        limits = f"Bağlam {context:,} · yanıt en çok {output:,} token" if context else ""
+        runtime_bytes = _safe_int(plan.get("estimated_runtime_bytes"))
+        memory = f"Tahmini çalışma belleği {runtime_bytes / (1024 ** 3):.1f} GiB" if runtime_bytes else ""
+        warnings = [str(item) for item in list(plan.get("warnings") or [])[:2]]
+        return "\n".join(dict.fromkeys(part for part in (title, capacity, limits, memory, *warnings) if part))
+
+    def _download_disk_free(self) -> int | None:
+        root = str(self._settings.get("download_root") or "").strip()
+        if not root:
+            return None
+        try:
+            target = Path(root)
+            while not target.exists() and target.parent != target:
+                target = target.parent
+            return int(shutil.disk_usage(target).free)
+        except OSError:
+            return None
+
+    def _sync_local_download_location(self) -> None:
+        root = str(self._settings.get("download_root") or "").strip()
+        free = self._download_disk_free()
+        free_text = f"\n{free / (1024 ** 3):.1f} GiB boş alan" if free is not None else ""
+        self.local_download_root_label.setText((root or "İndirme klasörü seçin.") + free_text)
+        self.local_download_root_label.setToolTip(root)
+        self._update_download_file_plan()
+
+    def _update_download_file_plan(self, *_args) -> None:
+        if not hasattr(self, "local_file_plan"):
+            return
+        payload = self.file_combo.currentData()
+        record = dict(payload) if isinstance(payload, dict) else {}
+        if self.local_library_tabs.currentIndex() == 0:
+            self.local_selection_name.setText(_safe_text(self._selected_detail.get("repo_id"), "Model kaynak planı"))
+        plan = dict(record.get("resource_plan") or {})
+        text = self._local_plan_text(plan) if record else "Bir model ve dosya seçin."
+        resources = dict(self._selected_detail.get("resources") or {})
+        available_ram = _safe_int(resources.get("available_ram_bytes"))
+        free_vram = _safe_int(resources.get("gpu_free_vram_bytes"))
+        if record and available_ram:
+            text += f"\nKullanılabilir RAM {available_ram / (1024 ** 3):.1f} GiB"
+            if free_vram:
+                text += f" · GPU {free_vram / (1024 ** 3):.1f} GiB"
+        free = self._download_disk_free()
+        size = _safe_int(record.get("size_bytes"))
+        disk_ok = True
+        if free is not None and size > 0:
+            try:
+                directory = self._settings.get("download_root")
+                repo = str(self._selected_detail.get("repo_id") or "")
+                partial = Path(directory) / repo / (Path(str(record.get("filename") or "")).name + ".part")
+                partial_bytes = partial.stat().st_size if partial.is_file() else 0
+                disk_ok = model_download_capacity(directory, size, partial_bytes=partial_bytes)["allowed"]
+            except (OSError, ValueError, TypeError):
+                disk_ok = False
+        if record and not disk_ok:
+            text += "\nİndirme için yeterli disk alanı yok. Klasörü değiştirin veya alan açın."
+        if self.local_library_tabs.currentIndex() == 0:
+            self.local_file_plan.setText(text)
+            self.local_file_plan.setStyleSheet("color: #B91C1C;" if not disk_ok else "")
+        if hasattr(self, "btn_download"):
+            downloading = self._download_worker is not None and self._download_worker.isRunning()
+            self.btn_download.setEnabled(bool(record) and disk_ok and not downloading)
+            self.btn_download.setToolTip("" if disk_ok else "Seçili diskte dosya ve indirme payı için yeterli alan yok.")
+
+    def _on_local_library_tab_changed(self, *_args) -> None:
+        if self.local_library_tabs.currentIndex() == 0:
+            self._update_download_file_plan()
+        else:
+            self._update_local_delete_button()
 
     def _refresh_library(self) -> None:
         if self._library_worker is not None and self._library_worker.isRunning():
@@ -2070,15 +2270,32 @@ class AIManagerDialog(QDialog):
     def _fill_installed_local_list(self, records: list[dict[str, Any]]) -> None:
         if not hasattr(self, "installed_local_list"):
             return
+        previous = self._selected_installed_local_record() or {}
+        previous_key = previous.get("id") or previous.get("local_path")
         self.installed_local_list.clear()
+        self.local_library_tabs.setTabText(1, f"Yüklü modeller · {len(records)}")
+        self.local_library_hint.setText(
+            f"{len(records)} yerel model. Kullanmak için Chat ekranından seçin."
+            if records else "Henüz yerel model yok. Keşfet ve indir sekmesinden bir GGUF model indirin."
+        )
         for record in records:
             payload = dict(record or {})
+            plan = dict(payload.get("resource_plan") or {})
+            state = "Dosya eksik" if not payload.get("exists_on_disk", True) else (
+                "Çalıştırmaya uygun değil" if not plan.get("safe_to_run", True) else
+                "Yavaş çalışabilir" if plan.get("suitability") == "slow" or plan.get("requires_paging") else "Yüklü"
+            )
             item = QListWidgetItem(
                 f"{_safe_text(payload.get('repo_id'), '-')}\n"
-                f"{_safe_text(payload.get('filename'), '-')} · {_safe_text(payload.get('size_text'), '-')}"
+                f"{_safe_text(payload.get('quantization'), 'GGUF')} · {_safe_text(payload.get('size_text'), '-')} · {state}"
             )
+            item.setToolTip(_safe_text(payload.get("filename")) + "\n" + self._local_plan_text(plan))
             item.setData(Qt.ItemDataRole.UserRole, payload)
             self.installed_local_list.addItem(item)
+            if previous_key and previous_key == (payload.get("id") or payload.get("local_path")):
+                self.installed_local_list.setCurrentItem(item)
+        if records and self.installed_local_list.currentRow() < 0:
+            self.installed_local_list.setCurrentRow(0)
         self._update_local_delete_button()
 
     def _selected_installed_local_record(self) -> dict[str, Any] | None:
@@ -2089,9 +2306,19 @@ class AIManagerDialog(QDialog):
         return dict(payload) if isinstance(payload, dict) else None
 
     def _update_local_delete_button(self) -> None:
+        record = self._selected_installed_local_record()
+        if hasattr(self, "local_library_tabs") and self.local_library_tabs.currentIndex() == 1:
+            self.local_selection_name.setText(_safe_text((record or {}).get("repo_id"), "Yüklü modeller"))
+            self.local_file_plan.setText(self._local_plan_text(dict((record or {}).get("resource_plan") or {})) if record else "Kaynak planı için bir model seçin.")
+            self.local_file_plan.setStyleSheet("color: #B91C1C;" if record and not (record.get("resource_plan") or {}).get("safe_to_run", True) else "")
+        if hasattr(self, "installed_local_detail"):
+            self.installed_local_detail.setText(
+                _safe_text(record.get("filename")) + "\n" + self._local_plan_text(dict(record.get("resource_plan") or {}))
+                if record else "Bir model seçin."
+            )
         if hasattr(self, "btn_delete_local_model"):
             self.btn_delete_local_model.setEnabled(
-                self._selected_installed_local_record() is not None
+                record is not None
             )
 
     def _delete_selected_local_model(self) -> None:
@@ -2151,6 +2378,7 @@ class AIManagerDialog(QDialog):
                 return
             self._settings = dict((result.data or {}).get("settings") or {})
             self.download_root_value.setText(_safe_text(self._settings.get("download_root"), "-"))
+            self._sync_local_download_location()
             self._set_header_status(ai_ui.AI_MANAGER_DOWNLOAD_ROOT_UPDATED_TEXT)
 
         def _finished() -> None:
@@ -2185,6 +2413,12 @@ class AIManagerDialog(QDialog):
             return
 
         self.btn_download.setEnabled(False)
+        self.file_combo.setEnabled(False)
+        self.results_list.setEnabled(False)
+        self.btn_local_choose_root.setEnabled(False)
+        self.btn_search.setEnabled(False)
+        self.search_input.setEnabled(False)
+        self.sort_combo.setEnabled(False)
         self.btn_pause_download.setEnabled(True)
         self.btn_pause_download.show()
         self.download_progress.setValue(0)
@@ -2214,10 +2448,16 @@ class AIManagerDialog(QDialog):
             self._refresh_library()
 
         def _finished() -> None:
-            self.btn_download.setEnabled(self.file_combo.count() > 0)
+            self.file_combo.setEnabled(True)
+            self.results_list.setEnabled(True)
+            self.btn_local_choose_root.setEnabled(True)
+            self.btn_search.setEnabled(True)
+            self.search_input.setEnabled(True)
+            self.sort_combo.setEnabled(True)
             self.btn_pause_download.setEnabled(False)
             self.btn_pause_download.hide()
             self._download_worker = None
+            self._sync_local_download_location()
 
         self._download_worker.progress_changed.connect(_progress)
         self._download_worker.result_ready.connect(_done)
@@ -2502,7 +2742,7 @@ class AIManagerDialog(QDialog):
             endpoint_url=endpoint_url,
             api_key=api_key,
             free_only=free_only,
-            limit=200,
+            limit=None,
         )
 
         def _done(result: Result) -> None:

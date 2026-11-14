@@ -1,5 +1,128 @@
 # OrderScout AI Domain Hedefleri
 
+> **2 Kasım 2026 — onaylı stok eşikleri:** Tek kartın stok eşiklerini ortak
+> Stock primitive'iyle güncelleyen araç eklendi. Sıfır/null, iptal, diskten
+> devam, atomik eski-değer karşılaştırması ve gerçek readback doğrulandı.
+> Kural ile yalnız saklanan ayar ayrımı eklendi. 129 test +10 alt test geçti;
+> ücretsiz NVIDIA ile yedi turluk akış ve manuel değişiklikte eski onayın
+> reddi geçti. 41 ücretsiz istek +bir ücretli 404 erişim denemesi; ücret 0 USD.
+> [İş akışı ve sınırlar](stock_threshold_workflow_2026_11_02.md).
+
+> **26 Ekim 2026 — somut işlerde canlı kullanım:** Gerçek sohbet girişinden
+> sipariş, iade, stok, finans, onaylı stok kartı ve kayıtlı sohbette model/mağaza
+> değişimi olmak üzere altı senaryo izole verilerle geçti. Beklentiler bağımsız
+> SQL ile kontrol edildi. Ücretsiz NVIDIA 550B başarıyla kullanıldı; GLM dahil
+> 38 wire istek toplam 0,011112829 USD. Stok eşiğinde eşitlik açıklaması ortak
+> domain'de düzeltildi; 33 hedefli test geçti.
+> [İş sonuçları ve kapsam](specific_business_jobs_2026_10_26.md).
+
+> **26 Ekim 2026 devam — araç keşfi ve model yolları:** 118 yeteneğin kısa anlam
+> dizini, dürüst exact keşif, local/Anthropic/Gemini completion review ve
+> kalıcı provider hata projeksiyonu eklendi. Bellek yolları ve gerçek SQL hesap
+> kapsamı düzeltildi. Son paket 321 test + 6 alt test geçti. GLM low ile temiz
+> dört turda Excel/readback/indirme; ayrı canlı sorguda üç mağaza/sekiz sipariş
+> doğrulandı. Bütün canlı denemeler 41 istek, 0,0296762187 USD.
+> [Değişiklikler ve açık sınırlar](agent_capability_parity_2026_10_26.md).
+
+> **26 Ekim 2026 — yeniden agent çekirdeği:** Son müşteri konuşmasındaki hesap
+> kapsamı, kimlik araması ve büyük kanıt belleği düzeltildi. Eksik iş denetimi
+> modele geri döner; structured reviewer son metni yeniden yazmaz. İş mantığı
+> ortak domain fonksiyonlarında kalır. UI değişmedi; sentetik müşteri–sipariş–
+> Excel kabulü ve exact model/maliyet kayıtları ayrı tutulur.
+> 400 hedefli test + 6 alt test geçti. GLM low ile aynı sohbetten devam ve
+> sekiz gerçek sentetik siparişin Excel/readback/indirme kabulü geçti.
+> Bütün canlı denemeler 108 wire istek, 0,078893806286 USD; verimlilik kabulü açık.
+> [Mimari ve doğrulama sınırları](agent_core_recovery_2026_10_26.md).
+
+> **23 Ekim 2026 — model seçimi:** Tam canlı katalog, varsayılan Tümü, yerel
+> fiyat/arama filtreleri ve görünür satırları çizen liste eklendi. Tam yönlendirme
+> bilgisi provider başına saklanır; model seçerken runtime kaydına bağlanır.
+> Hesap yenilemesi, kaynak geçişi ve seçimin sohbet ayarları korunur.
+> 142 hedefli test geçti; model completion çağrısı yok. Geniş sohbet paketindeki
+> 17 runtime kontrolü açık. [Uygulama ve doğrulama](model_picker_search_2026_10_23.md).
+
+> **23 Ekim 2026 — son ilan–stok görevi:** Tek amaçlı native okuma/hazırlık
+> ortak Listing domain atomlarına ve manuel setter'a bağlandı. Gerçek kimlik,
+> diğer bağlantılar, eski ana stok, drift, public onay ve tam DB readback korunur.
+> Sonuç aktarımında prepare yerine gerçek execute makbuzu hem karar modeline
+> hem reviewer'a taşınır. Exact GLM ile dört turda gerçek eşleştirme ve diskten
+> doğru devam geçti; son legacy koruması ayrıca yerel testlidir. Ücretsiz
+> alternatiflerin başarısız denemeleri saklandı; otomatik fallback kapalı.
+> Son kaynaklarla 736 hedefli test + 51 alt test geçti.
+> İki ücretli GLM koşusu toplam 0,0057331568 USD. Genel kabul ve ayrı workflow
+> katalog testi açık. [Uygulama, test ve sınırlar](listing_stock_agent_2026_10_23.md).
+
+> **21 Ekim 2026 — araç döngüsü ve kaynak sürekliliği:** OpenAI uyumlu çağrılara
+> mevcut turdaki gerçek assistant/tool geçmişi eklendi. Katalog/sayfalama,
+> kaynak belleği, ortak domain durum etiketleri ve kaynak bağlı hesap yolları
+> düzeltildi. 552 hedefli test geçti. Ücretsiz MiniMax ile eski sonuçtan 87
+> hesabı ve yeni mağazaya açık sorguyla 1 sipariş işlevsel olarak geçti;
+> basit toplama yine 9 araç adımı ve gereksiz uzun yanıt kullandığından
+> verimlilik kabulü açık. Başarısız denemeler dahil 72 wire istek / 0 USD.
+> Son küçük önizleme değişikliği yerel testlidir; bütün ürün/provider kabulü
+> iddia edilmez. [Uygulama ve kanıt](agent_loop_continuity_2026_10_21.md).
+
+> **21 Ekim 2026 — görevi tamamlayıp kayıttan devam:** Son sınıflandırma
+> görevinin stream/çıktı toparlanması düzeltildi. LLM kaynaklı son yanıt
+> aynı modele araçsız okutulabilir; özdenetim doğruluk kanıtı sayılmaz.
+> 282 hedefli test geçti. Ücretsiz MiniMax ile 32 kayıtlı sentetik araç
+> sonucundan yeni sorgusuz devam ve kalıcı doğru yanıt kontrol edildi.
+> Tekrarlı keşif/veri okumaları ile genel ürün kabulü açık.
+> [Uygulama ve kanıt](agent_completion_recovery_2026_10_21.md).
+
+> **20 Ekim 2026 — sohbet odaklı yerleşim:** Kullanıcı onayıyla sol panel sohbet
+> geçmişine ayrıldı; model/zekâ seçimi mesaj kutusuna taşındı. Kalıcı sohbet
+> kütüphanesi ve kayıt başarısızlığında veri koruyan geçişler eklendi.
+> [Değişiklik ve doğrulama](conversation_layout_2026_10_20.md).
+
+> **20 Ekim 2026 — onaylanan sohbet UI:** Yanıt altındaki küçük durum satırı ve
+> isteğe bağlı sağ işlem paneli uygulandı. Tahmini ilerleme yüzdesi ve tekrarlı
+> düşünme/teknik mesaj kutuları kaldırıldı; gerçek metin akışı korunuyor.
+> [Değişiklik ve açık test kapsamı](compact_chat_activity_2026_10_20.md).
+
+> **20 Ekim 2026 — yanıt akışı ve çeşitli görevler:** Kullanıcı, araç sonucundan
+> sonraki kararların daha çeşitli görevlerde sınanmasını ve yanıtların geldikçe
+> gösterilmesini istedi. Gerçek streaming UI eklendi; MiniMax ile 6 senaryo / 8 tur
+> geçti. 303 hedefli test geçti; genel agent kalite/ürün kabulü açık.
+> [Değişiklikler ve doğrulama](response_stream_and_varied_tasks_2026_10_20.md).
+
+> **20 Ekim 2026 güncel model tercihi:** Her çalışma başında güncel ücretsiz
+> tool modelleri, fiyat/kalite ve kota kontrol edilir. Testlerde kota/erişim
+> elverdiğince `minimax/minimax-m3.1-flash:free` önceliklidir. Ücretlide yaklaşık
+> AA 35–45 bandı ve gerçek görev başarısı birlikte değerlendirilir; ücretsizlerde
+> bu aralık sınırı yoktur. Önceki sabit GLM tercihi bu güncel talimatla değişti.
+> Benchmark ile tercih sırası ayrıdır; proje kökündeki AGENTS.md bu çalışma
+> tercihini ve alt ajanların xhigh eforunu korur.
+
+> **20 Ekim 2026 devamı — katalog ve dosya teslimi:** 11 Listing okuma aracı
+> gerçek manuel katalog kaynağına bağlandı; sıfır fiyat, kesirli miktar ve hesap
+> kapsamı düzeltildi. Kâr Excel'i Core'un ortak tam içerik readback'iyle doğrulanır
+> ve native sohbet dosya bağlantısına bağlanır. Alt ajan eforu kullanıcı isteğiyle
+> **xhigh**; bir alt ajan kullanıldı.
+> [Yapılanlar ve güncel kabul](catalog_and_file_delivery_2026_10_20.md).
+
+> **20 Ekim 2026 domain işlemleri:** Kullanıcının yeni teyidiyle araç sonrası
+> ortak domain çağrısı ve gerçek sonuç/hata dönüşüne geçildi. Stock arama,
+> listeleme ve sayım ile Finance nakit akışı AI içi iş hesaplarından ayrıldı;
+> sipariş kârı Excel hazırlığı gerçek ortak hesap motoruna bağlandı.
+> [Sınırlar, kanıt ve kalan geçiş](atomic_domain_operations_2026_10_20.md).
+
+> **20 Ekim 2026 ilk adım odağı:** Mesaj ve konuşma bağlamı seçilen LLM'ye
+> doğru ulaşmalı; doğrudan cevap veya araç kullanma kararını model vermeli.
+> Bu tur genel mimariyi büyütmek yerine bu aşamayı engelleyen host/protokol
+> kusurlarını gidermeye ayrıldı. Mekanik test başarısı canlı anlam kabulü değildir.
+> Kullanıcı devamında OpenRouter ücretsiz testlerini, sonra bakiye/anahtar
+> limiti artırarak özellikle `z-ai/glm-5.3-flash` ile ücretli testleri yetkilendirdi.
+> Sonraki testlerde bu model tercih edilir; başka modele sessizce geçilmez.
+> [Düzeltmeler ve açık canlı kabul](first_model_decision_2026_10_20.md).
+
+> **19 Ekim 2026 yerel motor yönlendirmesi:** Kullanıcı cloud yerine yerel
+> modellerle geliştirme/test ve model indirme/seçim arayüzünün iyileştirilmesini
+> istedi. Hızdan önce kapasite, kararlılık ve model kalitesi gelir. RAM/GPU/CPU
+> ve mmap birlikte planlanır; disk boşluğu ek RAM sayılmaz. Güçlü model açılması
+> tek başına agent kabulü değildir; gerçek araç, onay ve dosya readback'i gerekir.
+> [Yerel motor ve güncel kanıt](local_agent_runtime_2026_10_19.md).
+
 > **18 Ekim 2026 mimari yönlendirmesi:** Kullanıcı modelin konuşma, karar ve
 > araç seçimi sahibi olmasını yeniden teyit etti; AI altyapısının bu esasa göre
 > yeniden kurulmasını istedi. Manuel UI ile AI ortak domain işlemlerini kullanır.

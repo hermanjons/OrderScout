@@ -1,33 +1,23 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 import os
 import tempfile
 from typing import TYPE_CHECKING, Any, Optional
 
-from PyQt6.QtCore import Qt, QSignalBlocker, QTimer
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
     QScrollArea,
-    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
+from Core.services.business_refresh import business_refresh_signals
 from Account.signals.signals import account_signals
 from Account.views.company_list_widget import CompanyListWidget
-from Core.process.process_runner import GenericProcessRunner, ProcessTarget
-from Core.threads.async_worker import AsyncWorker
-from Core.threads.sync_worker import SyncWorker
-from Core.views import (
-    ActionPulseButton,
-    BadgeButton,
-    CircularProgressButton,
-    NumberStepper,
-    ResettableSplitter,
-    SwitchButton,
-)
+from Core.views import ActionPulseButton, BadgeButton, ResettableSplitter
 from Core.views.tab_widgets import DashboardHeroCard, QuickAccessSection, SplitPanelSidebar
 from Feedback.processors.pipeline import MessageHandler, Result, map_error_to_message
 from Listing.constants import (
@@ -37,18 +27,11 @@ from Listing.constants import (
 )
 from Listing.constants.platform_constants import canonical_platform_code, platform_label_for_code
 from Listing.constants.ui_constants import (
-    LISTING_AUTO_FETCH_ACTIVE_TEMPLATE,
-    LISTING_AUTO_FETCH_LABEL,
-    LISTING_AUTO_FETCH_STOPPED_TEXT,
-    LISTING_AUTO_FETCH_UNIT_TEXT,
     LISTING_BADGE_BUTTON_TEXT,
-    LISTING_FETCH_BUTTON_TEXT,
-    LISTING_FETCH_PANEL_TITLE,
     LISTING_QUICK_ACCESS_SUBTITLE,
     LISTING_QUICK_ACCESS_TITLE,
     LISTING_STATUS_FETCHING_COUNT_TEMPLATE,
     LISTING_STATUS_FETCHING_TEXT,
-    LISTING_STATUS_IDLE_TEXT,
     LISTING_STATUS_NO_CHANGES_TEXT,
     LISTING_STATUS_PRODUCTS_EMPTY_TEXT,
     LISTING_STATUS_PRODUCTS_RECEIVED_TEMPLATE,
@@ -58,7 +41,6 @@ from Listing.constants.ui_constants import (
     LISTING_STATUS_SAVING_TEXT,
     LISTING_STYLE,
     LISTING_TAB_ACTION_TEXT,
-    LISTING_TAB_HERO_SUBTITLE,
     LISTING_TAB_HERO_TITLE,
 )
 from Listing.signals.signals import listing_signals
@@ -186,11 +168,6 @@ class ListingTab(QWidget):
         super().__init__(parent)
 
         self.list_window: Optional[ListingManagerWindow] = None
-        self._fetch_progress_actual = 0
-        self._fetch_progress_display = 0
-        self._fetch_failed = False
-        self._fetch_waiting_for_save = False
-        self._payload_worker: SyncWorker | None = None
 
         self.setObjectName("ListingRoot")
         self.setStyleSheet(LISTING_STYLE)
@@ -201,7 +178,7 @@ class ListingTab(QWidget):
 
         hero = DashboardHeroCard(
             title=LISTING_TAB_HERO_TITLE,
-            subtitle=LISTING_TAB_HERO_SUBTITLE,
+            subtitle="Kayıtlar arka planda otomatik güncellenir.",
             action_text=LISTING_TAB_ACTION_TEXT,
         )
         if hero.action_button is not None:
@@ -217,7 +194,7 @@ class ListingTab(QWidget):
         self._panel_sidebar.add_panel_button(
             "fetch",
             "",
-            tooltip=str(ui_text("listing.sidebar.fetch_tooltip", "Veri çekme paneli")),
+            tooltip=str(ui_text("listing.sidebar.fetch_tooltip", "Otomatik güncelleme durumu")),
             icon_path=str(ASSETS_DIR / "veri-cekme.png"),
             shape="circular",
             icon_scale=1.28,
@@ -243,7 +220,7 @@ class ListingTab(QWidget):
         left_layout.setContentsMargins(14, 12, 14, 12)
         left_layout.setSpacing(10)
 
-        left_layout.addWidget(QLabel(LISTING_FETCH_PANEL_TITLE, objectName="SectionTitle"))
+        left_layout.addWidget(QLabel("Otomatik Güncelleme", objectName="SectionTitle"))
 
         self.no_company_card = QFrame()
         self.no_company_card.setObjectName("QuickCard")
@@ -278,53 +255,11 @@ class ListingTab(QWidget):
         self.company_list.companies_loaded.connect(lambda *_args: self._refresh_company_list_state())
         left_layout.addWidget(self.company_list)
 
-        self.fetch_button = CircularProgressButton(LISTING_FETCH_BUTTON_TEXT, size_scale=1.2)
-        if hasattr(self.fetch_button, "setAutoResetOnComplete"):
-            self.fetch_button.setAutoResetOnComplete(False)
-        self.fetch_button.clicked.connect(self.fetch_products)
-        left_layout.addWidget(self.fetch_button, alignment=Qt.AlignmentFlag.AlignHCenter)
-
-        auto_card = QFrame()
-        auto_card.setObjectName("QuickCard")
-        auto_card.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
-        auto_card_layout = QHBoxLayout(auto_card)
-        auto_card_layout.setContentsMargins(10, 8, 10, 8)
-        auto_card_layout.setSpacing(10)
-
-        auto_label = QLabel(LISTING_AUTO_FETCH_LABEL, objectName="Muted")
-        self.auto_fetch_toggle = SwitchButton()
-        self.auto_fetch_toggle.setChecked(False)
-        self.auto_fetch_toggle.clicked.connect(self._toggle_auto_fetch)
-
-        self.auto_fetch_minutes = NumberStepper(minimum=2, maximum=120, step=1)
-        self.auto_fetch_minutes.setValue(2)
-        self.auto_fetch_minutes.setEnabled(False)
-        self.auto_fetch_minutes.setFixedWidth(90)
-        self.auto_fetch_minutes.valueChanged.connect(self._on_auto_fetch_minutes_changed)
-
-        unit_label = QLabel(LISTING_AUTO_FETCH_UNIT_TEXT, objectName="Muted")
-        unit_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
-
-        time_inline = QHBoxLayout()
-        time_inline.setContentsMargins(0, 0, 0, 0)
-        time_inline.setSpacing(6)
-        time_inline.addWidget(self.auto_fetch_minutes)
-        time_inline.addWidget(unit_label)
-
-        auto_card_layout.addWidget(auto_label)
-        auto_card_layout.addLayout(time_inline)
-        auto_card_layout.addWidget(self.auto_fetch_toggle)
-        auto_card_layout.addStretch(1)
-        left_layout.addWidget(auto_card)
-        self.auto_fetch_card = auto_card
-
-        self.status_label = QLabel(LISTING_STATUS_IDLE_TEXT)
+        self.status_label = QLabel("Otomatik güncelleme hazır.")
         self.status_label.setObjectName("Muted")
         self.status_label.setWordWrap(True)
         left_layout.addWidget(self.status_label)
 
-        self._auto_fetch_interval = 120
-        self.fetch_button.setRepeatInterval(self._auto_fetch_interval)
         account_signals.company_changed.connect(self._on_companies_changed)
 
         left_scroll = QScrollArea()
@@ -356,7 +291,6 @@ class ListingTab(QWidget):
         listing_signals.products_save_started.connect(self._on_listing_products_save_started)
         listing_signals.products_saved.connect(self._on_listing_products_saved)
         listing_signals.products_save_failed.connect(self._on_listing_products_save_failed)
-        self._fetch_from_auto_repeat = False
 
         right_layout.addWidget(self.btn_open_products, alignment=Qt.AlignmentFlag.AlignLeft)
         right_layout.addStretch(1)
@@ -370,8 +304,34 @@ class ListingTab(QWidget):
         splitter.setSizes([520, 1020])
 
         self._sync_sidebar_state_from_splitter()
+        business_refresh_signals.status_changed.connect(self._on_background_status)
+        business_refresh_signals.refreshed.connect(self._on_background_refreshed)
+        self.status_label.setText(business_refresh_signals.statuses.get("listing", "Otomatik güncelleme hazır."))
 
     # ------------------------------------------------------------
+    def _refresh_company_list_state(self, *, reload_companies: bool = False):
+        if reload_companies:
+            self.company_list.reload_companies()
+            return
+        has_companies = self.company_list.count() > 0
+        self.no_company_card.setVisible(not has_companies)
+        self.company_list.setVisible(has_companies)
+        for index in range(self.company_list.count()):
+            widget = self.company_list.itemWidget(self.company_list.item(index))
+            control = getattr(widget, "right_widget", None)
+            if control is not None:
+                control.hide()
+
+    def _on_background_status(self, domain: str, message: str) -> None:
+        if domain == "listing":
+            self.status_label.setText(message)
+
+    def _on_background_refreshed(self, domain: str, payload: object) -> None:
+        if domain != "listing":
+            return
+        if self.list_window is not None:
+            self.list_window.mark_stale()
+
     def _release_splitter_guard(self):
         self._splitter_guard = False
         self._sync_sidebar_state_from_splitter()
@@ -452,291 +412,7 @@ class ListingTab(QWidget):
         self._sync_sidebar_state_from_splitter()
 
     # ------------------------------------------------------------
-    def _begin_fetch_progress(self) -> None:
-        self._fetch_failed = False
-        self._fetch_waiting_for_save = False
-        self._fetch_progress_actual = 0
-        self._fetch_progress_display = 0
-        self.fetch_button.setProgress(0)
 
-    def _stop_fetch_progress(self) -> None:
-        return
-
-    def _finish_fetch_progress(self, *, success: bool) -> None:
-        self._fetch_waiting_for_save = False
-        self._fetch_from_auto_repeat = False
-        self._stop_fetch_progress()
-        if success:
-            self._fetch_progress_actual = 100
-            self._fetch_progress_display = 100
-            self.fetch_button.setProgress(100)
-            QTimer.singleShot(550, self._reset_fetch_button_after_success)
-            return
-        self._fetch_failed = True
-        self.fetch_button.fail()
-        self.fetch_button.setEnabled(True)
-
-    def _reset_fetch_button_after_success(self) -> None:
-        self.fetch_button.reset()
-        self.fetch_button.setEnabled(True)
-
-    def _set_fetch_progress_actual(self, percent: int) -> None:
-        target = max(0, min(int(percent), 99))
-        self._fetch_progress_actual = target
-        if target <= self._fetch_progress_display:
-            return
-        self._fetch_progress_display = target
-        self.fetch_button.setProgress(self._fetch_progress_display)
-
-    def fetch_products(self):
-        from Account.views.actions import collect_selected_companies
-        from Listing.views.actions import action_fetch_listings, action_get_company_credentials
-
-        if self.company_list.count() == 0:
-            self._refresh_company_list_state(reload_companies=True)
-            MessageHandler.show(
-                self,
-                Result.fail(
-                    str(ui_text("listing.fetch_panel.no_company_error", "Kayıtlı şirket bulunamadı. Önce şirket eklemelisin.")),
-                    close_dialog=False,
-                ),
-                only_errors=True,
-            )
-            return
-
-        if not self.fetch_button.isEnabled():
-            return
-
-        try:
-            self._fetch_from_auto_repeat = bool(self.auto_fetch_toggle.isChecked())
-
-            res_sel = collect_selected_companies(self.company_list)
-            if not res_sel.success:
-                self.fetch_button.fail()
-                self.fetch_button.setEnabled(True)
-                MessageHandler.show(self, res_sel, only_errors=True)
-                return
-
-            selected_pks = res_sel.data.get("selected_company_pks", []) or []
-            res_creds = action_get_company_credentials(selected_pks)
-            if not res_creds.success:
-                self.fetch_button.fail()
-                self.fetch_button.setEnabled(True)
-                MessageHandler.show(self, res_creds, only_errors=True)
-                return
-
-            comp_api_account_list = res_creds.data.get("accounts", []) or []
-            if not comp_api_account_list:
-                self.fetch_button.fail()
-                self.fetch_button.setEnabled(True)
-                MessageHandler.show(self, Result.fail("Seçili mağazalar için API bilgisi yok."), only_errors=True)
-                return
-            account_records = res_creds.data.get("records", []) or []
-            account_accept_language_map = {
-                getattr(record, "pk", None): (
-                    str((getattr(record, "extra_config", None) or {}).get("acceptLanguage") or "").strip()
-                    if isinstance(getattr(record, "extra_config", None), dict)
-                    else ""
-                )
-                for record in account_records
-                if getattr(record, "pk", None) is not None
-            }
-            account_environment_map = {
-                getattr(record, "pk", None): (
-                    str(
-                        (getattr(record, "extra_config", None) or {}).get("environment")
-                        or (getattr(record, "extra_config", None) or {}).get("api_environment")
-                        or "production"
-                    ).strip()
-                    if isinstance(getattr(record, "extra_config", None), dict)
-                    else "production"
-                )
-                for record in account_records
-                if getattr(record, "pk", None) is not None
-            }
-            comp_api_account_list = [
-                list(raw_row[:4])
-                + [
-                    account_accept_language_map.get(raw_row[0], ""),
-                    account_environment_map.get(raw_row[0], "production"),
-                ]
-                for raw_row in comp_api_account_list
-                if isinstance(raw_row, (list, tuple)) and len(raw_row) >= 4
-            ]
-            if not comp_api_account_list:
-                self.fetch_button.fail()
-                self.fetch_button.setEnabled(True)
-                MessageHandler.show(self, Result.fail("Seçili mağazalar için API context bilgisi yok."), only_errors=True)
-                return
-
-            fetch_page_size = _listing_fetch_page_size(comp_api_account_list)
-
-            self.status_label.setText(LISTING_STATUS_FETCHING_TEXT)
-            listing_signals.fetch_started.emit(
-                {
-                    "account_ids": list(selected_pks),
-                    "account_count": len(selected_pks),
-                    "fetch_all_pages": True,
-                    "page_size": fetch_page_size,
-                }
-            )
-            self.fetch_button.setEnabled(False)
-            self.fetch_button.start()
-            self._begin_fetch_progress()
-
-            params = {
-                "page": 0,
-                "size": fetch_page_size,
-                "approved": None,
-                "barcode": None,
-                "stock_code": None,
-                "fetch_all_pages": True,
-                "max_pages": None,
-            }
-
-            self.worker = AsyncWorker(
-                action_fetch_listings,
-                comp_api_account_list,
-                parent=self,
-                kwargs=params,
-            )
-            self.worker.progress_changed.connect(self._on_progress)
-            self.worker.result_ready.connect(self._on_fetch_done)
-            self.worker.finished.connect(self._on_worker_finished)
-            self.worker.start()
-
-        except Exception as e:
-            self.fetch_button.fail()
-            self.fetch_button.setEnabled(True)
-            MessageHandler.show(self, Result.fail(map_error_to_message(e), error=e), only_errors=True)
-
-    def _on_progress(self, current: int, total: int):
-        try:
-            total = int(total)
-            if total <= 0:
-                return
-            percent = _listing_fetch_percent(current, total)
-            self._set_fetch_progress_actual(percent)
-        except Exception:
-            pass
-
-    def _on_fetch_done(self, result: Result):
-        if not result.success:
-            self._fetch_failed = True
-            self._stop_fetch_progress()
-            self.fetch_button.fail()
-            self.fetch_button.setEnabled(True)
-            self.status_label.setText(f"Hata: {result.message}")
-            MessageHandler.show(self, result, only_errors=True)
-            return
-
-        self._fetch_waiting_for_save = True
-
-        items = (result.data or {}).get("items", []) or []
-        listing_signals.products_loaded.emit(
-            {
-                "count": len(items),
-                "api_account_ids": list((result.data or {}).get("api_account_ids", []) or []),
-            }
-        )
-        self.status_label.setText(LISTING_STATUS_SAVING_TEXT)
-
-        payload = {
-            "items": items,
-            "sync_api_account_ids": (result.data or {}).get("api_account_ids", []) or [],
-            "prune_missing": True,
-        }
-        listing_signals.products_save_started.emit(
-            {
-                "count": len(items),
-                "api_account_ids": list(payload["sync_api_account_ids"]),
-                "prune_missing": True,
-            }
-        )
-
-        def _start_db_save(process_payload: dict, payload_path: str | None) -> None:
-            target = ProcessTarget(identifier="Listing/processors/trendyol/db_save_worker.py")
-            self.db_runner = GenericProcessRunner(target=target, initial_payload=process_payload, parent=self)
-            self.db_runner.finished.connect(lambda result: _on_db_finished(result, payload_path))
-            self.db_runner.start()
-            self.db_runner.close_stdin()
-
-        def _on_payload_ready(result: Result) -> None:
-            self._payload_worker = None
-            if not result.success:
-                self._fetch_failed = True
-                self._finish_fetch_progress(success=False)
-                self.status_label.setText(LISTING_STATUS_SAVE_FAILED_TEXT)
-                MessageHandler.show(self, result, only_errors=True)
-                return
-            prepared = (result.data or {}).get("result")
-            if not isinstance(prepared, tuple) or len(prepared) != 2:
-                prepared = (dict(payload or {}), None)
-            process_payload, payload_path = prepared
-            _start_db_save(dict(process_payload or {}), payload_path)
-
-        def _on_db_finished(result: dict, payload_path: str | None):
-            if payload_path:
-                try:
-                    os.unlink(payload_path)
-                except Exception:
-                    pass
-            failed = not bool(result.get("success"))
-            if failed:
-                listing_signals.products_save_failed.emit(
-                    {
-                        "message": result.get("message", "DB kayıt hatası."),
-                        "api_account_ids": list(payload["sync_api_account_ids"]),
-                    }
-                )
-            if not result.get("success"):
-                MessageHandler.show(self, Result.fail(result.get("message", "DB kayıt hatası.")), only_errors=True)
-                self.status_label.setText(LISTING_STATUS_SAVE_FAILED_TEXT)
-                self._finish_fetch_progress(success=False)
-                return
-
-            data = result.get("data") or {}
-            listing_signals.products_saved.emit(
-                {
-                    "attempted": data.get("attempted"),
-                    "changed": bool(data.get("changed")),
-                    "counts": dict(data.get("counts") or {}),
-                    "api_account_ids": list(payload["sync_api_account_ids"]),
-                }
-            )
-            changed = bool(data.get("changed"))
-            if changed:
-                self.status_label.setText(LISTING_STATUS_SAVED_TEXT)
-                if self.list_window is not None and self.list_window.isVisible():
-                    self.list_window.mark_stale()
-                counts = data.get("counts") or {}
-                delta = _listing_badge_count_from_save_counts(counts)
-                if delta > 0:
-                    listing_signals.badge_changed.emit(delta)
-                else:
-                    listing_signals.badge_cleared.emit()
-            else:
-                self.status_label.setText(LISTING_STATUS_NO_CHANGES_TEXT)
-                listing_signals.badge_cleared.emit()
-            self._finish_fetch_progress(success=True)
-
-        worker = SyncWorker(_prepare_listing_process_payload, payload, parent=self)
-        self._payload_worker = worker
-        worker.result_ready.connect(_on_payload_ready)
-        worker.finished.connect(worker.deleteLater)
-        worker.start()
-
-    def _on_worker_finished(self):
-        self._fetch_from_auto_repeat = False
-        self._stop_fetch_progress()
-        if self._fetch_waiting_for_save or self._fetch_failed:
-            return
-        self.fetch_button.setEnabled(True)
-        delay_ms = 550 if not self._fetch_failed and self._fetch_progress_display >= 100 else 0
-        if delay_ms > 0:
-            QTimer.singleShot(delay_ms, self.fetch_button.reset)
-        else:
-            self.fetch_button.reset()
 
     def open_listings_window(self):
         try:
@@ -752,30 +428,6 @@ class ListingTab(QWidget):
             res = Result.fail(map_error_to_message(e), error=e, close_dialog=False)
             MessageHandler.show(self, res, only_errors=True)
 
-    def _toggle_auto_fetch(self):
-        try:
-            if self.auto_fetch_toggle.isChecked():
-                self.auto_fetch_minutes.setEnabled(True)
-                self._on_auto_fetch_minutes_changed(self.auto_fetch_minutes.value())
-                self.fetch_button.enableRepeat(True)
-                mins = self.auto_fetch_minutes.value()
-                self.status_label.setText(LISTING_AUTO_FETCH_ACTIVE_TEMPLATE.format(mins=mins))
-            else:
-                self.auto_fetch_minutes.setEnabled(False)
-                self.fetch_button.stopRepeat()
-                self.status_label.setText(LISTING_AUTO_FETCH_STOPPED_TEXT)
-        except Exception:
-            pass
-
-    def _on_auto_fetch_minutes_changed(self, value: int):
-        try:
-            mins = max(2, int(value))
-            self._auto_fetch_interval = mins * 60
-            self.fetch_button.setRepeatInterval(self._auto_fetch_interval)
-            if self.auto_fetch_toggle.isChecked():
-                self.status_label.setText(LISTING_AUTO_FETCH_ACTIVE_TEMPLATE.format(mins=mins))
-        except Exception:
-            pass
 
     def _on_companies_changed(self):
         QTimer.singleShot(0, self._refresh_company_list_state)
@@ -795,50 +447,6 @@ class ListingTab(QWidget):
         finally:
             self._refresh_company_list_state(reload_companies=True)
 
-    def _refresh_company_list_state(self, *, reload_companies: bool = False):
-        try:
-            if reload_companies:
-                self.company_list.reload_companies()
-                return
-
-            has_companies = self.company_list.count() > 0
-            self.no_company_card.setVisible(not has_companies)
-            self.company_list.setVisible(has_companies)
-            self.fetch_button.setVisible(has_companies)
-            self.auto_fetch_card.setVisible(has_companies)
-            self.fetch_button.setEnabled(has_companies)
-
-            if not has_companies:
-                if self.auto_fetch_toggle.isChecked():
-                    with QSignalBlocker(self.auto_fetch_toggle):
-                        self.auto_fetch_toggle.setChecked(False)
-                self.auto_fetch_minutes.setEnabled(False)
-                self.fetch_button.stopRepeat()
-                self.status_label.setText(
-                    str(
-                        ui_text(
-                            "listing.fetch_panel.no_company_status",
-                            "Henüz ekli şirket yok. Şirket ekleyerek ilan çekmeye başlayabilirsin."
-                        )
-                    )
-                )
-                return
-
-            if self.auto_fetch_toggle.isChecked():
-                self.auto_fetch_minutes.setEnabled(True)
-            else:
-                self.auto_fetch_minutes.setEnabled(False)
-
-            empty_status = str(
-                ui_text(
-                    "listing.fetch_panel.no_company_status",
-                    "Henüz ekli şirket yok. Şirket ekleyerek ilan çekmeye başlayabilirsin."
-                )
-            )
-            if self.status_label.text().strip() == empty_status:
-                self.status_label.setText(str(ui_text("listing.fetch_panel.idle_status", LISTING_STATUS_IDLE_TEXT)))
-        except Exception:
-            pass
 
     def _on_listing_fetch_started(self, payload: Any):
         if not isinstance(payload, dict):
@@ -896,11 +504,5 @@ class ListingTab(QWidget):
             self.btn_open_products.setActive(True)
         except Exception:
             pass
-
-
-
-
-
-
 
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Callable
 
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtWidgets import QLabel, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QLabel, QPushButton, QVBoxLayout, QWidget
 
 
 class LazyTabHost(QWidget):
@@ -28,9 +28,18 @@ class LazyTabHost(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         self._layout = layout
 
-        self._placeholder = QLabel(self._loading_text, self)
-        self._placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._placeholder.setStyleSheet("color:#64748B; font-size:13px; font-weight:600;")
+        self._placeholder = QWidget(self)
+        placeholder_layout = QVBoxLayout(self._placeholder)
+        placeholder_layout.addStretch()
+        self._status = QLabel(self._loading_text, self._placeholder)
+        self._status.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._status.setStyleSheet("color:#64748B; font-size:13px; font-weight:600;")
+        placeholder_layout.addWidget(self._status)
+        self._retry = QPushButton("Tekrar dene", self._placeholder)
+        self._retry.clicked.connect(self.request_load)
+        self._retry.hide()
+        placeholder_layout.addWidget(self._retry, alignment=Qt.AlignmentFlag.AlignHCenter)
+        placeholder_layout.addStretch()
         self._layout.addWidget(self._placeholder, 1)
 
     @property
@@ -44,8 +53,8 @@ class LazyTabHost(QWidget):
         if self._content is not None or self._load_scheduled:
             return
         self._load_scheduled = True
-        if self._placeholder is not None:
-            self._placeholder.setText(self._loading_text)
+        self._status.setText(self._loading_text)
+        self._retry.hide()
         self._load_timer.start()
 
     def _ensure_loaded(self) -> None:
@@ -55,14 +64,14 @@ class LazyTabHost(QWidget):
         self.setUpdatesEnabled(False)
         try:
             widget = self._factory()
-            self._content = widget
             self._layout.addWidget(widget, 1)
-            if self._placeholder is not None:
-                self._placeholder.deleteLater()
-                self._placeholder = None
+            self._content = widget
+            self._layout.removeWidget(self._placeholder)
+            self._placeholder.hide()
+            self._placeholder.deleteLater()
         except Exception as exc:
-            if self._placeholder is not None:
-                self._placeholder.setText(f"Sekme açılamadı: {exc}")
+            self._status.setText("Sekme açılamadı.")
+            self._retry.show()
             print(f"[main tabs] load failed: {exc}")
         finally:
             self.setUpdatesEnabled(True)

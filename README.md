@@ -25,21 +25,23 @@ kullanabilirsin. Bağış hiçbir özelliği açıp kapatmaz.
 
 | Çalışma alanı | İşlev |
 | --- | --- |
-| Siparişler ve iadeler | Siparişleri getir, durumlarını izle, iade talepleriyle çalış. |
+| Siparişler ve iadeler | Siparişleri otomatik güncelle, durumlarını izle, iade talepleriyle çalış. |
 | Ürünler ve stok | İlanları, stok kartlarını, depoları ve stok hareketlerini yönet. |
 | Maliyet ve kârlılık | Ürün maliyetlerini, komisyonları ve kargo tarifelerini değerlendir. |
 | Kargo etiketleri | Sipariş bilgileriyle hazır etiket şablonlarını doldur ve çıktı hazırla. |
 | Birden fazla firma | Firma ve pazaryeri hesaplarını aynı uygulamada kullan. |
+| OrderScout AI | Sipariş, iade, stok, ilan ve finans verilerini sohbetten sorgula, rapor hazırla ve önerilen işlemleri incele. |
 
 Aktif entegrasyon odağı **Trendyol**'dur. Diğer pazaryerleri için yapılandırma
 tanımları bulunması, bu entegrasyonların tamamlandığı anlamına gelmez.
-AI çalışma alanı deneyseldir; yerel model veya harici sağlayıcı ayarı gerektirebilir.
+AI sekmesi Windows paketinde açıktır. Model Hub’dan yerel bir GGUF modeli indir
+veya kendi bulut sağlayıcı hesabını ekle. Ajan özellikleri deneysel olarak sunulur.
 Harici AI hizmetlerinin kendi ücretleri ve veri işleme koşulları geçerlidir.
 
 ## Başlarken
 
-Hazır Windows uygulaması için [indirme deposuna](https://github.com/hermanjons/OrderScout-releases/releases)
-git. Bu depo kaynak kodu, testleri ve geliştirme belgelerini içerir.
+Windows 10 veya 11 x64 için [son sürüm sayfasından](https://github.com/hermanjons/OrderScout-releases/releases/latest)
+`OrderScout_Setup_x64.exe` dosyasını indir ve çalıştır.
 
 Kaynak koddan çalıştırmak için **Windows ve Python 3.11** kullan:
 
@@ -66,7 +68,8 @@ sürümün destek kapsamına dahil değildir.
 - Log, veritabanı, sipariş çıktısı ve gerçek müşteri bilgilerini hata bildirimlerine ekleme.
 
 [Güvenlik politikası](SECURITY.md) · [Kurulum ve ayarlar](docs/setup.md) ·
-[Mimari](docs/architecture.md) · [Bilinen sınırlar](docs/project-status.md)
+[Mimari](docs/architecture.md) · [Bilinen sınırlar](docs/project-status.md) ·
+[Windows paketleme](docs/windows-build.md)
 
 ## Geliştirme
 

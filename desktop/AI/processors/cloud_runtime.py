@@ -12,6 +12,12 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import requests
 
+from AI.runtime.prompt import provider_prompt_fields as _prompt_fields
+from AI.runtime.provider_response import ProviderText
+from AI.runtime.response_stream import (
+    ResponseStreamCancelled, ResponseStreamIncomplete, callback_for_contract,
+    provider_usage_snapshot, request_provider_stream,
+)
 from AI.processors.provider_adapters import (
     CallableProviderAdapter,
     ModelCapabilityProfile,
@@ -38,6 +44,8 @@ DEFAULT_FINAL_TEXT_MAX_TOKENS = DEFAULT_STRUCTURED_OUTPUT_MAX_TOKENS
 # budget; otherwise a valid exact-model plan can be truncated before the JSON
 # closes and spuriously degrade into repair/fallback behavior.
 DEFAULT_GUARDED_JSON_MAX_TOKENS = DEFAULT_STRUCTURED_OUTPUT_MAX_TOKENS
+# One recovery expansion is enough; never grow a provider envelope repeatedly.
+MAX_CLOUD_RECOVERY_TOKENS = 16_384
 DEFAULT_CLOUD_TEMPERATURE = 0
 DEFAULT_CLOUD_REQUEST_TIMEOUT_SECONDS = 120.0
 DEFAULT_CLOUD_TURN_TIMEOUT_SECONDS = 180.0
@@ -451,6 +459,73 @@ def _json(response: requests.Response) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
+def _provider_request_payload(
+    endpoint: str, *, client: ChatClient, family: str, invocation_contract: str,
+    headers: dict[str, str], payload: dict[str, Any], timeout: float,
+) -> dict[str, Any]:
+    # ContextVars do not cross new threading.Thread boundaries. Capture the
+    # observer here, before either the POST or the SSE reader starts its worker.
+    callback = callback_for_contract(invocation_contract)
+    turn_limited = _last_request_timeout_turn_limited(client)
+    try:
+        if bool(getattr(getattr(client, "task_control", None), "pause_requested", False)):
+            raise ResponseStreamCancelled("Provider generation paused by task control.")
+        if callback is None:
+            response = _json(_post_with_hard_wall_clock_timeout(
+                endpoint, headers=headers, json=payload, timeout=timeout,
+                turn_deadline_limited=turn_limited,
+            ))
+            # Buffered and visible streaming responses have the same authority:
+            # a length-limited generation cannot become a final answer/tool.
+            choices = response.get("candidates" if family == "gemini" else "choices") or []
+            first = choices[0] if choices and isinstance(choices[0], dict) else {}
+            finish = response.get("stop_reason") if family == "anthropic" else first.get("finishReason" if family == "gemini" else "finish_reason")
+            if finish in {"length", "max_tokens", "model_context_window_exceeded", "MAX_TOKENS"}:
+                error = ResponseStreamIncomplete("Provider response exceeded its output limit.", reason="output_limit", finish_reason=finish)
+                error.provider_stream_usage = provider_usage_snapshot(response, family=family)
+                error.provider_stream_diagnostic = {"provider_family": family, "reason": "output_limit",
+                                                    "finish_reason": finish, "terminal_received": True, "streamed": False}
+                raise error
+            return response
+        stream_payload = dict(payload)
+        stream_headers = {**headers, "Accept": "text/event-stream"}
+        if family == "gemini":
+            endpoint = _append_query(endpoint.replace(":generateContent", ":streamGenerateContent"), alt="sse")
+        else:
+            stream_payload["stream"] = True
+            if family == "openai":
+                stream_payload["stream_options"] = {**dict(stream_payload.get("stream_options") or {}), "include_usage": True}
+        response = request_provider_stream(
+            request=lambda: requests.post(endpoint, headers=stream_headers,
+                json=stream_payload, timeout=timeout, stream=True),
+            family=family, callback=callback, timeout=timeout,
+            validate_status=raise_for_status_safely,
+            cancelled=lambda: bool(getattr(getattr(client, "task_control", None), "pause_requested", False)),
+            timeout_error=lambda: (
+                CloudTurnDeadlineExceeded("Cloud provider stream exceeded the shared wall-clock budget.")
+                if turn_limited else requests.Timeout("Cloud provider stream exceeded its phase wall-clock budget.")
+            ),
+        )
+        note = response.pop("_provider_stream_note", None)
+        plan = getattr(client, "resource_plan", {})
+        if isinstance(note, dict) and isinstance(plan, dict):
+            plan["provider_stream_notes"] = [*plan.get("provider_stream_notes", []), dict(note)][-100:]
+        return response
+    except Exception as exc:
+        # Partial attempts still consume tokens. Keep only provider accounting
+        # and protocol facts; never preserve partial content as an answer/call.
+        usage = getattr(exc, "provider_stream_usage", None)
+        if isinstance(usage, dict):
+            from AI.runtime.usage import record_provider_usage
+            record_provider_usage(client, payload, usage, family=family)
+        diagnostic = getattr(exc, "provider_stream_diagnostic", None)
+        plan = getattr(client, "resource_plan", {})
+        if isinstance(diagnostic, dict) and isinstance(plan, dict):
+            plan["last_incomplete_response"] = dict(diagnostic)
+            plan["incomplete_response_history"] = [*plan.get("incomplete_response_history", []), dict(diagnostic)][-100:]
+        raise
+
+
 def _join_endpoint(base_url: str, suffix: str) -> str:
     base = _compact_text(base_url).rstrip("/")
     if not base:
@@ -472,21 +547,21 @@ def _append_query(url: str, **params: str) -> str:
 def _extract_openai_text(payload: dict[str, Any]) -> str:
     choices = payload.get("choices")
     if not isinstance(choices, list) or not choices:
-        return ""
+        return ProviderText("")
     first = choices[0] if isinstance(choices[0], dict) else {}
     message = first.get("message") if isinstance(first.get("message"), dict) else {}
     content = message.get("content")
     if isinstance(content, str):
-        return _strip_chat_template_edge_tokens(content)
+        return ProviderText(_strip_chat_template_edge_tokens(content))
     if isinstance(content, list):
         parts = [
             _compact_text(part.get("text") if isinstance(part, dict) else part)
             for part in content
         ]
-        return _strip_chat_template_edge_tokens(
+        return ProviderText(_strip_chat_template_edge_tokens(
             "\n".join(part for part in parts if part)
-        )
-    return _strip_chat_template_edge_tokens(first.get("text"))
+        ))
+    return ProviderText(_strip_chat_template_edge_tokens(first.get("text")))
 
 
 def _wire_tool_name(value: Any, *, used: set[str]) -> str:
@@ -557,11 +632,31 @@ def _provider_tool_definitions(
     return definitions, wire_to_source
 
 
+def _native_call(wire_name, arguments, wire_to_source, *, json_arguments=False):
+    """Invalid calls are model feedback, never an empty provider response/default read."""
+    source_name = wire_to_source.get(wire_name)
+    if source_name is None and wire_name in wire_to_source.values():
+        source_name = wire_name  # Exact canonical alias for an offered contract.
+    problem = "tool_not_in_current_menu" if source_name is None else ""
+    if json_arguments and isinstance(arguments, str):
+        try:
+            arguments = json.loads(arguments)
+        except (ValueError, TypeError):
+            problem = problem or "tool_arguments_invalid_json"
+    if not isinstance(arguments, dict):
+        problem = problem or "tool_arguments_must_be_object"
+    call = {"tool": source_name or wire_name or "__invalid_tool_call__",
+            "arguments": arguments if isinstance(arguments, dict) else {}}
+    if problem:
+        call["call_error"] = problem
+    return call
+
+
 def _normalized_tool_decision(calls: list[dict[str, Any]]) -> str:
     clean_calls = [row for row in calls if isinstance(row, dict) and _compact_text(row.get("tool"))]
     if not clean_calls:
         return ""
-    if len(clean_calls) == 1:
+    if len(clean_calls) == 1 and not clean_calls[0].get("call_error"):
         row = clean_calls[0]
         return json.dumps(
             {
@@ -1076,19 +1171,8 @@ def _extract_openai_tool_decision(
             if not isinstance(function, dict):
                 continue
             wire_name = _compact_text(function.get("name"))
-            source_name = wire_to_source.get(wire_name, "")
             arguments = function.get("arguments")
-            if isinstance(arguments, str):
-                try:
-                    arguments = json.loads(arguments)
-                except Exception:
-                    arguments = {}
-            calls.append(
-                {
-                    "tool": source_name,
-                    "arguments": dict(arguments or {}) if isinstance(arguments, dict) else {},
-                }
-            )
+            calls.append(_native_call(wire_name, arguments, wire_to_source, json_arguments=True))
     normalized = _normalized_tool_decision(calls)
     return normalized or _extract_openai_text(payload)
 
@@ -1101,34 +1185,25 @@ def _extract_anthropic_tool_decision(
     content = payload.get("content")
     calls: list[dict[str, Any]] = []
     if isinstance(content, list):
-        for part in content[:16]:
+        for part in content:
             if not isinstance(part, dict) or _compact_text(part.get("type")) != "tool_use":
                 continue
             wire_name = _compact_text(part.get("name"))
-            calls.append(
-                {
-                    "tool": wire_to_source.get(wire_name, ""),
-                    "arguments": (
-                        dict(part.get("input") or {})
-                        if isinstance(part.get("input"), dict)
-                        else {}
-                    ),
-                }
-            )
+            calls.append(_native_call(wire_name, part.get("input"), wire_to_source))
     return _normalized_tool_decision(calls) or _extract_anthropic_text(payload)
 
 
 def _extract_anthropic_text(payload: dict[str, Any]) -> str:
     content = payload.get("content")
     if isinstance(content, list):
-        return _strip_chat_template_edge_tokens(
+        return ProviderText(_strip_chat_template_edge_tokens(
             "\n".join(
                 _compact_text(part.get("text"))
                 for part in content
                 if isinstance(part, dict) and _compact_text(part.get("text"))
             )
-        )
-    return _strip_chat_template_edge_tokens(payload.get("completion"))
+        ))
+    return ProviderText(_strip_chat_template_edge_tokens(payload.get("completion")))
 
 
 def _extract_anthropic_structured_output(
@@ -1167,12 +1242,12 @@ def _openai_response_format(schema: dict[str, Any] | None) -> dict[str, Any]:
 def _extract_gemini_text(payload: dict[str, Any]) -> str:
     candidates = payload.get("candidates")
     if not isinstance(candidates, list) or not candidates:
-        return ""
+        return ProviderText("")
     content = candidates[0].get("content") if isinstance(candidates[0], dict) else {}
     parts = content.get("parts") if isinstance(content, dict) else []
     if not isinstance(parts, list):
-        return ""
-    return _strip_chat_template_edge_tokens(
+        return ProviderText("")
+    return ProviderText(_strip_chat_template_edge_tokens(
         "\n".join(
             _compact_text(part.get("text"))
             for part in parts
@@ -1182,7 +1257,7 @@ def _extract_gemini_text(payload: dict[str, Any]) -> str:
                 and _compact_text(part.get("text"))
             )
         )
-    )
+    ))
 
 
 def _gemini_response_metadata(payload: dict[str, Any]) -> dict[str, Any]:
@@ -1216,18 +1291,13 @@ def _extract_gemini_tool_decision(
     parts = content.get("parts") if isinstance(content, dict) else []
     calls: list[dict[str, Any]] = []
     if isinstance(parts, list):
-        for part in parts[:16]:
+        for part in parts:
             function_call = part.get("functionCall") if isinstance(part, dict) else None
             if not isinstance(function_call, dict):
                 continue
             wire_name = _compact_text(function_call.get("name"))
             arguments = function_call.get("args")
-            calls.append(
-                {
-                    "tool": wire_to_source.get(wire_name, ""),
-                    "arguments": dict(arguments or {}) if isinstance(arguments, dict) else {},
-                }
-            )
+            calls.append(_native_call(wire_name, arguments, wire_to_source))
     return _normalized_tool_decision(calls) or _extract_gemini_text(payload)
 
 
@@ -1390,9 +1460,12 @@ def provider_reasoning_capabilities(
         mandatory = bool(reasoning_meta.get("mandatory"))
         if supported and not mandatory:
             efforts.append("off")
-        for effort in ("low", "medium", "high"):
+        for effort in (supported_efforts or ["low", "medium", "high"]):
+            if effort not in {"none", "minimal", "low", "medium", "high", "xhigh", "max"}:
+                continue
             if not supported_efforts or effort in supported_efforts:
-                efforts.append(effort)
+                if effort not in efforts:
+                    efforts.append(effort)
         return {
             "supported": supported,
             "control": "reasoning_effort" if supported else "",
@@ -1451,6 +1524,7 @@ def build_openai_compatible_client(
     headers.update(dict(extra_headers or {}))
     endpoint = _join_endpoint(clean_base, "chat/completions")
     options = dict(request_options or {})
+    explicit_output_limit = any(options.get(key) not in (None, "") for key in ("max_tokens", "max_output_tokens"))
     metadata_by_model = {
         _compact_text(key).removeprefix("models/"): dict(value)
         for key, value in dict(fallback_model_metadata or {}).items()
@@ -1485,6 +1559,7 @@ def build_openai_compatible_client(
         response_extractor: Callable[[dict[str, Any]], str] = _extract_openai_text,
         invocation_contract: str = "text",
         required_capability: str = "",
+        exact_model: bool = False,
     ) -> str:
         last_error: Exception | None = None
         fallback_attempts: list[dict[str, Any]] = []
@@ -1494,6 +1569,15 @@ def build_openai_compatible_client(
         same_model_retry_events: list[dict[str, Any]] = []
         prompt_hash = hashlib.sha256(str(prompt or "").encode("utf-8")).hexdigest()
         initial_plan = getattr(_client, "resource_plan", {})
+        invocation_requested_model = clean_model
+        invocation_models = list(model_candidates)
+        if exact_model:
+            prior_plan = initial_plan if isinstance(initial_plan, dict) else {}
+            invocation_requested_model = _compact_text(
+                prior_plan.get("actual_model") or prior_plan.get("last_successful_actual_model")
+                or getattr(_client, "model_name", "")
+            ) or clean_model
+            invocation_models = [invocation_requested_model]
         prior_same_model_empty_retry_history = (
             [
                 dict(row)
@@ -1511,18 +1595,19 @@ def build_openai_compatible_client(
         if isinstance(initial_plan, dict):
             initial_plan.update(
                 {
-                    "requested_model": clean_model,
+                    "requested_model": invocation_requested_model,
                     "actual_model": "",
                     "fallback_used": False,
                     "model_invocation_attempted": True,
                     "invocation_error_reason": "",
                     "same_model_empty_retries": [],
                     "same_model_retry_events": [],
+                    "invocation_fallback_allowed": not exact_model and len(invocation_models) > 1,
                 }
             )
             setattr(_client, "resource_plan", initial_plan)
         _record_invocation_contract(_client, invocation_contract)
-        for candidate in model_candidates:
+        for candidate in invocation_models:
             candidate_metadata = _metadata_for(candidate)
             candidate_profile = capability_profile_from_record(
                 {
@@ -1557,7 +1642,7 @@ def build_openai_compatible_client(
                 continue
             payload = {
                 "model": candidate,
-                "messages": [{"role": "user", "content": str(prompt or "")}],
+                **_prompt_fields(prompt, family="openai"),
                 "temperature": temperature,
                 "max_tokens": max_tokens,
             }
@@ -1568,64 +1653,95 @@ def build_openai_compatible_client(
                 else dict(payload_overrides or {})
             )
             payload.update(dict(resolved_overrides or {}))
+            # Catalog defaults are not provider caps. Only an explicit limit
+            # or the provider's declared completion capacity may bound growth.
+            top_provider = candidate_metadata.get("top_provider") or {}
+            output_limits = [
+                value for raw in (candidate_metadata.get("max_output_tokens"),
+                                  candidate_metadata.get("output_token_limit"),
+                                  top_provider.get("max_completion_tokens") if isinstance(top_provider, dict) else None)
+                if (value := _safe_optional_int(raw)) is not None and value > 0
+            ]
+            if explicit_output_limit:
+                output_limits.append(max_tokens)
+            if output_limits:
+                payload["max_tokens"] = min(payload["max_tokens"], *output_limits)
             try:
                 answer = ""
                 exact_model_empty_retry_limit = (
                     0
                     if invocation_contract == "structured_output"
                     else 1
-                    if len(model_candidates) == 1
-                    and candidate == clean_model
+                    if len(invocation_models) == 1
+                    and candidate == invocation_requested_model
                     else 0
                 )
                 exact_model_request_attempt_limit = (
                     1
                     if invocation_contract == "structured_output"
                     else 3
-                    if len(model_candidates) == 1
-                    and candidate == clean_model
-                    else 1
                 )
                 empty_retry_count = 0
+                protocol_retry_used = False
+                output_growth_used = False
+                candidate_prompt_start = len(request_prompt_hashes)
                 for request_attempt in range(exact_model_request_attempt_limit):
                     request_prompt_record: dict[str, Any] = {
                         "model": candidate,
                         "prompt_sha256": prompt_hash,
                     }
-                    if exact_model_request_attempt_limit > 1:
+                    if request_attempt:
+                        # Keep the established single-attempt record shape.
+                        # Number attempts only once this candidate is retried.
+                        request_prompt_hashes[candidate_prompt_start]["attempt"] = 1
                         request_prompt_record["attempt"] = request_attempt + 1
                     request_prompt_hashes.append(request_prompt_record)
                     try:
                         request_timeout = _effective_provider_request_timeout(
                             _client,
-                            timeout,
+                            # A larger completion envelope also needs bounded
+                            # phase time. The shared deadline still clamps it;
+                            # protocol-only retries retain the original phase.
+                            timeout * (2 if output_growth_used else 1),
                             invocation_contract=invocation_contract,
                         )
-                        response_payload = _json(
-                            _post_with_hard_wall_clock_timeout(
-                                endpoint,
-                                headers=headers,
-                                json=payload,
-                                timeout=request_timeout,
-                                turn_deadline_limited=(
-                                    _last_request_timeout_turn_limited(_client)
-                                ),
-                            )
+                        response_payload = _provider_request_payload(
+                            endpoint, client=_client, family="openai",
+                            invocation_contract=invocation_contract,
+                            headers=headers, payload=payload, timeout=request_timeout,
                         )
                     except requests.RequestException as retry_exc:
+                        if bool(getattr(getattr(_client, "task_control", None), "pause_requested", False)):
+                            raise ResponseStreamCancelled("Provider generation paused by task control.") from retry_exc
                         retry_error = normalize_provider_error(
                             provider_code,
                             retry_exc,
                         )
+                        incomplete = isinstance(retry_exc, ResponseStreamIncomplete)
+                        next_max_tokens = payload["max_tokens"]
+                        if incomplete and retry_exc.reason == "output_limit" and not explicit_output_limit:
+                            next_max_tokens = max(next_max_tokens, min(MAX_CLOUD_RECOVERY_TOKENS,
+                                max(DEFAULT_STRUCTURED_OUTPUT_MAX_TOKENS, next_max_tokens * 2)))
+                            if output_limits:
+                                next_max_tokens = min(next_max_tokens, *output_limits)
+                        incomplete_retry_allowed = bool(
+                            incomplete and retry_error.retryable
+                            and (
+                                not output_growth_used and next_max_tokens > payload["max_tokens"]
+                                if retry_exc.reason == "output_limit"
+                                else not protocol_retry_used
+                            )
+                        )
                         same_model_retry_allowed = bool(
                             request_attempt + 1
                             < exact_model_request_attempt_limit
-                            and retry_error.retryable
-                            and (
-                                retry_error.category == "transport"
-                                or retry_error.status_code
-                                in {500, 502, 503, 504}
-                            )
+                            and (incomplete_retry_allowed or (
+                                not incomplete and not protocol_retry_used and len(invocation_models) == 1
+                                and retry_error.retryable and (
+                                    retry_error.category == "transport"
+                                    or retry_error.status_code in {500, 502, 503, 504}
+                                )
+                            ))
                             # Unknown/project/model rate-limit scopes require
                             # their own bounded wait/fallback policy.  A blind
                             # immediate 429 retry would only burn the turn.
@@ -1647,9 +1763,24 @@ def build_openai_compatible_client(
                                 ),
                                 "invocation_contract": invocation_contract,
                                 "prompt_sha256": prompt_hash,
+                                **({"response_reason": retry_exc.reason,
+                                    "finish_reason": getattr(retry_exc, "provider_stream_diagnostic", {}).get("finish_reason", ""),
+                                    "previous_max_tokens": payload["max_tokens"],
+                                    "retry_max_tokens": next_max_tokens}
+                                   if incomplete else {}),
                             }
                         )
+                        if incomplete:
+                            if retry_exc.reason == "output_limit":
+                                output_growth_used = True
+                            else:
+                                protocol_retry_used = True
+                            payload["max_tokens"] = next_max_tokens
+                        else:
+                            protocol_retry_used = True
                         continue
+                    from AI.runtime.usage import record_provider_usage
+                    record_provider_usage(_client, payload, response_payload, family="openai")
                     answer = response_extractor(response_payload)
                     if _compact_text(answer):
                         break
@@ -1674,6 +1805,8 @@ def build_openai_compatible_client(
                 error_reason = (
                     "turn_deadline_exceeded"
                     if normalized_error.category == "turn_deadline"
+                    else "incomplete_response"
+                    if normalized_error.category == "incomplete_response"
                     else "transport_error" if not status else f"http_{status}"
                 )
                 fallback_attempts.append(
@@ -1705,15 +1838,15 @@ def build_openai_compatible_client(
                     setattr(_client, "resource_plan", plan)
                 if (
                     not normalized_error.model_fallback_allowed
-                    or candidate == model_candidates[-1]
+                    or candidate == invocation_models[-1]
                 ):
                     _record_invocation_outcome(
                         _client,
                         contract=invocation_contract,
-                        requested_model=clean_model,
+                        requested_model=invocation_requested_model,
                         response_received=False,
                         error_reason=fallback_attempts[-1]["reason"],
-                        fallback_used=candidate != clean_model,
+                        fallback_used=candidate != invocation_requested_model,
                         normalized_error=normalized_error,
                         normalized_error_history=normalized_error_history,
                         fallback_blocked_reason=(
@@ -1746,14 +1879,14 @@ def build_openai_compatible_client(
                         *same_model_empty_retries,
                     ][-100:]
                     setattr(_client, "resource_plan", plan)
-                if candidate == model_candidates[-1]:
+                if candidate == invocation_models[-1]:
                     _record_invocation_outcome(
                         _client,
                         contract=invocation_contract,
-                        requested_model=clean_model,
+                        requested_model=invocation_requested_model,
                         response_received=False,
                         error_reason="empty_response",
-                        fallback_used=candidate != clean_model,
+                        fallback_used=candidate != invocation_requested_model,
                         fallback_attempts=fallback_attempts,
                     )
                     raise last_error
@@ -1776,9 +1909,9 @@ def build_openai_compatible_client(
                     native_tool_runtime_enabled=native_tool_runtime_enabled,
                     structured_output_runtime_enabled=structured_output_runtime_enabled,
                 )
-                plan["requested_model"] = clean_model
+                plan["requested_model"] = invocation_requested_model
                 plan["actual_model"] = candidate
-                plan["fallback_used"] = candidate != clean_model
+                plan["fallback_used"] = candidate != invocation_requested_model
                 plan["fallback_attempts"] = list(fallback_attempts)
                 plan["normalized_error_history"] = list(normalized_error_history)
                 plan["request_prompt_hashes"] = list(request_prompt_hashes)
@@ -1802,10 +1935,10 @@ def build_openai_compatible_client(
             _record_invocation_outcome(
                 _client,
                 contract=invocation_contract,
-                requested_model=clean_model,
+                requested_model=invocation_requested_model,
                 actual_model=candidate,
                 response_received=True,
-                fallback_used=candidate != clean_model,
+                fallback_used=candidate != invocation_requested_model,
                 normalized_error_history=normalized_error_history,
                 fallback_attempts=fallback_attempts,
             )
@@ -1814,7 +1947,7 @@ def build_openai_compatible_client(
             _record_invocation_outcome(
                 _client,
                 contract=invocation_contract,
-                requested_model=clean_model,
+                requested_model=invocation_requested_model,
                 response_received=False,
                 error_reason=_compact_text(
                     dict(getattr(_client, "resource_plan", {}) or {}).get(
@@ -1956,16 +2089,16 @@ def build_openai_compatible_client(
             invocation_contract="json_text_guarded",
         )
 
-    def _invoke_final_text(prompt: str) -> str:
-        """Render a verified final projection without hidden-reasoning starvation.
+    def _invoke_final_text(prompt: str, *, disable_tools: bool = False, exact_model: bool = False) -> str:
+        """Render final text without hidden-reasoning starvation.
 
         Reasoning-capable OpenRouter models may spend the ordinary 2K text
         envelope entirely on excluded reasoning and return an empty visible
-        message.  Final synthesis is already grounded in typed authoritative
-        observations and independently verified, so it needs output headroom,
-        not another expensive planning pass.
+        message. Final synthesis and factual self-review need visible output
+        headroom too. This transport does not verify their business content.
         """
 
+        disable_tools = disable_tools or exact_model
         final_max_tokens = max(max_tokens, DEFAULT_FINAL_TEXT_MAX_TOKENS)
         plan = getattr(_client, "resource_plan", {})
         if isinstance(plan, dict):
@@ -1974,7 +2107,35 @@ def build_openai_compatible_client(
 
         def final_overrides(candidate: str) -> dict[str, Any]:
             overrides: dict[str, Any] = {"max_tokens": final_max_tokens}
+            if disable_tools and "tool_choice" in _supported_parameters(candidate):
+                # A depleted tool menu is a text-only decision. Otherwise
+                # some routes keep emitting native calls from prior context.
+                overrides["tool_choice"] = "none"
             if provider_code != "openrouter":
+                return overrides
+            configured_reasoning = options.get("reasoning")
+            configured_reasoning = configured_reasoning if isinstance(configured_reasoning, dict) else {}
+            configured_effort = _compact_text(configured_reasoning.get("effort") or options.get("reasoning_effort")).casefold()
+            if disable_tools and (
+                configured_effort not in {"", "auto"}
+                or configured_reasoning.get("enabled") is False
+                or configured_reasoning.get("max_tokens") is not None
+            ):
+                # Choosing the final response envelope must not overwrite a
+                # user's explicit reasoning effort or reasoning token budget.
+                current_plan = getattr(_client, "resource_plan", {})
+                if isinstance(current_plan, dict):
+                    current_plan["final_text_reasoning_effort"] = configured_effort or "configured"
+                    current_plan["final_text_reasoning_disabled"] = configured_reasoning.get("enabled") is False or configured_effort in {"none", "off"}
+                return overrides
+            if exact_model:
+                # Self-review needs the selected model's reasoning policy too.
+                # Auto remains the model/provider default rather than silently
+                # becoming the low-effort visible-text shortcut below.
+                current_plan = getattr(_client, "resource_plan", {})
+                if isinstance(current_plan, dict):
+                    current_plan["final_text_reasoning_effort"] = configured_effort or "auto"
+                    current_plan["final_text_reasoning_disabled"] = False
                 return overrides
             reasoning = provider_reasoning_capabilities(
                 provider_code,
@@ -1993,7 +2154,7 @@ def build_openai_compatible_client(
                         for value in ("low", "medium", "high")
                         if value in supported_efforts
                     ),
-                    "high",
+                    next((value for value in supported_efforts if value not in {"auto", "off"}), "high"),
                 )
             overrides["reasoning"] = {
                 "effort": effort,
@@ -2006,11 +2167,53 @@ def build_openai_compatible_client(
                 setattr(_client, "resource_plan", current_plan)
             return overrides
 
+        def final_response(payload: dict[str, Any]) -> str:
+            choices = payload.get("choices") or []
+            choice = choices[0] if choices and isinstance(choices[0], dict) else {}
+            message = choice.get("message") or {}
+            if disable_tools and (
+                isinstance(message, dict) and message.get("tool_calls")
+                or choice.get("finish_reason") in {"tool_calls", "function_call"}
+            ):
+                error = ResponseStreamIncomplete("Provider returned a tool call while tools were disabled.", reason="tools_disabled")
+                error.provider_stream_diagnostic = {"provider_family": "openai", "reason": "tools_disabled",
+                                                    "finish_reason": "tool_calls", "terminal_received": True}
+                plan = getattr(_client, "resource_plan", {})
+                if isinstance(plan, dict):
+                    plan["last_incomplete_response"] = dict(error.provider_stream_diagnostic)
+                    plan["incomplete_response_history"] = [*plan.get("incomplete_response_history", []), dict(error.provider_stream_diagnostic)][-100:]
+                raise error
+            return _extract_openai_text(payload)
+
         return _invoke(
             prompt,
             payload_overrides=final_overrides,
+            response_extractor=final_response,
             invocation_contract="final_text",
+            exact_model=exact_model,
         )
+
+    def _invoke_completion_review(prompt: str, *, schema: dict[str, Any]) -> str:
+        """An exact-model, tool-free control response; never a business tool call."""
+        def overrides(candidate: str) -> dict[str, Any]:
+            parameters = _supported_parameters(candidate)
+            result: dict[str, Any] = {"max_tokens": max(max_tokens, DEFAULT_FINAL_TEXT_MAX_TOKENS)}
+            if "tool_choice" in parameters:
+                result["tool_choice"] = "none"
+            if parameters.intersection({"json_schema", "structured_outputs"}):
+                result["response_format"] = _openai_response_format(schema)
+            elif "response_format" in parameters:
+                result["response_format"] = _openai_response_format(None)
+            return result
+
+        def extract(payload: dict[str, Any]) -> str:
+            choice = (payload.get("choices") or [{}])[0]
+            if (choice.get("message") or {}).get("tool_calls") or choice.get("finish_reason") in {"tool_calls", "function_call"}:
+                raise ResponseStreamIncomplete("Review cannot execute tools.", reason="tools_disabled")
+            return _extract_openai_text(payload)
+
+        return _invoke(guarded_json_prompt(prompt, schema), payload_overrides=overrides,
+            response_extractor=extract, invocation_contract="completion_review", exact_model=True)
 
     def _invoke_tools(prompt: str, *, tools: list[dict[str, Any]]) -> str:
         definitions, wire_to_source = _provider_tool_definitions(
@@ -2018,13 +2221,27 @@ def build_openai_compatible_client(
             family="openai",
         )
         if not definitions:
-            return _invoke(prompt)
+            return _invoke_final_text(prompt, disable_tools=True)
+
+        def tool_overrides(candidate: str) -> dict[str, Any]:
+            overrides: dict[str, Any] = {"tools": definitions}
+            supported = _supported_parameters(candidate)
+            # Tool support does not imply support for tool_choice. OpenRouter
+            # can reject otherwise valid routes when require_parameters is on.
+            # Omitting this optional field retains the provider's auto default.
+            if not supported or "tool_choice" in supported:
+                overrides["tool_choice"] = "auto"
+            reasoning = provider_reasoning_capabilities(provider_code, candidate, model_metadata=_metadata_for(candidate))
+            if not explicit_output_limit and reasoning.get("mandatory"):
+                # Hidden reasoning and visible function arguments share this
+                # output envelope. The ordinary 2K chat default can consume it
+                # before a mandatory-reasoning model reaches its decision.
+                overrides["max_tokens"] = max(max_tokens, DEFAULT_STRUCTURED_OUTPUT_MAX_TOKENS)
+            return overrides
+
         return _invoke(
             prompt,
-            payload_overrides={
-                "tools": definitions,
-                "tool_choice": "auto",
-            },
+            payload_overrides=tool_overrides,
             response_extractor=lambda payload: _extract_openai_tool_decision(
                 payload,
                 wire_to_source=wire_to_source,
@@ -2036,6 +2253,7 @@ def build_openai_compatible_client(
     setattr(_client, "invoke_structured", _invoke_structured)
     setattr(_client, "invoke_json_text", _invoke_json_text)
     setattr(_client, "invoke_final_text", _invoke_final_text)
+    setattr(_client, "invoke_completion_review", _invoke_completion_review)
     setattr(_client, "invoke_tools", _invoke_tools)
 
     return _client
@@ -2081,6 +2299,7 @@ def _build_anthropic_client(
                     "requested_model": clean_model,
                     "actual_model": "",
                     "fallback_used": False,
+                    "invocation_fallback_allowed": False,
                     "model_invocation_attempted": True,
                     "invocation_error_reason": "",
                     "request_prompt_hashes": [
@@ -2099,27 +2318,26 @@ def _build_anthropic_client(
             "model": clean_model,
             "max_tokens": max_tokens,
             "temperature": temperature,
-            "messages": [{"role": "user", "content": str(prompt or "")}],
+            **_prompt_fields(prompt, family="anthropic"),
         }
         payload.update(options)
         payload.update(dict(payload_overrides or {}))
+        if invocation_contract == "completion_review":
+            payload.pop("tools", None)
+            payload.pop("tool_choice", None)
         try:
             request_timeout = _effective_provider_request_timeout(
                 _client,
                 timeout,
                 invocation_contract=invocation_contract,
             )
-            response = _json(
-                _post_with_hard_wall_clock_timeout(
-                    endpoint,
-                    headers=headers,
-                    json=payload,
-                    timeout=request_timeout,
-                    turn_deadline_limited=(
-                        _last_request_timeout_turn_limited(_client)
-                    ),
-                )
+            response = _provider_request_payload(
+                endpoint, client=_client, family="anthropic",
+                invocation_contract=invocation_contract,
+                headers=headers, payload=payload, timeout=request_timeout,
             )
+            from AI.runtime.usage import record_provider_usage
+            record_provider_usage(_client, payload, response, family="anthropic")
             answer = response_extractor(response)
         except requests.RequestException as exc:
             normalized_error = normalize_provider_error("anthropic", exc)
@@ -2223,6 +2441,21 @@ def _build_anthropic_client(
     setattr(_client, "invoke_structured", _invoke_structured)
     setattr(_client, "invoke_tools", _invoke_tools)
 
+    def _invoke_completion_review(prompt: str, *, schema: dict[str, Any]) -> str:
+        def extract(payload: dict[str, Any]) -> str:
+            if payload.get("stop_reason") == "tool_use" or any(
+                isinstance(block, dict) and block.get("type") == "tool_use"
+                for block in payload.get("content") or []
+            ):
+                raise ResponseStreamIncomplete("Review cannot execute tools.", reason="tools_disabled")
+            return _extract_anthropic_text(payload)
+
+        return _invoke(guarded_json_prompt(prompt, schema),
+            payload_overrides={"max_tokens": max(max_tokens, DEFAULT_FINAL_TEXT_MAX_TOKENS)},
+            response_extractor=extract, invocation_contract="completion_review")
+
+    setattr(_client, "invoke_completion_review", _invoke_completion_review)
+
     return _client
 
 
@@ -2306,6 +2539,7 @@ def _build_gemini_client(
         payload_overrides: dict[str, Any] | None = None,
         response_extractor: Callable[[dict[str, Any]], str] = _extract_gemini_text,
         invocation_contract: str = "text",
+        exact_model: bool = False,
     ) -> str:
         last_error: requests.RequestException | None = None
         fallback_attempts: list[dict[str, Any]] = []
@@ -2313,7 +2547,13 @@ def _build_gemini_client(
         normalized_error_history: list[dict[str, Any]] = []
         request_prompt_hashes: list[dict[str, str]] = []
         prompt_hash = hashlib.sha256(str(prompt or "").encode("utf-8")).hexdigest()
-        model_candidates = _model_candidates()
+        prior_plan = getattr(_client, "resource_plan", {})
+        requested_model = clean_model.removeprefix("models/")
+        if exact_model:
+            requested_model = _compact_text(
+                prior_plan.get("actual_model") or prior_plan.get("last_successful_actual_model") or requested_model
+            ).removeprefix("models/")
+        model_candidates = [requested_model] if exact_model else _model_candidates()
         if invocation_contract in {"structured_output", "native_tools"}:
             model_candidates = [
                 candidate
@@ -2328,11 +2568,12 @@ def _build_gemini_client(
         if isinstance(initial_plan, dict):
             initial_plan.update(
                 {
-                    "requested_model": clean_model,
+                    "requested_model": requested_model,
                     "actual_model": "",
                     "fallback_used": False,
                     "model_invocation_attempted": True,
                     "invocation_error_reason": "",
+                    "invocation_fallback_allowed": not exact_model and len(model_candidates) > 1,
                 }
             )
             setattr(_client, "resource_plan", initial_plan)
@@ -2350,11 +2591,14 @@ def _build_gemini_client(
                     dict(generation_config_factory(endpoint_model) or {})
                 )
             payload = {
-                "contents": [{"role": "user", "parts": [{"text": str(prompt or "")}]}],
+                **_prompt_fields(prompt, family="gemini"),
                 "generationConfig": candidate_generation_config,
             }
             payload.update(options)
             payload.update(dict(payload_overrides or {}))
+            if invocation_contract == "completion_review":
+                payload.pop("tools", None)
+                payload.pop("toolConfig", None)
             if ":generateContent" in base:
                 endpoint = base
             else:
@@ -2363,7 +2607,7 @@ def _build_gemini_client(
             try:
                 max_same_model_attempts = (
                     1
-                    if invocation_contract == "structured_output"
+                    if invocation_contract in {"structured_output", "completion_review"}
                     else 3
                     if not allow_fallback
                     else 1
@@ -2383,17 +2627,14 @@ def _build_gemini_client(
                             timeout,
                             invocation_contract=invocation_contract,
                         )
-                        response = _json(
-                            _post_with_hard_wall_clock_timeout(
-                                endpoint,
-                                headers={"Content-Type": "application/json"},
-                                json=payload,
-                                timeout=request_timeout,
-                                turn_deadline_limited=(
-                                    _last_request_timeout_turn_limited(_client)
-                                ),
-                            )
+                        response = _provider_request_payload(
+                            endpoint, client=_client, family="gemini",
+                            invocation_contract=invocation_contract,
+                            headers={"Content-Type": "application/json"},
+                            payload=payload, timeout=request_timeout,
                         )
+                        from AI.runtime.usage import record_provider_usage
+                        record_provider_usage(_client, payload, response, family="gemini")
                         answer = response_extractor(response)
                         if _compact_text(answer):
                             break
@@ -2462,9 +2703,9 @@ def _build_gemini_client(
                     plan = getattr(_client, "resource_plan", {})
                     if isinstance(plan, dict):
                         plan["actual_model"] = endpoint_model
-                        plan["requested_model"] = clean_model
+                        plan["requested_model"] = requested_model
                         plan["fallback_used"] = (
-                            endpoint_model != clean_model.removeprefix("models/")
+                            endpoint_model != requested_model
                         )
                         plan["invocation_error_reason"] = "empty_response"
                         plan["fallback_attempts"] = list(fallback_attempts)
@@ -2481,7 +2722,7 @@ def _build_gemini_client(
                         _record_invocation_outcome(
                             _client,
                             contract=invocation_contract,
-                            requested_model=clean_model,
+                            requested_model=requested_model,
                             actual_model=endpoint_model,
                             response_received=False,
                             error_reason="empty_response",
@@ -2502,8 +2743,8 @@ def _build_gemini_client(
                         endpoint_model,
                     )
                     plan["actual_model"] = endpoint_model
-                    plan["requested_model"] = clean_model
-                    plan["fallback_used"] = endpoint_model != clean_model.removeprefix("models/")
+                    plan["requested_model"] = requested_model
+                    plan["fallback_used"] = endpoint_model != requested_model
                     plan["fallback_attempts"] = list(fallback_attempts)
                     plan["normalized_error_history"] = list(normalized_error_history)
                     plan["request_prompt_hashes"] = list(request_prompt_hashes)
@@ -2582,11 +2823,11 @@ def _build_gemini_client(
                     _record_invocation_outcome(
                         _client,
                         contract=invocation_contract,
-                        requested_model=clean_model,
+                        requested_model=requested_model,
                         response_received=False,
                         error_reason=reason,
                         fallback_used=(
-                            endpoint_model != clean_model.removeprefix("models/")
+                            endpoint_model != requested_model
                         ),
                         normalized_error=normalized_error,
                         normalized_error_history=normalized_error_history,
@@ -2604,7 +2845,7 @@ def _build_gemini_client(
         _record_invocation_outcome(
             _client,
             contract=invocation_contract,
-            requested_model=clean_model,
+            requested_model=requested_model,
             actual_model=_compact_text(
                 dict(getattr(_client, "resource_plan", {}) or {}).get(
                     "actual_model"
@@ -2767,6 +3008,21 @@ def _build_gemini_client(
     setattr(_client, "invoke_json_text", _invoke_json_text)
     setattr(_client, "invoke_tools", _invoke_tools)
 
+    def _invoke_completion_review(prompt: str, *, schema: dict[str, Any]) -> str:
+        def extract(payload: dict[str, Any]) -> str:
+            if any(isinstance(part, dict) and "functionCall" in part
+                   for candidate in payload.get("candidates") or []
+                   for part in (candidate.get("content") or {}).get("parts") or []):
+                raise ResponseStreamIncomplete("Review cannot execute tools.", reason="tools_disabled")
+            return _extract_gemini_text(payload)
+
+        return _invoke(guarded_json_prompt(prompt, schema),
+            generation_config_overrides={"maxOutputTokens": max(
+                int(generation_config.get("maxOutputTokens") or 0), DEFAULT_FINAL_TEXT_MAX_TOKENS)},
+            response_extractor=extract, invocation_contract="completion_review", exact_model=True)
+
+    setattr(_client, "invoke_completion_review", _invoke_completion_review)
+
     return _client
 
 
@@ -2831,7 +3087,8 @@ def _configured_fallback_model_metadata(
                 supported_parameters.append("response_format")
         metadata["supported_parameters"] = list(dict.fromkeys(supported_parameters))
         metadata.setdefault("context_length", row.get("context_tokens"))
-        metadata.setdefault("output_token_limit", row.get("output_tokens"))
+        # A route's output_tokens may be its synthetic 2048-token default.
+        # Preserve provider-declared limits from metadata without inventing one.
         if row.get("reasoning") is not None and not isinstance(
             metadata.get("reasoning"), dict
         ):
@@ -3083,6 +3340,7 @@ def build_provider_chat_client(
             "profile": "local_provider" if provider_code == "local" else "cloud_provider",
             "provider_code": provider_code,
             "provider_family": adapter.family,
+            "native_tool_history_enabled": native_runtime_enabled and adapter.family == "openai_compatible",
             "requested_model": model,
             "reasoning_effort": effort,
             "reasoning_capabilities": reasoning,
@@ -3093,6 +3351,9 @@ def build_provider_chat_client(
             "guarded_json_recovery_available": callable(
                 getattr(client, "invoke_json_text", None)
             ),
+            "final_answer_review_enabled": callable(
+                getattr(client, "invoke_final_text", None)
+            ) or callable(getattr(client, "invoke_completion_review", None)),
             "contract_health_key": hashlib.sha256(
                 json.dumps(
                     {

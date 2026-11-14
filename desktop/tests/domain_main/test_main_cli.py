@@ -44,6 +44,12 @@ class TestMainCli(unittest.TestCase):
         self.assertTrue(routed)
         run_smoke.assert_called_once_with("report.json")
 
+    def test_cli_router_windows_release_smoke_dispatch(self) -> None:
+        with patch("sys.argv", ["main.py", "--smoke-windows-release", "new-directory"]):
+            with patch("Testing.processors.windows_release_smoke.run") as run_smoke:
+                self.assertTrue(main._cli_router())
+        run_smoke.assert_called_once_with("new-directory")
+
     def test_cli_router_ignores_removed_listing_flag(self) -> None:
         with patch("sys.argv", ["main.py", "--listing-db-save-worker"]):
             routed = main._cli_router()

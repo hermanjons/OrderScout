@@ -17,6 +17,21 @@ from Core.processors.report_artifacts import (
 
 
 class TestReportArtifacts(unittest.TestCase):
+    def test_readback_total_counts_all_report_sheets_without_headers_or_hidden_metadata(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            sheets=[make_report_sheet(name=f"Data {i}",columns=[ReportColumn('value','Value',data_type='integer')],
+                                      rows=[{'value':n} for n in range(count)])
+                    for i,count in enumerate((8,18,4,2))]
+            snapshot=ReportSnapshot.create(title='Rows',source_domain='files',report_type='fixture',
+                                           filters={},metadata={},sheets=sheets)
+            path=Path(temporary)/'counts.xlsx'
+            write_report_snapshot_xlsx(snapshot,output_path=path)
+            receipt=verify_report_snapshot_xlsx(snapshot,path)
+            self.assertTrue(receipt['verified'])
+            self.assertEqual(receipt['sheet_count'],4)
+            self.assertEqual(receipt['row_count'],32)
+            self.assertEqual(receipt['row_count_includes'],'report_sheets_without_headers_or_internal_metadata')
+
     def test_nullable_text_date_and_datetime_keep_source_nulls_and_verify_native_blanks(self):
         columns = tuple(ReportColumn(kind, kind, data_type=kind) for kind in ("string", "date", "datetime"))
         snapshot = ReportSnapshot.create(title="Nullable source", source_domain="files", report_type="fixture",

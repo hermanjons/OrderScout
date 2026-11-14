@@ -11,7 +11,7 @@ from typing import Optional, Callable, Any
 
 from sqlmodel import Session, select
 from sqlalchemy import and_, func, or_
-from sqlalchemy.orm import aliased, contains_eager
+from sqlalchemy.orm import aliased, contains_eager, selectinload
 
 from settings import DB_NAME
 
@@ -37,17 +37,8 @@ from Core.utils.time_utils import coerce_to_date
 from Marketplaces.constants.catalog_constants import canonical_platform_code
 from Account.models.models import ApiAccount
 
-_ENGINE_DB_NAME: str | None = None
-_ENGINE = None
-
-
 def _engine(db_name: str | None = None):
-    global _ENGINE_DB_NAME, _ENGINE
-    resolved_db_name = str(db_name or DB_NAME)
-    if _ENGINE is None or _ENGINE_DB_NAME != resolved_db_name:
-        _ENGINE = get_engine(resolved_db_name)
-        _ENGINE_DB_NAME = resolved_db_name
-    return _ENGINE
+    return get_engine(str(db_name or DB_NAME))
 
 
 def _normalize_order_item_record(row: dict) -> dict:
@@ -2489,6 +2480,7 @@ def get_latest_orders_filtered(
     order_numbers: Optional[list[str]] = None,
     api_account_ids: Optional[list[int]] = None,
     db_name: str | None = None,
+    summary_only: bool = False,
 ) -> Result:
     return get_latest_orders(
         shipment_statuses=shipment_statuses,
@@ -2499,6 +2491,7 @@ def get_latest_orders_filtered(
         api_account_ids=api_account_ids,
         db_name=db_name,
         exclude_simulated=True,
+        summary_only=summary_only,
     )
 
 
@@ -2512,14 +2505,31 @@ def get_latest_orders(
     api_account_ids: Optional[list[int]] = None,
     db_name: str | None = None,
     exclude_simulated: bool = False,
+    summary_only: bool = False,
 ) -> Result:
     """
     Her sipariş için en güncel snapshot'ı OrderHeader JOIN ile döndürür.
     Opsiyonel olarak shipment status filtrelemesi yapılabilir.
     Runtime olarak OrderData instance'larına ek alanlar basılır:
         - is_extracted, is_printed, extracted_at, printed_at
+    Summary callers can request scalar order and header fields from the same
+    snapshot selection.
     """
     try:
+        lower_date = int(start_ms) if start_ms is not None else None
+        upper_date = int(end_ms) if end_ms is not None else None
+
+        def date_conditions(column):
+            # A positive lower bound already excludes NULL dates. Keep the
+            # indexed date column bare when zero cannot be in the range.
+            date = column if lower_date is not None and lower_date > 0 else func.coalesce(column, 0)
+            conditions = []
+            if lower_date is not None:
+                conditions.append(date >= lower_date)
+            if upper_date is not None:
+                conditions.append(date <= upper_date)
+            return conditions
+
         normalized_order_numbers = _normalize_order_numbers(order_numbers)
         normalized_api_account_ids = _normalize_api_account_ids(api_account_ids)
         engine = _engine(db_name)
@@ -2530,11 +2540,10 @@ def get_latest_orders(
                 simulated_groups = select(
                     OrderData.api_account_id,
                     OrderData.orderNumber,
-                ).where(~_exclude_simulated_order_sql(OrderData.orderNumber, OrderData.cargoProviderName))
-                if start_ms is not None:
-                    simulated_groups = simulated_groups.where(func.coalesce(OrderData.orderDate, 0) >= int(start_ms))
-                if end_ms is not None:
-                    simulated_groups = simulated_groups.where(func.coalesce(OrderData.orderDate, 0) <= int(end_ms))
+                ).where(
+                    ~_exclude_simulated_order_sql(OrderData.orderNumber, OrderData.cargoProviderName),
+                    *date_conditions(OrderData.orderDate),
+                )
                 if normalized_order_numbers:
                     simulated_groups = simulated_groups.where(OrderData.orderNumber.in_(normalized_order_numbers))
                 if normalized_api_account_ids:
@@ -2555,40 +2564,32 @@ def get_latest_orders(
                 subq_base = subq_base.where(
                     _exclude_simulated_order_sql(OrderData.orderNumber, OrderData.cargoProviderName)
                 )
-            if start_ms is not None:
-                subq_base = subq_base.where(func.coalesce(OrderData.orderDate, 0) >= int(start_ms))
-            if end_ms is not None:
-                subq_base = subq_base.where(func.coalesce(OrderData.orderDate, 0) <= int(end_ms))
+            subq_base = subq_base.where(*date_conditions(OrderData.orderDate))
             subq = subq_base.group_by(OrderData.api_account_id, OrderData.orderNumber).subquery()
 
             OD = aliased(OrderData)
 
+            if summary_only:
+                stmt = select(
+                    OD.pk, OD.api_account_id, OD.orderNumber, OD.id, OD.shipmentPackageId,
+                    OD.shipmentPackageStatus, OD.status, OD.cargoProviderName, OD.cargoTrackingNumber,
+                    OD.totalPrice, OD.packageTotalPrice, OD.currencyCode, OD.orderDate, OD.lastModifiedDate,
+                    OrderHeader.is_printed, OrderHeader.is_extracted, OrderHeader.printed_at, OrderHeader.extracted_at,
+                ).select_from(OD)
+            else:
+                stmt = select(OD).options(selectinload(OD.api_account), contains_eager(OD.header))
             stmt = (
-                select(OD)
+                stmt
                 .join(
                     subq,
-                    or_(
-                        OD.api_account_id == subq.c.api_account_id,
-                        and_(OD.api_account_id.is_(None), subq.c.api_account_id.is_(None)),
-                    )
+                    OD.api_account_id.is_not_distinct_from(subq.c.api_account_id)
                     & (OD.orderNumber == subq.c.orderNumber)
                     & (OD.lastModifiedDate == subq.c.max_date),
                 )
                 .outerjoin(
                     OrderHeader,
-                    or_(
-                        OrderHeader.api_account_id == OD.api_account_id,
-                        and_(OrderHeader.api_account_id.is_(None), OD.api_account_id.is_(None)),
-                    )
+                    OrderHeader.api_account_id.is_not_distinct_from(OD.api_account_id)
                     & (OrderHeader.orderNumber == OD.orderNumber),
-                )
-                .outerjoin(
-                    ApiAccount,
-                    ApiAccount.pk == OD.api_account_id,
-                )
-                .options(
-                    contains_eager(OD.api_account),
-                    contains_eager(OD.header),
                 )
             )
             if exclude_simulated:
@@ -2616,16 +2617,15 @@ def get_latest_orders(
                     )
                 )
             if normalized_platform_codes:
-                stmt = stmt.where(func.upper(func.coalesce(ApiAccount.platform, "")).in_(normalized_platform_codes))
+                stmt = stmt.join(ApiAccount, ApiAccount.pk == OD.api_account_id).where(
+                    func.upper(func.coalesce(ApiAccount.platform, "")).in_(normalized_platform_codes)
+                )
             if normalized_api_account_ids:
                 stmt = stmt.where(OD.api_account_id.in_(normalized_api_account_ids))
-            if start_ms is not None:
-                stmt = stmt.where(func.coalesce(OD.orderDate, 0) >= int(start_ms))
-            if end_ms is not None:
-                stmt = stmt.where(func.coalesce(OD.orderDate, 0) <= int(end_ms))
+            stmt = stmt.where(*date_conditions(OD.orderDate))
 
-            rows: list[OrderData] = session.exec(stmt).all() or []
-            latest_order_rows: dict[tuple[int | None, str], OrderData] = {}
+            rows = session.exec(stmt).all()
+            latest_order_rows: dict[tuple[int | None, str], Any] = {}
             for row in rows:
                 key = (
                     getattr(row, "api_account_id", None),
@@ -2636,22 +2636,19 @@ def get_latest_orders(
                     latest_order_rows[key] = row
             rows = list(latest_order_rows.values())
 
-            for od in rows:
-                h = od.header
-                if h:
-                    object.__setattr__(od, "is_extracted", bool(h.is_extracted))
-                    object.__setattr__(od, "is_printed", bool(h.is_printed))
-                    object.__setattr__(od, "extracted_at", h.extracted_at)
-                    object.__setattr__(od, "printed_at", h.printed_at)
-                else:
-                    object.__setattr__(od, "is_extracted", False)
-                    object.__setattr__(od, "is_printed", False)
-                    object.__setattr__(od, "extracted_at", None)
-                    object.__setattr__(od, "printed_at", None)
+            if not summary_only:
+                for order in rows:
+                    header = order.header
+                    object.__setattr__(order, "is_extracted", bool(header and header.is_extracted))
+                    object.__setattr__(order, "is_printed", bool(header and header.is_printed))
+                    object.__setattr__(order, "extracted_at", header.extracted_at if header else None)
+                    object.__setattr__(order, "printed_at", header.printed_at if header else None)
 
         return Result.ok(
             f"En güncel sipariş snapshotları çekildi (toplam: {len(rows)})",
-            data={"orders": rows, "simulated_excluded": simulated_excluded},
+            data={"orders": rows, "simulated_excluded": simulated_excluded,
+                  "query_scope": {"account_filter_applied": bool(normalized_api_account_ids),
+                                  "api_account_ids": normalized_api_account_ids}},
             close_dialog=False,
         )
 
@@ -2784,6 +2781,7 @@ def get_latest_return_claims(
     claim_ids: Optional[list[str]] = None,
     api_account_ids: Optional[list[int]] = None,
     db_name: str | None = None,
+    summary_only: bool = False,
 ) -> Result:
     try:
         engine = _engine(db_name)
@@ -2814,14 +2812,18 @@ def get_latest_return_claims(
 
             subq = base_subq.subquery()
             RC = aliased(ReturnClaim)
+            if summary_only:
+                stmt = select(
+                    RC.pk, RC.api_account_id, RC.claimId, RC.claimNumber, RC.orderNumber,
+                    RC.claimDate, RC.orderDate, RC.claimItemStatus, RC.itemCount, RC.totalPrice,
+                ).select_from(RC)
+            else:
+                stmt = select(RC)
             stmt = (
-                select(RC)
+                stmt
                 .join(
                     subq,
-                    or_(
-                        RC.api_account_id == subq.c.api_account_id,
-                        and_(RC.api_account_id.is_(None), subq.c.api_account_id.is_(None)),
-                    )
+                    RC.api_account_id.is_not_distinct_from(subq.c.api_account_id)
                     & (RC.claimId == subq.c.claimId)
                     & (RC.lastModifiedDate == subq.c.max_last_modified),
                 )
@@ -2838,8 +2840,8 @@ def get_latest_return_claims(
                 stmt = stmt.where(RC.claimItemStatus.in_(normalized_claim_statuses))
             stmt = stmt.where(RC.sync_deleted_at.is_(None))
 
-            rows: list[ReturnClaim] = session.exec(stmt).all() or []
-            latest_claim_rows: dict[tuple[int | None, str], ReturnClaim] = {}
+            rows = session.exec(stmt).all()
+            latest_claim_rows: dict[tuple[int | None, str], Any] = {}
             for row in rows:
                 key = (
                     getattr(row, "api_account_id", None),
@@ -2856,7 +2858,7 @@ def get_latest_return_claims(
             if getattr(row, "api_account_id", None) is not None
         }
         api_accounts_by_id: dict[int, ApiAccount] = {}
-        if api_account_ids_from_rows:
+        if api_account_ids_from_rows and not summary_only:
             acc_res = get_records(
                 model=ApiAccount,
                 db_name=db_name or DB_NAME,
@@ -2877,8 +2879,9 @@ def get_latest_return_claims(
             ),
             reverse=True,
         )
-        for row in rows:
-            _hydrate_return_claim_runtime(row, api_accounts_by_id)
+        if not summary_only:
+            for row in rows:
+                _hydrate_return_claim_runtime(row, api_accounts_by_id)
 
         return Result.ok(
             f"En güncel iadeler çekildi (toplam: {len(rows)})",
@@ -2899,6 +2902,7 @@ def get_latest_return_claims_filtered(
     claim_ids: Optional[list[str]] = None,
     api_account_ids: Optional[list[int]] = None,
     db_name: str | None = None,
+    summary_only: bool = False,
 ) -> Result:
     return get_latest_return_claims(
         start_ms=start_ms,
@@ -2908,6 +2912,7 @@ def get_latest_return_claims_filtered(
         claim_ids=claim_ids,
         api_account_ids=api_account_ids,
         db_name=db_name,
+        summary_only=summary_only,
     )
 
 
@@ -2947,10 +2952,7 @@ def get_stale_return_claims(
                 select(RC)
                 .join(
                     subq,
-                    or_(
-                        RC.api_account_id == subq.c.api_account_id,
-                        and_(RC.api_account_id.is_(None), subq.c.api_account_id.is_(None)),
-                    )
+                    RC.api_account_id.is_not_distinct_from(subq.c.api_account_id)
                     & (RC.claimId == subq.c.claimId)
                     & (RC.lastModifiedDate == subq.c.max_last_modified),
                 )
@@ -3031,12 +3033,12 @@ def get_latest_order_items_by_numbers(
                         OrderItem.order_data_pk.is_(None)
                         & (OrderItem.order_data_id == latest_data.id)
                         & (OrderItem.snapshotLastModifiedDate == latest_data.lastModifiedDate)
-                        & (OrderItem.api_account_id == latest_data.api_account_id),
+                        & OrderItem.api_account_id.is_not_distinct_from(latest_data.api_account_id),
                     ),
                 )
                 .join(
                     latest_subq,
-                    (latest_data.api_account_id == latest_subq.c.api_account_id)
+                    latest_data.api_account_id.is_not_distinct_from(latest_subq.c.api_account_id)
                     & (latest_data.orderNumber == latest_subq.c.orderNumber)
                     & (latest_data.lastModifiedDate == latest_subq.c.max_last_modified),
                 )

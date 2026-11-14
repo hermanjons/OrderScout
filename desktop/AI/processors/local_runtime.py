@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import atexit
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -15,8 +17,8 @@ from pathlib import Path
 from typing import Any, Callable
 
 from AI.constants.paths import AI_BUNDLED_RUNTIME_ROOT, AI_RUNTIME_ROOT
-from AI.processors.cloud_runtime import build_openai_compatible_client
 from AI.processors.local_resources import LocalModelResourcePlan, build_local_resource_plan
+from AI.processors.local_transport import build_local_http_client, LocalContextExceeded
 from AI.processors.provider_adapters import capability_profile_from_record
 
 
@@ -77,9 +79,13 @@ class _ManagedLlamaServer:
     base_url: str
     model_path: str
     guard_stop_event: threading.Event | None = None
+    log_path: str = ""
+    plan: LocalModelResourcePlan | None = None
+    request_key: str = ""
 
 
-_SERVER_LOCK = threading.Lock()
+_SERVER_LOCK = threading.RLock()
+_INFERENCE_LOCK = threading.RLock()
 _SERVER_CACHE: dict[str, _ManagedLlamaServer] = {}
 
 
@@ -87,65 +93,12 @@ def _compact_text(value: Any) -> str:
     return str(value or "").strip()
 
 
-def _compact_local_prompt(
-    prompt: str,
-    *,
-    num_ctx: int,
-    max_tokens: int,
-) -> tuple[str, dict[str, Any]]:
+def _compact_local_prompt(prompt: str, *, num_ctx: int, max_tokens: int):
+    """Compatibility metadata only; the HTTP tokenizer owns actual limits."""
     text = str(prompt or "")
-    input_token_budget = max(512, int(num_ctx or 4096) - int(max_tokens or 256) - 256)
-    max_input_chars = max(2_000, input_token_budget * 3)
-    original_chars = len(text)
-    if original_chars <= max_input_chars:
-        return text, {
-            "prompt_compacted": False,
-            "prompt_input_chars": original_chars,
-            "prompt_output_chars": original_chars,
-            "prompt_max_input_chars": max_input_chars,
-            "prompt_compaction_strategy": "none",
-        }
-
-    def _compact_history_segment(value: str, start: str, end: str) -> str:
-        start_at = value.find(start)
-        if start_at < 0:
-            return value
-        payload_at = start_at + len(start)
-        end_at = value.find(end, payload_at)
-        if end_at < 0:
-            return value
-        payload = value[payload_at:end_at].strip()
-        try:
-            rows = json.loads(payload)
-        except Exception:
-            rows = []
-        if not isinstance(rows, list) or not rows:
-            return value
-        compact_rows = rows[-6:]
-        replacement = json.dumps(compact_rows, ensure_ascii=False)
-        return f"{value[:payload_at]}{replacement}{value[end_at:]}"
-
-    compacted = _compact_history_segment(text, "<history>", "</history>")
-    compacted = _compact_history_segment(
-        compacted,
-        "Konusma gecmisi:\n",
-        "\n\nIzinli read-only lokal DB tool'lari:",
-    )
-    strategy = "recent_history"
-    if len(compacted) > max_input_chars:
-        marker = "\n...[yerel model baglamina sigmasi icin orta bolum kisaltildi]...\n"
-        available = max(256, max_input_chars - len(marker))
-        head_chars = max(256, int(available * 0.32))
-        tail_chars = max(256, available - head_chars)
-        compacted = f"{compacted[:head_chars]}{marker}{compacted[-tail_chars:]}"
-        strategy = "recent_history+head_tail"
-    return compacted, {
-        "prompt_compacted": True,
-        "prompt_input_chars": original_chars,
-        "prompt_output_chars": len(compacted),
-        "prompt_max_input_chars": max_input_chars,
-        "prompt_compaction_strategy": strategy,
-    }
+    return text, {"prompt_compacted": False, "prompt_input_chars": len(text),
+        "prompt_output_chars": len(text), "prompt_compaction_strategy": "preserve_or_error",
+        "num_ctx": num_ctx, "max_tokens": max_tokens}
 
 
 def _record_value(record: dict[str, Any] | None, key: str) -> str:
@@ -161,7 +114,8 @@ def _request_json(url: str, payload: dict[str, Any] | None = None, *, timeout: f
         data = json.dumps(payload).encode("utf-8")
         headers["Content-Type"] = "application/json"
     request = urllib.request.Request(url, data=data, headers=headers)
-    with urllib.request.urlopen(request, timeout=timeout) as response:
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    with opener.open(request, timeout=timeout) as response:
         body = response.read().decode("utf-8", errors="replace")
     parsed = json.loads(body or "{}")
     return parsed if isinstance(parsed, dict) else {}
@@ -207,10 +161,6 @@ def find_bundled_llama_server() -> str:
     return ""
 
 
-def _runtime_process_names() -> tuple[str, ...]:
-    return ("llama-server", "llama-server.exe", "server.exe")
-
-
 def _apply_runtime_process_priority(priority: str, *, process: subprocess.Popen | None = None) -> None:
     clean = str(priority or "").strip().casefold()
     if clean not in {"below_normal", "idle"}:
@@ -236,14 +186,6 @@ def _apply_runtime_process_priority(priority: str, *, process: subprocess.Popen 
             targets.append(psutil.Process(int(process.pid)))
         except Exception:
             pass
-    if not targets:
-        for proc in psutil.process_iter(["name"]):
-            try:
-                name = str((proc.info or {}).get("name") or "").casefold()
-                if name and any(token in name for token in _runtime_process_names()):
-                    targets.append(proc)
-            except Exception:
-                continue
     for proc in targets:
         try:
             proc.nice(priority_value)
@@ -251,46 +193,35 @@ def _apply_runtime_process_priority(priority: str, *, process: subprocess.Popen 
             continue
 
 
-def _trim_process_working_set(pid: int) -> None:
-    if os.name != "nt":
-        return
-    try:
-        import ctypes
-        from ctypes import wintypes
-
-        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-        psapi = ctypes.WinDLL("psapi", use_last_error=True)
-        kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
-        kernel32.OpenProcess.restype = wintypes.HANDLE
-        psapi.EmptyWorkingSet.argtypes = [wintypes.HANDLE]
-        psapi.EmptyWorkingSet.restype = wintypes.BOOL
-        kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
-        handle = kernel32.OpenProcess(0x0400 | 0x0100, False, int(pid))
-        if not handle:
-            return
-        try:
-            psapi.EmptyWorkingSet(handle)
-        finally:
-            kernel32.CloseHandle(handle)
-    except Exception:
-        return
-
-
 def _start_memory_guard(plan: LocalModelResourcePlan, process: subprocess.Popen) -> tuple[threading.Event, threading.Thread] | None:
-    if not bool(getattr(plan, "trim_working_set", False)) or os.name != "nt":
-        return None
     stop_event = threading.Event()
     priority = str(getattr(plan, "process_priority", "normal") or "normal")
 
     def _guard() -> None:
-        while not stop_event.wait(0.5):
-            _apply_runtime_process_priority(priority, process=process)
-            if process.poll() is None:
-                _trim_process_working_set(int(process.pid))
+        pressure_samples = 0
+        while not stop_event.wait(1.0) and process.poll() is None:
+            try:
+                import psutil
+                memory = psutil.virtual_memory()
+                # Stop only the runner owned by this app. Repeated working-set
+                # trimming used to evict mmap pages every 0.5s and cause thrash.
+                # A low available-RAM reading alone is expected during mmap
+                # paging. The real failure is exhausted allocation capacity.
+                commit_available = memory.available + psutil.swap_memory().free
+                if os.name == "nt":
+                    import ctypes
+                    from AI.processors.local_resources import _windows_memory_status
+                    status = _windows_memory_status()
+                    if status is not None:
+                        commit_available = status.available_commit
+                pressure_samples = pressure_samples + 1 if commit_available < 512 * 1024**2 else 0
+                if pressure_samples >= 4:
+                    process.terminate()
+                    return
+            except Exception:
+                return
 
     _apply_runtime_process_priority(priority, process=process)
-    if process.poll() is None:
-        _trim_process_working_set(int(process.pid))
     thread = threading.Thread(target=_guard, name="orderscout-llama-server-memory-guard", daemon=True)
     thread.start()
     return stop_event, thread
@@ -335,7 +266,7 @@ def _apply_local_reasoning_control(
     text = str(prompt or "")
     model = _compact_text(model_hint).casefold().replace("_", "-")
     effort = _compact_text(reasoning_effort).casefold()
-    if "qwen3" not in model:
+    if "qwen3" not in model or "qwen3.5" in model:
         return text, ""
     if text.lstrip().startswith(("/think", "/no_think")):
         return text, "qwen3_explicit"
@@ -380,14 +311,25 @@ def _llama_server_args(
         "1",
         "-b",
         str(plan.num_batch),
+        "-ub", str(plan.num_ubatch),
+        "--jinja", "-fa", "on", "--cache-type-k", plan.cache_type_k,
+        "--cache-type-v", plan.cache_type_v,
+        "--timeout", str(plan.inference_timeout_seconds),
+        "--poll", "0",
+        "--cache-ram", "0",
+        "--ctx-checkpoints", "0",
     ]
     executable_text = str(executable or "").casefold()
     cpu_only_binary = any(token in executable_text for token in ("windows-x64-cpu", "linux-x64-cpu", "macos-x64-cpu"))
-    if plan.num_gpu > 0 and not cpu_only_binary:
-        args.extend(["-ngl", str(plan.num_gpu)])
+    args.extend(["-ngl", str(plan.num_gpu if not cpu_only_binary else 0)])
     args.append("--mmap" if plan.use_mmap else "--no-mmap")
     if plan.use_mlock:
         args.append("--mlock")
+    idle = re.fullmatch(r"(\d+)\s*(ms|s|m|h)", str(plan.keep_alive or "").casefold())
+    if idle:
+        seconds = int(idle.group(1)) * {"ms": 0.001, "s": 1, "m": 60, "h": 3600}[idle.group(2)]
+        if seconds > 0:
+            args.extend(["--sleep-idle-seconds", str(max(1, int(seconds)))])
     return args
 
 
@@ -399,6 +341,8 @@ def _server_key(model_path: str, plan: LocalModelResourcePlan) -> str:
             str(plan.num_thread),
             str(plan.num_batch),
             str(plan.num_gpu),
+            plan.cache_type_k, plan.cache_type_v, str(plan.num_ubatch), str(plan.max_tokens),
+            str(plan.keep_alive), str(plan.inference_timeout_seconds),
             "mmap" if plan.use_mmap else "nommap",
             "mlock" if plan.use_mlock else "nomlock",
         ]
@@ -439,6 +383,10 @@ def _start_managed_llama_server(
         if existing is not None and existing.process.poll() is None:
             return existing
 
+        # A model switch must release the previous model before allocating the
+        # new one. Never stop independently launched llama/Ollama processes.
+        shutdown_managed_llama_servers()
+
         port = _free_port()
         base_url = f"http://{LLAMA_HOST}:{port}"
         command = _llama_server_args(
@@ -448,112 +396,165 @@ def _start_managed_llama_server(
             port=port,
             plan=plan,
         )
-        process = subprocess.Popen(
-            command,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            text=True,
-            creationflags=_creation_flags_for_priority(getattr(plan, "process_priority", "normal")),
-        )
+        log_dir = AI_RUNTIME_ROOT / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_path = log_dir / f"llama-server-{port}.log"
+        with log_path.open("w", encoding="utf-8") as log:
+            process = subprocess.Popen(command, stdout=log, stderr=log, text=True,
+                creationflags=_creation_flags_for_priority(getattr(plan, "process_priority", "normal"))
+                    | (getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0))
         _apply_runtime_process_priority(getattr(plan, "process_priority", "normal"), process=process)
         guard = _start_memory_guard(plan, process)
         try:
             _wait_for_server(base_url, process, timeout=startup_timeout)
-        except Exception:
+        except Exception as error:
             if guard is not None:
                 guard[0].set()
             try:
                 process.terminate()
+                process.wait(timeout=10)
             except Exception:
                 pass
-            raise
+            detail = log_path.read_text(encoding="utf-8", errors="replace")[-5000:]
+            raise RuntimeError(str(error) + "\n" + detail) from error
         managed = _ManagedLlamaServer(
             key=key,
             process=process,
             base_url=base_url,
             model_path=model_path,
             guard_stop_event=guard[0] if guard is not None else None,
+            log_path=str(log_path),
         )
         _SERVER_CACHE[key] = managed
         return managed
 
 
-def build_llama_cpp_server_client(record: dict[str, Any] | None, *, timeout: float = 600.0) -> LocalPlannerClient | None:
+def build_llama_cpp_server_client(record: dict[str, Any] | None, *, timeout: float = 3600.0) -> LocalPlannerClient | None:
     executable = find_bundled_llama_server()
     model_path = _record_model_path(record)
     if not executable or not model_path:
         return None
-
-    plan = build_local_resource_plan(record, model_hint=model_path)
-    if (
-        not plan.safe_to_run
-        and not bool(getattr(plan, "allow_unsafe", False))
-        and _compact_text(os.environ.get("ORDERSCOUT_LOCAL_ALLOW_UNSAFE")) != "1"
-    ):
-        raise RuntimeError(plan.reason)
-
-    server = _start_managed_llama_server(
-        executable=executable,
-        model_path=model_path,
-        plan=plan,
-        startup_timeout=float(getattr(plan, "startup_timeout_seconds", 45) or 45),
-    )
-    client = build_openai_compatible_client(
-        base_url=f"{server.base_url}/v1",
-        api_key=DEFAULT_LOCAL_API_KEY,
-        model=Path(model_path).name,
-        timeout=timeout,
-        request_options=plan.to_openai_request_options(),
-    )
-    if client is None:
-        return None
-
-    def _client(prompt: str) -> str:
-        controlled_prompt, reasoning_control = _apply_local_reasoning_control(
-            prompt,
-            model_hint=model_path,
-            reasoning_effort=plan.reasoning_effort,
-        )
-        compacted_prompt, compaction = _compact_local_prompt(
-            controlled_prompt,
-            num_ctx=plan.num_ctx,
-            max_tokens=plan.max_tokens,
-        )
-        runtime_plan = _local_runtime_plan_payload(
-            plan,
-            record,
-            model_path=model_path,
-        )
-        runtime_plan.update(compaction)
-        runtime_plan["reasoning_control"] = reasoning_control
-        setattr(_client, "resource_plan", runtime_plan)
-        last_exc: Exception | None = None
-        for attempt in range(3):
-            try:
-                return client(compacted_prompt)
-            except Exception as exc:
-                last_exc = exc
-                time.sleep(0.25 * (attempt + 1))
-        if last_exc is not None:
-            raise last_exc
-        return ""
-
-    setattr(_client, "runtime_name", "llama_cpp_server")
-    setattr(_client, "model_name", model_path)
-    setattr(
-        _client,
-        "resource_plan",
-        _local_runtime_plan_payload(plan, record, model_path=model_path),
-    )
-    setattr(_client, "server_url", server.base_url)
-    setattr(_client, "server_key", server.key)
-    setattr(
-        _client,
-        "release_after_turn",
-        str(plan.keep_alive or "").strip().casefold() == "0s"
-        and (bool(plan.trim_working_set) or int(plan.estimated_model_bytes or 0) >= 10 * 1024 ** 3),
-    )
-    return _client
+    model_stat = Path(model_path).stat() if Path(model_path).is_file() else None
+    request_key = json.dumps({"runtime": (record or {}).get("runtime_config") or {},
+        "model": str(Path(model_path).resolve()), "executable": executable,
+        "model_file": (model_stat.st_size, model_stat.st_mtime_ns) if model_stat else None,
+        "environment": {key: os.environ.get(key) for key in ("ORDERSCOUT_LOCAL_NUM_CTX", "ORDERSCOUT_LOCAL_MAX_TOKENS",
+            "ORDERSCOUT_LOCAL_NUM_THREAD", "ORDERSCOUT_LOCAL_NUM_BATCH", "ORDERSCOUT_LLAMA_CPP_NUM_GPU")}}, sort_keys=True, default=str)
+    with _INFERENCE_LOCK:
+        server = None
+        with _SERVER_LOCK:
+            for owned in _SERVER_CACHE.values():
+                if owned.process.poll() is None and owned.request_key == request_key and owned.plan is not None:
+                    try:
+                        if not _request_json(owned.base_url + "/props", timeout=2).get("is_sleeping", False):
+                            server = owned
+                            break
+                    except (OSError, ValueError):
+                        pass
+            if server is None:
+                shutdown_managed_llama_servers()
+        plan = server.plan if server is not None else build_local_resource_plan(record, model_hint=model_path)
+        if not plan.safe_to_run:
+            raise RuntimeError(plan.reason)
+        fallback_reason = ""
+        try:
+            if server is None:
+                server = _start_managed_llama_server(executable=executable, model_path=model_path,
+                    plan=plan, startup_timeout=plan.startup_timeout_seconds)
+        except RuntimeError as error:
+            reason = str(error).casefold()
+            if not any(token in reason for token in ("out of memory", "failed to allocate", "alloc failed", "cuda error")):
+                raise
+            # Same model, same context. Lower GPU allocation and batch once;
+            # CPU fallback remains subject to an updated resource check.
+            fallback_reason = "GPU allocation failed; retried same model with fewer GPU layers"
+            retry_record = {**dict(record or {}), "runtime_config": {
+                **dict((record or {}).get("runtime_config") or {}), "num_gpu": max(0, plan.num_gpu // 2),
+                "num_batch": 32, "num_ctx": plan.num_ctx, "max_tokens": plan.max_tokens}}
+            plan = build_local_resource_plan(retry_record, model_hint=model_path)
+            if not plan.safe_to_run:
+                raise RuntimeError(plan.reason) from error
+            server = _start_managed_llama_server(executable=executable, model_path=model_path,
+                plan=plan, startup_timeout=plan.startup_timeout_seconds)
+        server.plan, server.request_key = plan, request_key
+        client = build_local_http_client(base_url=server.base_url, model=Path(model_path).name,
+            plan=plan, record=record)
+        client.resource_plan["fallback_reason"] = fallback_reason
+        client.runtime_name = "llama_cpp_server"
+        client.model_name = model_path
+        client.server_url = server.base_url
+        client.server_key = server.key
+        client.release_after_turn = str(plan.keep_alive).strip().casefold() == "0s"
+        client.runtime_lock = _INFERENCE_LOCK
+        def cancel_generation():
+            with _SERVER_LOCK:
+                owned = _SERVER_CACHE.pop(client.server_key, None)
+            if owned is not None:
+                if owned.guard_stop_event is not None:
+                    owned.guard_stop_event.set()
+                if owned.process.poll() is None:
+                    owned.process.terminate()
+                    try:
+                        owned.process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        owned.process.kill()
+                        owned.process.wait(timeout=5)
+        def restart_runtime():
+            nonlocal plan
+            shutdown_managed_llama_servers()
+            retry_record = {**dict(record or {}), "runtime_config": {
+                **dict((record or {}).get("runtime_config") or {}), "num_ctx": plan.num_ctx,
+                "max_tokens": plan.max_tokens}}
+            fresh = build_local_resource_plan(retry_record, model_hint=model_path)
+            if not fresh.safe_to_run:
+                raise RuntimeError(fresh.reason)
+            resumed = _start_managed_llama_server(executable=executable, model_path=model_path,
+                plan=fresh, startup_timeout=fresh.startup_timeout_seconds)
+            resumed.plan, resumed.request_key = fresh, request_key
+            plan = fresh
+            client.resource_plan.update(fresh.to_dict())
+            client.server_key, client.server_url = resumed.key, resumed.base_url
+            return resumed.base_url
+        def resize_context(required_tokens):
+            nonlocal plan
+            target = ((int(required_tokens) + 4095) // 4096) * 4096
+            if target > 32768 or ((record or {}).get("runtime_config") or {}).get("allow_context_growth") is False:
+                raise LocalContextExceeded("Tam girdi yerel bağlam sınırını aşıyor; kayıtlar korundu, içerik kesilmedi.")
+            previous_context = plan.num_ctx
+            shutdown_managed_llama_servers()
+            grown_record = {**dict(record or {}), "runtime_config": {
+                **dict((record or {}).get("runtime_config") or {}), "num_ctx": target,
+                "max_tokens": plan.max_tokens, "reasoning_effort": plan.reasoning_effort}}
+            fresh = build_local_resource_plan(grown_record, model_hint=model_path)
+            if not fresh.safe_to_run or fresh.num_ctx < required_tokens:
+                client.resource_plan["restart_required"] = True
+                raise LocalContextExceeded("Bağlam büyütmek için yeterli çalışma belleği yok veya model/ayar sınırı aşıldı. "
+                    "Kayıtlar korundu; içerik kesilmedi.")
+            grown = _start_managed_llama_server(executable=executable, model_path=model_path,
+                plan=fresh, startup_timeout=fresh.startup_timeout_seconds)
+            grown.plan, grown.request_key = fresh, request_key
+            plan = fresh
+            client.server_key, client.server_url = grown.key, grown.base_url
+            client.resource_plan.update(fresh.to_dict())
+            client.resource_plan.update({"context_resized_from": previous_context,
+                "context_resized_to": fresh.num_ctx, "context_resize_reason": "preserve_complete_input_and_output_budget"})
+            client.resource_plan["capability_profile"]["context_tokens"] = fresh.num_ctx
+            return grown.base_url, fresh
+        def ensure_runtime():
+            with _SERVER_LOCK:
+                owned = _SERVER_CACHE.get(client.server_key)
+            if owned is not None and owned.process.poll() is None:
+                try:
+                    if not _request_json(owned.base_url + "/props", timeout=2).get("is_sleeping", False):
+                        return owned.base_url
+                except (OSError, ValueError):
+                    pass
+            return restart_runtime()
+        client.cancel_generation = cancel_generation
+        client.restart_runtime = restart_runtime
+        client.ensure_runtime = ensure_runtime
+        client.resize_context = resize_context
+        return client
 
 
 def build_llama_cpp_cli_client(record: dict[str, Any] | None, *, timeout: float = 600.0) -> LocalPlannerClient | None:
@@ -576,11 +577,7 @@ def build_llama_cpp_cli_client(record: dict[str, Any] | None, *, timeout: float 
     plan = build_local_resource_plan(record, model_hint=model_path)
 
     def _planner(prompt: str) -> str:
-        if (
-            not plan.safe_to_run
-            and not bool(getattr(plan, "allow_unsafe", False))
-            and _compact_text(os.environ.get("ORDERSCOUT_LOCAL_ALLOW_UNSAFE")) != "1"
-        ):
+        if not plan.safe_to_run:
             raise RuntimeError(plan.reason)
         controlled_prompt, reasoning_control = _apply_local_reasoning_control(
             prompt,
@@ -639,11 +636,15 @@ def shutdown_managed_llama_servers() -> None:
         try:
             if server.process.poll() is None:
                 server.process.terminate()
+                server.process.wait(timeout=10)
         except Exception:
             continue
 
 
 def release_local_planner_client(planner_client: LocalPlannerClient | None) -> None:
+    close = getattr(planner_client, "close", None)
+    if callable(close):
+        close()
     key = _compact_text(getattr(planner_client, "server_key", ""))
     if not key:
         return
@@ -656,5 +657,9 @@ def release_local_planner_client(planner_client: LocalPlannerClient | None) -> N
     try:
         if server.process.poll() is None:
             server.process.terminate()
+            server.process.wait(timeout=10)
     except Exception:
         return
+
+
+atexit.register(shutdown_managed_llama_servers)

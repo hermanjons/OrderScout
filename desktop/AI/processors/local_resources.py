@@ -4,7 +4,7 @@ import os
 import re
 import shutil
 import subprocess
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +21,8 @@ class ResourceSnapshot:
     gpu_total_vram_bytes: int = 0
     gpu_free_vram_bytes: int = 0
     disk_free_bytes: int = 0
+    virtual_available_bytes: int = 0
+    swap_free_bytes: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
@@ -57,6 +59,23 @@ class LocalModelResourcePlan:
     process_priority: str = "normal"
     trim_working_set: bool = False
     startup_timeout_seconds: int = 45
+    estimated_runtime_bytes: int = 0
+    estimated_kv_bytes: int = 0
+    estimated_resident_bytes: int = 0
+    virtual_available_bytes: int = 0
+    requires_paging: bool = False
+    suitability: str = "unknown"
+    capacity_label: str = "Boyut bilinmiyor"
+    warnings: tuple[str, ...] = ()
+    context_policy: str = "preserve_grow_or_error"
+    tool_menu_limit: int = 6
+    model_layers: int = 0
+    architecture: str = ""
+    cache_type_k: str = "q8_0"
+    cache_type_v: str = "q8_0"
+    num_ubatch: int = 32
+    inference_timeout_seconds: int = 3600
+    sampling_defaults: dict[str, Any] = field(default_factory=dict)
 
     def to_openai_request_options(self) -> dict[str, Any]:
         return {
@@ -76,8 +95,7 @@ class LocalModelResourcePlan:
             "--temp",
             "0",
         ]
-        if self.num_gpu > 0:
-            args.extend(["-ngl", str(self.num_gpu)])
+        args.extend(["-ngl", str(self.num_gpu)])
         args.append("--mmap" if self.use_mmap else "--no-mmap")
         return args
 
@@ -143,6 +161,7 @@ def _parse_nvidia_smi() -> tuple[tuple[str, ...], int, int]:
             text=True,
             timeout=3,
             check=False,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0,
         )
     except Exception:
         return (), 0, 0
@@ -162,22 +181,49 @@ def _parse_nvidia_smi() -> tuple[tuple[str, ...], int, int]:
     return tuple(names), total_mb * 1024 * 1024, free_mb * 1024 * 1024
 
 
-def capture_resource_snapshot() -> ResourceSnapshot:
+def _windows_memory_status():
+    if os.name != "nt":
+        return None
+    try:
+        import ctypes
+        class MemoryStatus(ctypes.Structure):
+            _fields_ = [("length", ctypes.c_ulong), ("load", ctypes.c_ulong)] + [
+                (name, ctypes.c_ulonglong) for name in ("total_physical", "available_physical", "total_commit",
+                    "available_commit", "total_virtual", "available_virtual", "extended")]
+        status = MemoryStatus()
+        status.length = ctypes.sizeof(status)
+        return status if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)) else None
+    except Exception:
+        return None
+
+
+def capture_resource_snapshot(disk_path: str | Path | None = None) -> ResourceSnapshot:
     total_ram = 0
     available_ram = 0
+    virtual_available = 0
+    swap_free = 0
     try:
         import psutil  # type: ignore
 
         memory = psutil.virtual_memory()
         total_ram = int(memory.total)
         available_ram = int(memory.available)
+        swap_free = int(psutil.swap_memory().free)
+        virtual_available = available_ram + swap_free
     except Exception:
         pass
 
+    if os.name == "nt":
+        status = _windows_memory_status()
+        if status is not None:
+            total_ram, available_ram = status.total_physical, status.available_physical
+            virtual_available = status.available_commit
     gpu_names, gpu_total, gpu_free = _parse_nvidia_smi()
     disk_free = 0
     try:
-        target = os.environ.get("ORDERSCOUT_MODELS_DIR") or os.getcwd()
+        target = Path(disk_path or os.environ.get("ORDERSCOUT_MODELS_DIR") or os.getcwd())
+        while not target.exists() and target.parent != target:
+            target = target.parent
         disk_free = int(shutil.disk_usage(str(target)).free)
     except Exception:
         disk_free = 0
@@ -189,14 +235,13 @@ def capture_resource_snapshot() -> ResourceSnapshot:
         gpu_total_vram_bytes=gpu_total,
         gpu_free_vram_bytes=gpu_free,
         disk_free_bytes=disk_free,
+        virtual_available_bytes=virtual_available,
+        swap_free_bytes=swap_free,
     )
 
 
 def estimate_model_bytes(record: dict[str, Any] | None = None, *, model_hint: str = "") -> int:
     if isinstance(record, dict):
-        size_bytes = _optional_int(record.get("size_bytes"))
-        if size_bytes and size_bytes > 0:
-            return size_bytes
         for key in ("local_path", "model_path", "gguf_path"):
             path_text = _compact_text(record.get(key))
             if not path_text:
@@ -207,6 +252,9 @@ def estimate_model_bytes(record: dict[str, Any] | None = None, *, model_hint: st
                     return int(path.stat().st_size)
             except Exception:
                 pass
+        size_bytes = _optional_int(record.get("size_bytes"))
+        if size_bytes and size_bytes > 0:
+            return size_bytes
 
     haystack = _record_text(record, model_hint)
     if "gpt-oss:20b" in haystack or "gpt-oss-20b" in haystack:
@@ -242,6 +290,38 @@ def _env_int(name: str) -> int | None:
     return value if value is not None and value >= 0 else None
 
 
+def local_model_sort_key(record):
+    """Prefer fitting candidates over tiny alphabetical defaults.
+
+    This is a capacity ordering, not a benchmark or model-quality certificate.
+    Large paging candidates remain selectable directly below resident models.
+    """
+    plan = record.get("resource_plan") or {}
+    return (not bool(plan.get("safe_to_run", False)), bool(plan.get("requires_paging", False)),
+            -int(record.get("size_bytes") or plan.get("estimated_model_bytes") or 0),
+            str(record.get("repo_id") or "").casefold())
+
+
+def local_sampling_defaults(record=None, *, architecture="", thinking=False):
+    if architecture == "qwen35" or "qwen3.5" in _record_text(record):
+        # Qwen's published non-thinking/thinking general-task recommendations.
+        return {"temperature": 1.0 if thinking else 0.7, "top_p": 0.95 if thinking else 0.8,
+                "top_k": 20, "min_p": 0.0, "presence_penalty": 1.5, "repeat_penalty": 1.0}
+    return {"temperature": 0.2}
+
+
+def _model_metadata(record):
+    from AI.processors.gguf_metadata import read_gguf_metadata
+    for key in ("local_path", "model_path", "gguf_path"):
+        candidate = _compact_text((record or {}).get(key))
+        if candidate and Path(candidate).is_file():
+            try:
+                return read_gguf_metadata(candidate), ""
+            except (OSError, ValueError) as error:
+                return {}, str(error)
+    return {}, ""
+
+
 def build_local_resource_plan(
     record: dict[str, Any] | None = None,
     *,
@@ -249,241 +329,114 @@ def build_local_resource_plan(
     snapshot: ResourceSnapshot | None = None,
     requested_ctx: int | None = None,
 ) -> LocalModelResourcePlan:
-    snap = snapshot or capture_resource_snapshot()
+    """Plan a single runner, keeping context useful and OS allocations bounded.
+
+    Read-only mmap weights can be paged from their model file. Free disk is NOT
+    memory or commit capacity. KV/scratch allocations still need real headroom.
+    These are estimates; runner allocation failures are handled at startup.
+    """
+    record = dict(record or {})
+    snap = snapshot or capture_resource_snapshot(record.get("local_path") or record.get("download_root"))
     config = _runtime_config(record)
+    metadata, invalid_model = _model_metadata(record)
+    architecture = str(metadata.get("general.architecture") or "")
+    layers = int(metadata.get(architecture + ".block_count") or 32)
+    total = max(0, int(snap.total_ram_bytes))
+    available = max(0, int(snap.available_ram_bytes))
+    reserve = max(int(1.5 * GIB), int(total * 0.12))
+    ram_budget = max(0, available - reserve)
+    # Leave display/desktop and compute workspace on the GPU, even on laptops.
+    gpu_budget = max(0, int(snap.gpu_free_vram_bytes) - max(512 * 1024**2, int(snap.gpu_total_vram_bytes * 0.12)))
+    virtual = int(snap.virtual_available_bytes or (available + snap.swap_free_bytes))
     estimated = estimate_model_bytes(record, model_hint=model_hint)
-    total_ram = max(0, int(snap.total_ram_bytes or 0))
-    available_ram = max(0, int(snap.available_ram_bytes or 0))
-    allow_unsafe = bool(_optional_bool(config.get("allow_unsafe"), False))
-    if total_ram and total_ram <= 24 * GIB:
-        reserve = max(4 * GIB, int(total_ram * 0.30))
-    elif total_ram:
-        reserve = max(6 * GIB, int(total_ram * 0.22))
-    else:
-        reserve = 4 * GIB
-    ram_budget = max(0, available_ram - reserve)
-    gpu_budget = max(0, int((snap.gpu_free_vram_bytes or 0) * 0.85))
-    disk_free = max(0, int(snap.disk_free_bytes or 0))
-    disk_budget = max(0, min(int(disk_free * 0.35), 64 * GIB))
-    cpu_threads = max(2, min(6, int(snap.cpu_count or 1) // 3 or 1))
-
-    primary_runtime_budget = ram_budget + gpu_budget
-    total_capacity = primary_runtime_budget + min(disk_budget, 12 * GIB)
-    is_large = estimated >= 10 * GIB
-    tight_available = bool(estimated and primary_runtime_budget < int(estimated * 0.85))
-    hard_reserve = max(2 * GIB, int(total_ram * 0.12)) if total_ram else 2 * GIB
-    os_guard_ok = available_ram >= reserve if total_ram else True
-    disk_fallback_ok = bool(
-        estimated
-        and available_ram >= hard_reserve
-        and disk_budget >= min(estimated, 2 * GIB)
-        and total_capacity >= estimated
-    )
-    survival_mmap_ok = bool(
-        is_large
-        and total_ram >= 15 * GIB
-        and available_ram >= int(3.25 * GIB)
-        and disk_free >= estimated + 8 * GIB
-        and disk_budget >= min(estimated, 8 * GIB)
-    )
-    safe = not estimated or ((os_guard_ok and total_capacity >= estimated + GIB) or disk_fallback_ok)
-    large_disk_only_risk = bool(is_large and total_ram < 24 * GIB and primary_runtime_budget < int(estimated * 0.95))
-    if survival_mmap_ok:
-        safe = True
-    elif large_disk_only_risk and not allow_unsafe:
-        safe = False
-    performance_score = round(
-        min(100.0, ((total_ram / GIB) * 2.2) + ((snap.gpu_free_vram_bytes / GIB) * 5.0) + (snap.cpu_count * 2.4)),
-        1,
-    )
-    memory_denominator = max(1, primary_runtime_budget + min(disk_budget, 12 * GIB))
-    memory_pressure = round(float(estimated / memory_denominator), 2) if estimated else 0.0
-    os_pressure = bool(safe and not os_guard_ok)
-    disk_guarded = bool(is_large and safe and (tight_available or memory_pressure >= 0.70 or os_pressure))
-    process_priority = "below_normal" if estimated else "normal"
-    if os_pressure:
-        process_priority = "idle"
-    startup_timeout_seconds = 45
-
+    preset = _compact_text(config.get("performance_preset") or "auto").casefold()
+    reasoning_model = any(token in _record_text(record, model_hint) for token in ("qwen3", "gpt-oss", "gemma-4", "gemma4", "deepseek-r1"))
+    effort = _compact_text(config.get("reasoning_effort") or "auto").casefold()
+    if effort == "auto":
+        effort = "low" if preset in {"eco", "fast"} or not reasoning_model else "medium"
+    if effort not in {"low", "medium", "high"}:
+        effort = "medium" if reasoning_model else "low"
+    thinking = effort in {"medium", "high"}
+    ctx = 4096 if preset in {"eco", "fast"} else 8192 if preset == "balanced" else 16384 if thinking or preset == "quality" else 12288
+    output = 1024 if preset in {"eco", "fast"} else 2048 if preset == "balanced" else 4096 if thinking or preset == "quality" else 2048
+    ctx = int(_env_int("ORDERSCOUT_LOCAL_NUM_CTX") or requested_ctx or config.get("num_ctx") or ctx)
+    ctx = max(2048, min(ctx, 32768))
+    trained = int(metadata.get(architecture + ".context_length") or 32768)
+    ctx = min(ctx, trained)
+    output = max(128, min(int(_env_int("ORDERSCOUT_LOCAL_MAX_TOKENS") or config.get("max_tokens") or output), ctx // 2, 8192))
+    warnings = []
+    # q8 cache avoids the very large f16 allocation; architecture metadata wins
+    # over model-name guesses. Some hybrid models use additional recurrent state.
+    heads = int(metadata.get(architecture + ".attention.head_count") or 32)
+    kv_heads = int(metadata.get(architecture + ".attention.head_count_kv") or 4)
+    dim = int(metadata.get(architecture + ".embedding_length") or 4096)
+    key_dim = int(metadata.get(architecture + ".attention.key_length") or max(64, dim // max(1, heads)))
+    value_dim = int(metadata.get(architecture + ".attention.value_length") or key_dim)
+    kv_bytes = int(ctx * layers * kv_heads * (key_dim + value_dim) * 1.063)
+    # Hybrid attention/recurrent state estimation is deliberately conservative.
+    if architecture in {"qwen35", "qwen3next"}:
+        kv_bytes = max(kv_bytes // 4, 256 * 1024**2)
+    scratch = max(512 * 1024**2, min(GIB, int(estimated * 0.08)))
+    # Keep some VRAM for KV and graph buffers, then offload as many whole layers
+    # as fit. Never count integrated/shared graphics as additional physical RAM.
+    per_layer = max(1, estimated // max(1, layers))
+    gpu_weight_budget = max(0, gpu_budget - min(kv_bytes, 512 * 1024**2) - 384 * 1024**2)
+    auto_gpu = min(layers, gpu_weight_budget // per_layer) if estimated else 0
+    explicit_gpu = _env_int("ORDERSCOUT_LLAMA_CPP_NUM_GPU")
+    if explicit_gpu is None and config.get("num_gpu") is not None:
+        explicit_gpu = _optional_int(config.get("num_gpu"))
+    num_gpu = auto_gpu if explicit_gpu is None else min(auto_gpu, max(0, explicit_gpu))
+    cpu_weights = max(0, estimated - num_gpu * per_layer)
+    cpu_kv = int(kv_bytes * max(0, layers - num_gpu) / max(1, layers))
+    resident = cpu_weights + cpu_kv + scratch
+    mmap = _optional_bool(config.get("use_mmap"), True) is not False
+    paging = bool(estimated and resident > ram_budget)
+    # File-backed weights do not all need to be resident, but kernels, scratch
+    # and an actual working set do. Do not lock pages for a paging workload.
+    working_set = cpu_kv + scratch + min(cpu_weights, int(1.25 * GIB))
+    allocation = cpu_kv + scratch + (cpu_weights if not mmap else 0)
+    safe = bool(total and available and working_set <= ram_budget and allocation + reserve <= virtual)
+    if not paging:
+        safe = bool(total and resident <= ram_budget and allocation + reserve <= virtual)
     if not estimated:
-        profile = "unknown_model_safe_defaults"
-        reason = "Model boyutu bilinmiyor; guvenli varsayilan limitler uygulanacak."
-        num_ctx = 1536
-        max_tokens = 384
-        num_batch = 48
-        cpu_threads = max(1, min(cpu_threads, 4))
-        keep_alive = "0s"
+        safe = False
+        warnings.append("Dosya boyutu bilinmiyor; indirme tamamlandığında yeniden değerlendirilir.")
+    auxiliary = any(token in architecture.casefold() for token in ("mtp", "support", "clip", "projector")) or int(metadata.get("split.count") or 1) > 1
+    if invalid_model or auxiliary:
+        safe = False
+        reason = invalid_model or "Bu dosya tek başına bir sohbet modeli değil; yardımcı veya bölünmüş model dosyası."
+        label, suitability, profile = "Sohbet modeli değil" if auxiliary else "Dosya okunamadı", "blocked", "blocked_invalid_model"
+    elif not estimated:
+        reason, label, suitability, profile = "Model boyutu doğrulanmalı.", "Boyut bilinmiyor", "unknown", "unknown_model_safe_defaults"
     elif not safe:
-        profile = "blocked_insufficient_memory"
-        reason = "Model OS koruma rezervini veya guvenli bellek butcesini asiyor; app model baslatmayi engellemeli."
-        num_ctx = 512
-        max_tokens = 128
-        num_batch = 8
-        keep_alive = "0s"
-        process_priority = "idle"
-    elif disk_guarded:
-        if survival_mmap_ok and not os_guard_ok:
-            profile = "survival_mmap_large_model"
-            reason = "Buyuk model sinirli RAM ile mmap agirlikli survival modda calisacak; hiz dusuk, uygulama onceligi korunur."
-        else:
-            profile = "disk_guarded_large_model"
-            reason = "Buyuk model OS rezervini korumak icin mmap/disk agirlikli ve dusuk concurrency ile calisacak."
-        num_ctx = 512
-        max_tokens = 160 if survival_mmap_ok and not os_guard_ok else 192
-        num_batch = 4 if survival_mmap_ok and not os_guard_ok else 8
-        cpu_threads = max(1, min(cpu_threads, 2))
-        keep_alive = "0s"
-        startup_timeout_seconds = 240 if survival_mmap_ok else 180
-    elif os_pressure:
-        profile = "os_guarded_low_memory"
-        reason = "Bos RAM OS rezervinin altinda; model idle priority ve disk mmap ile yavas ama guvenli calisacak."
-        num_ctx = 768
-        max_tokens = 192
-        num_batch = 16
-        cpu_threads = max(1, min(cpu_threads, 3))
-        keep_alive = "0s"
-    elif is_large and tight_available:
-        profile = "tight_large_model"
-        reason = "Buyuk model dusuk bos bellekle calisacak; kisa context ve tek tur cevap limiti uygulanacak."
-        num_ctx = 1024
-        max_tokens = 192
-        num_batch = 32
-        keep_alive = "0s"
-        startup_timeout_seconds = 150
-    elif is_large:
-        profile = "balanced_large_model"
-        reason = "Buyuk model icin dengeli CPU/GPU kaynak plani uygulanacak."
-        num_ctx = 2048
-        max_tokens = 384
-        num_batch = 64
-        keep_alive = "0s"
-        startup_timeout_seconds = 120
+        reason = "Modelin çalışma belleği için yeterli boş RAM veya Windows ayırma kapasitesi yok. Bellek boşaltıp yeniden deneyin."
+        label, suitability, profile = "Şu an bellek yetersiz", "blocked", "blocked_insufficient_memory"
+    elif paging:
+        reason = "Ağırlıkların bir bölümü model dosyasından okunacak; CPU ve GPU birlikte çalışır. Yanıt belirgin şekilde yavaşlayabilir."
+        label, suitability, profile = "Disk desteğiyle · yavaş", "slow", "disk_guarded_large_model"
+        warnings.append("Disk model ağırlıklarını taşır; RAM ve ekran kartı belleğinin yerini tamamen alamaz.")
     else:
-        profile = "balanced_local_model"
-        reason = "Model boyutu bu makine icin uygun; OS korumali yerel sohbet limitleri uygulanacak."
-        num_ctx = 4096
-        max_tokens = 512
-        num_batch = 64
-        cpu_threads = max(1, min(cpu_threads, 4))
-        keep_alive = "0s"
-
-    preset = _compact_text(config.get("performance_preset")).casefold()
-    if preset == "eco":
-        num_ctx = min(num_ctx, 1024)
-        max_tokens = min(max_tokens, 192)
-        num_batch = min(num_batch, 32)
-        cpu_threads = max(1, min(cpu_threads, 4))
-        keep_alive = "0s"
-    elif preset == "fast":
-        if safe and memory_pressure <= 0.55 and not disk_guarded:
-            num_ctx = min(4096, max(num_ctx, 2048))
-            max_tokens = min(768, max(max_tokens, 512))
-            num_batch = min(160, max(num_batch, 96))
-            cpu_threads = min(max(1, snap.cpu_count or 1), max(cpu_threads, 8))
-    elif preset == "balanced":
-        if not disk_guarded:
-            num_ctx = min(3072, max(num_ctx, 2048))
-            max_tokens = min(512, max(max_tokens, 384))
-
-    if requested_ctx:
-        num_ctx = max(512, min(int(requested_ctx), num_ctx))
-    env_ctx = _env_int("ORDERSCOUT_LOCAL_NUM_CTX")
-    env_tokens = _env_int("ORDERSCOUT_LOCAL_MAX_TOKENS")
-    env_threads = _env_int("ORDERSCOUT_LOCAL_NUM_THREAD")
-    env_batch = _env_int("ORDERSCOUT_LOCAL_NUM_BATCH")
-    env_gpu = _env_int("ORDERSCOUT_LLAMA_CPP_NUM_GPU")
-    config_ctx = _optional_int(config.get("num_ctx"))
-    config_tokens = _optional_int(config.get("max_tokens"))
-    config_threads = _optional_int(config.get("num_thread"))
-    config_batch = _optional_int(config.get("num_batch"))
-    config_gpu = _optional_int(config.get("num_gpu"))
-    if config_ctx:
-        num_ctx = max(512, min(config_ctx, 8192))
-    if config_tokens:
-        max_tokens = max(64, min(config_tokens, 2048))
-    if config_threads:
-        cpu_threads = max(1, min(config_threads, max(1, snap.cpu_count or 1)))
-    if config_batch:
-        num_batch = max(8, min(config_batch, 512))
-    if env_ctx:
-        num_ctx = max(512, min(env_ctx, 8192))
-    if env_tokens:
-        max_tokens = max(64, min(env_tokens, 2048))
-    if env_threads:
-        cpu_threads = max(1, min(env_threads, max(1, snap.cpu_count or 1)))
-    if env_batch:
-        num_batch = max(8, min(env_batch, 512))
-
-    if env_gpu is not None:
-        num_gpu = env_gpu
-    elif config_gpu is not None:
-        num_gpu = max(0, min(config_gpu, 99))
-    elif gpu_budget >= int(8 * GIB):
-        num_gpu = 24 if is_large else 12
-    elif gpu_budget >= int(3 * GIB):
-        num_gpu = 8 if is_large else 6
-    elif gpu_budget >= int(1.5 * GIB):
-        num_gpu = 4 if is_large else 2
-    else:
-        num_gpu = 0
-
-    default_reasoning_effort = "low" if (disk_guarded or os_pressure) else "medium"
-    reasoning_effort = _compact_text(config.get("reasoning_effort")).casefold() or default_reasoning_effort
-    if reasoning_effort not in {"auto", "low", "medium", "high"}:
-        reasoning_effort = "medium"
-    if reasoning_effort == "auto":
-        reasoning_effort = "low" if is_large and memory_pressure >= 1.0 else "medium"
-    reasoning_model = any(
-        token in _record_text(record, model_hint)
-        for token in ("gpt-oss", "deepseek-r1", "reasoning", "qwen-r1")
-    )
-    if reasoning_model:
-        min_reasoning_tokens = {"low": 256, "medium": 384, "high": 640}.get(reasoning_effort, 384)
-        max_tokens = max(max_tokens, min_reasoning_tokens)
-    if not allow_unsafe and (disk_guarded or os_pressure or profile == "blocked_insufficient_memory"):
-        num_ctx = min(num_ctx, 512 if disk_guarded else 1024 if os_pressure else 512)
-        num_batch = min(num_batch, 4 if profile == "survival_mmap_large_model" else 8 if disk_guarded else 24 if os_pressure else 8)
-        cpu_threads = min(cpu_threads, 2 if disk_guarded else 3 if os_pressure else 2)
-        if profile == "blocked_insufficient_memory":
-            max_tokens = min(max_tokens, 256)
-    runtime_strategy = "llama_cpp"
-    use_mmap = _optional_bool(config.get("use_mmap"), True)
-    use_mlock = _optional_bool(config.get("use_mlock"), False)
-    if use_mmap is None:
-        use_mmap = True
-    if use_mlock is None:
-        use_mlock = False
-    keep_alive_override = _compact_text(config.get("keep_alive"))
-    if keep_alive_override:
-        keep_alive = keep_alive_override
-    offload_strategy = "disk_mmap_gpu_cpu" if use_mmap and num_gpu > 0 else "disk_mmap_cpu" if use_mmap else "ram_resident"
-
+        reason = "Model CPU ve GPU arasında paylaştırılabilir; uygulama ve işletim sistemi için bellek payı ayrıldı."
+        label, suitability, profile = "Bu bilgisayara uygun", "recommended", "balanced_local_model"
+    if config.get("use_mlock") and paging:
+        warnings.append("Disk desteği gerektiği için RAM kilidi uygulanmadı.")
+    default_threads = min(4, max(1, snap.cpu_count // 2)) if preset == "eco" else max(1, snap.cpu_count // 2)
+    threads = max(1, min(int(_env_int("ORDERSCOUT_LOCAL_NUM_THREAD") or config.get("num_thread") or default_threads), snap.cpu_count))
+    batch = max(16, min(int(_env_int("ORDERSCOUT_LOCAL_NUM_BATCH") or config.get("num_batch") or (64 if preset == "eco" else 128)), 256))
     return LocalModelResourcePlan(
-        profile=profile,
-        safe_to_run=safe,
-        reason=reason,
-        model_hint=_compact_text(model_hint) or _record_text(record),
-        estimated_model_bytes=estimated,
-        ram_budget_bytes=ram_budget,
-        gpu_budget_bytes=gpu_budget,
-        num_ctx=num_ctx,
-        max_tokens=max_tokens,
-        num_thread=cpu_threads,
-        num_batch=num_batch,
-        num_gpu=num_gpu,
-        keep_alive=keep_alive,
-        reasoning_effort=reasoning_effort,
-        runtime_strategy=runtime_strategy,
-        use_mmap=bool(use_mmap),
-        use_mlock=bool(use_mlock),
-        offload_strategy=offload_strategy,
-        disk_budget_bytes=disk_budget,
-        performance_score=performance_score,
-        memory_pressure=memory_pressure,
-        allow_unsafe=allow_unsafe,
-        os_reserve_bytes=reserve,
-        available_after_reserve_bytes=ram_budget,
-        process_priority=process_priority,
-        trim_working_set=bool(disk_guarded or os_pressure or memory_pressure >= 0.55),
-        startup_timeout_seconds=startup_timeout_seconds,
+        profile=profile, safe_to_run=safe, reason=reason, model_hint=model_hint or _record_text(record),
+        estimated_model_bytes=estimated, ram_budget_bytes=ram_budget, gpu_budget_bytes=gpu_budget,
+        num_ctx=ctx, max_tokens=output, num_thread=threads, num_batch=batch, num_gpu=num_gpu,
+        keep_alive=_compact_text(config.get("keep_alive") or "5m"), reasoning_effort=effort,
+        use_mmap=mmap, use_mlock=bool(_optional_bool(config.get("use_mlock"), False) and not paging),
+        offload_strategy="disk_mmap_gpu_cpu" if mmap and num_gpu else "disk_mmap_cpu" if mmap else "ram_resident",
+        disk_budget_bytes=0, memory_pressure=round(resident / max(1, ram_budget), 2),
+        allow_unsafe=False, os_reserve_bytes=reserve, available_after_reserve_bytes=ram_budget,
+        process_priority="below_normal", trim_working_set=False, startup_timeout_seconds=1800,
+        estimated_runtime_bytes=estimated + kv_bytes + scratch, estimated_kv_bytes=kv_bytes,
+        estimated_resident_bytes=resident, virtual_available_bytes=virtual, requires_paging=paging,
+        suitability=suitability, capacity_label=label, warnings=tuple(warnings), model_layers=layers,
+        architecture=architecture, num_ubatch=min(batch, 32), tool_menu_limit=6,
+        inference_timeout_seconds=max(600, min(int(config.get("timeout_seconds") or 3600), 86400)),
+        sampling_defaults=local_sampling_defaults(record, architecture=architecture, thinking=effort in {"medium", "high"}),
     )

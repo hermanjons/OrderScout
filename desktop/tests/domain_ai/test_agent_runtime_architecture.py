@@ -113,6 +113,16 @@ def test_malformed_source_shape_is_a_repairable_argument_error(tmp_path):
 def test_model_repairs_array_validation_before_any_native_prepare(tmp_path, monkeypatch):
     database = str(tmp_path / "fixture.sqlite3")
     seed_business_fixture(database, isolation_root=tmp_path)
+    # This test prepares a real remote sync. Its synthetic stage account must
+    # therefore have transport configuration (no request is made in prepare).
+    from sqlmodel import Session
+    from Core.utils.model_utils import get_engine
+    from Account.models.models import ApiAccount
+    with Session(get_engine(database)) as session:
+        account = session.get(ApiAccount, 101)
+        account.api_key, account.api_secret = "unit-key", "unit-secret"
+        session.add(account)
+        session.commit()
     invocations = []
     original = tools.orders_prepare_fetch
     from functools import wraps
@@ -224,6 +234,26 @@ def test_discovery_does_not_restore_revoked_source_or_child_authority():
     registry = {"example.allowed": read_tool("example.allowed")}
     record_discovered_tools(state, {"operations": [{"exposed_tool_name": "private.read"}]}, registry)
     assert "private.read" not in select_tool_menu(registry, state)
+
+
+def test_cached_discovery_reloads_a_contract_evicted_from_the_bounded_menu(tmp_path, monkeypatch):
+    registry = {"operations.discover": tools.registered_tools()["operations.discover"],
+                "example.first": read_tool("example.first"), "example.second": read_tool("example.second")}
+    monkeypatch.setattr(tools, "available_tools", lambda: registry)
+    monkeypatch.setattr(operation_catalog, "available_tools", lambda: registry)
+    model = Model([call("operations.discover", query="example.first", limit=1),
+                   call("operations.discover", query="example.second", limit=1),
+                   call("operations.discover", query="example.first", limit=1),
+                   call("example.first"), "İlk aracı yeniden yükleyip okudum."])
+    model.resource_plan["tool_menu_limit"] = 2
+    result = model_loop.run_model_loop("İlk aracı oku", client=model, db_name=str(tmp_path / "unused.db"))
+    assert result.success, result.data
+    assert model.menus == [["operations.discover"], ["operations.discover", "example.first"],
+                          ["operations.discover", "example.second"], ["operations.discover", "example.first"],
+                          ["operations.discover", "example.first"]]
+    # Reuse the saved search without another dispatch or a fabricated observation.
+    assert [row["tool"] for row in result.data["direct_tool_calls"]] == [
+        "operations.discover", "operations.discover", "example.first"]
 
 
 def test_pause_is_observed_between_tools_in_the_same_model_batch(tmp_path, monkeypatch):

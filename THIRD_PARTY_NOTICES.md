@@ -13,6 +13,13 @@ project.
 - **Qt**: The Qt Company and contributors. Individual Qt modules have their own
   licensing terms. Preserve the notices and license files supplied in the Qt wheels.
 - **Python**: Python Software Foundation license and associated notices.
+- **llama.cpp b9221**: MIT. The CPU and Vulkan engines use the upstream Windows
+  release. They also include the LLVM OpenMP runtime with its own notices.
+  [llama.cpp release](https://github.com/ggml-org/llama.cpp/releases/tag/b9221).
+- **PyInstaller**: The packaged launcher uses the bootloader with its
+  distribution exception. The installed `licenses` folder contains the
+  application and dependency notices. See [Windows build](docs/windows-build.md)
+  for source and build instructions.
 - Other packages are identified and pinned in `requirements.lock` and
   `requirements-dev.lock`. Their distributed license files remain authoritative.
 

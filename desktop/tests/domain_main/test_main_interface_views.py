@@ -8,7 +8,6 @@ from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt6.QtCore import QThread
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication, QLabel, QTabWidget, QTextBrowser, QWidget
 
@@ -175,51 +174,6 @@ class TestMainInterfaceViews(unittest.TestCase):
         self.assertIs(window.tabs.currentWidget(), window._tab_hosts["ai"])
         self.assertIs(window._tab_hosts["ai"].content, tab)
 
-    def test_idle_preload_warms_imports_without_building_hidden_tabs(self) -> None:
-        warmed: list[tuple[str, tuple[str, ...]]] = []
-
-        orders_host = LazyTabHost(factory=QWidget, loading_text="Orders")
-        logistics_host = LazyTabHost(factory=QWidget, loading_text="Logistics")
-        self.addCleanup(self._app.processEvents)
-        self.addCleanup(logistics_host.deleteLater)
-        self.addCleanup(orders_host.deleteLater)
-
-        class _FakeTabs:
-            def currentWidget(self):
-                return orders_host
-
-            def indexOf(self, host):
-                return {orders_host: 0, logistics_host: 1}.get(host, -1)
-
-            def isTabVisible(self, _index):
-                return True
-
-            def tabBar(self):
-                return None
-
-        def fake_warmup(key: str, module_names: tuple[str, ...]) -> None:
-            warmed.append((key, module_names))
-            fake_window._tab_import_warmup_done.add(key)
-
-        fake_window = SimpleNamespace(
-            _tab_import_warmup_worker=None,
-            _tab_hosts={"orders": orders_host, "logistics": logistics_host},
-            _tab_import_warmup_done=set(),
-            _tab_import_modules={
-                "orders": ("Orders.views.views",),
-                "logistics": ("Logistics.views.views", "Logistics.views.actions", "Finance.views.actions"),
-            },
-            tabs=_FakeTabs(),
-            _start_tab_import_warmup=fake_warmup,
-        )
-
-        main_interface_views.MainInterface._preload_next_idle_tab(fake_window)
-
-        self.assertEqual(
-            warmed,
-            [("logistics", ("Logistics.views.views", "Logistics.views.actions", "Finance.views.actions"))],
-        )
-        self.assertFalse(logistics_host.is_loaded())
 
     def test_lazy_tab_request_load_defers_factory_until_event_loop(self) -> None:
         calls: list[str] = []
@@ -239,63 +193,25 @@ class TestMainInterfaceViews(unittest.TestCase):
         self.assertEqual(calls, ["built"])
         self.assertTrue(host.is_loaded())
 
-    def test_idle_import_warmup_runs_on_gui_thread(self) -> None:
-        imported: list[tuple[str, bool]] = []
+    def test_failed_tab_can_retry_in_place(self) -> None:
+        attempts = []
 
-        class _FakeTabs:
-            def currentWidget(self):
-                return None
+        def factory():
+            attempts.append(True)
+            if len(attempts) == 1:
+                raise RuntimeError("test module failed")
+            return QWidget()
 
-        class _FakeTimer:
-            def __init__(self) -> None:
-                self.started = False
-
-            def start(self, *_args) -> None:
-                self.started = True
-
-        class _FakeWindow:
-            pass
-
-        window = _FakeWindow()
-        window._tab_import_warmup_worker = None
-        window._tab_import_warmup_active = False
-        window._tab_import_warmup_key = ""
-        window._tab_import_warmup_modules = ()
-        window._tab_import_warmup_done = set()
-        window._tab_hosts = {}
-        window._tab_deferred_load_key = ""
-        window._deferred_work_started = False
-        window._is_closing = False
-        window._tab_preload_timer = _FakeTimer()
-        window.tabs = _FakeTabs()
-        window._key_for_tab_widget = MethodType(main_interface_views.MainInterface._key_for_tab_widget, window)
-        window._on_tab_import_warmed = MethodType(main_interface_views.MainInterface._on_tab_import_warmed, window)
-        window._on_tab_import_warmup_finished = MethodType(
-            main_interface_views.MainInterface._on_tab_import_warmup_finished,
-            window,
-        )
-        window._run_tab_import_warmup_on_gui_thread = MethodType(
-            main_interface_views.MainInterface._run_tab_import_warmup_on_gui_thread,
-            window,
-        )
-
-        def fake_import(module_name: str):
-            imported.append((module_name, QThread.currentThread() is self._app.thread()))
-            return object()
-
-        with patch.object(main_interface_views_impl, "import_module", side_effect=fake_import):
-            main_interface_views.MainInterface._start_tab_import_warmup(
-                window,
-                "orders",
-                ("Orders.views.views",),
-            )
-            QTest.qWait(1)
-            self._app.processEvents()
-
-        self.assertEqual(imported, [("Orders.views.views", True)])
-        self.assertIn("orders", window._tab_import_warmup_done)
-        self.assertFalse(window._tab_import_warmup_active)
-        self.assertFalse(window._tab_preload_timer.started)
+        host = LazyTabHost(factory=factory, loading_text="Loading")
+        self._add_window_cleanup(host)
+        host.show()
+        host.request_load()
+        QTest.qWait(1)
+        self.assertFalse(host.is_loaded())
+        self.assertTrue(host._retry.isVisible())
+        host._retry.click()
+        QTest.qWait(1)
+        self.assertTrue(host.is_loaded())
 
 
 if __name__ == "__main__":

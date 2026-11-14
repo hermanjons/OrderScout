@@ -1,0 +1,160 @@
+{
+  "source": "isolated rich synthetic local orders, no live marketplace access",
+  "receipt": {
+    "account_by_order": {
+      "DEMO-202605-000386": "2"
+    },
+    "account_scopes": [
+      {
+        "account_id": "850002",
+        "api_account_id": 2,
+        "environment": "local",
+        "environment_source": "account.extra_config",
+        "platform": "TRENDYOL",
+        "store_name": "Lale Yaşam-demo"
+      }
+    ],
+    "contexts": [
+      {
+        "header": {
+          "exists": true,
+          "extracted_at": 1779530038867,
+          "is_extracted": true,
+          "is_printed": true,
+          "printed_at": 1779530038867
+        },
+        "invoice_address": {
+          "address": "Örnek Mahallesi, Çiçek Sokak No:66 Daire:2, Çankaya, Ankara, 06550",
+          "city": "Ankara",
+          "country_code": "TR",
+          "district": "Çankaya",
+          "neighborhood": "Örnek Mahallesi",
+          "postal_code": "06550",
+          "recipient_name": "Ece Yıldız-demo",
+          "source": "invoice"
+        },
+        "items": [
+          {
+            "barcode": "2000000000015",
+            "content_id": "900001",
+            "line_id": 7100003852,
+            "line_total": 479.7,
+            "price": 159.9,
+            "product_code": "900001",
+            "product_color": "Yeşil",
+            "product_name": "Karpuz Kesme Aparatı-demo",
+            "product_origin": "TR",
+            "product_size": "25 cm",
+            "quantity": 3,
+            "sku": "DEMO-KRP-001",
+            "status": "Delivered"
+          },
+          {
+            "barcode": "2000000000145",
+            "content_id": "900014",
+            "line_id": 7100003851,
+            "line_total": 699.8,
+            "price": 349.9,
+            "product_code": "900014",
+            "product_color": "Metalik",
+            "product_name": "Aile Ağacı Fotoğraf Çerçevesi-demo",
+            "product_origin": "TR",
+            "product_size": "30 cm yükseklik",
+            "quantity": 2,
+            "sku": "DEMO-CER-014",
+            "status": "Delivered"
+          }
+        ],
+        "order": {
+          "account": "Lale Yaşam-demo",
+          "api_account_id": 2,
+          "cargo_provider": "YKMP",
+          "cargo_sender_number": "LOCAL-2",
+          "cargo_tracking_link": "",
+          "cargo_tracking_number": "DEMOTRK710000385",
+          "currency": "TRY",
+          "customer": "Ece Yıldız-demo",
+          "customer_email": "alici386@example.invalid",
+          "extracted": false,
+          "last_modified": "2026-05-26 04:53",
+          "last_modified_ms": 1779760438867,
+          "order_date": "2026-05-23 04:53",
+          "order_date_ms": 1779501238867,
+          "order_number": "DEMO-202605-000386",
+          "package_id": 710000385,
+          "platform": "TRENDYOL",
+          "platform_code": "TRENDYOL",
+          "printed": false,
+          "shipment_package_id": 710000385,
+          "status": "Delivered",
+          "total_price": 1179.5
+        },
+        "return_count": 1,
+        "returns": [
+          {
+            "api_account_id": 2,
+            "cargo_provider": "YKMP",
+            "cargo_tracking_number": "IADE710000385",
+            "claim_date": "2026-05-29 04:53",
+            "claim_date_ms": 1780019638867,
+            "claim_id": "CLM-710000385",
+            "claim_line_item_ids": [
+              "7100003851"
+            ],
+            "claim_number": "IA-000386",
+            "currency": "TRY",
+            "customer_first_name": "Ece",
+            "customer_last_name": "Yıldız-demo",
+            "item_count": 2,
+            "last_modified": "2026-05-29 04:53",
+            "last_modified_ms": 1780019638867,
+            "order_number": "DEMO-202605-000386",
+            "order_shipment_package_id": 710000385,
+            "platform_code": "",
+            "reason": "Ürünü beğenmedim",
+            "status": "Accepted",
+            "total_price": 699.8,
+            "waiting_line_item_ids": []
+          }
+        ],
+        "shipment_address": {
+          "address": "Örnek Mahallesi, Çiçek Sokak No:66 Daire:2, Çankaya, Ankara, 06550",
+          "city": "Ankara",
+          "country_code": "TR",
+          "district": "Çankaya",
+          "neighborhood": "Örnek Mahallesi",
+          "postal_code": "06550",
+          "recipient_name": "Ece Yıldız-demo",
+          "source": "shipment"
+        },
+        "waiting_return_count": 0
+      }
+    ],
+    "count": 1,
+    "end_ms": null,
+    "environment_by_account": {
+      "2": "local"
+    },
+    "filters": {},
+    "listed_count": 1,
+    "order_numbers": [
+      "DEMO-202605-000386"
+    ],
+    "pagination": {
+      "limit": 10,
+      "offset": 0,
+      "page": 1,
+      "page_size": 10,
+      "returned": 1,
+      "total_pages": 1
+    },
+    "period": "all",
+    "period_label": "all",
+    "query": "",
+    "simulated_excluded": 0,
+    "start_ms": null,
+    "tool": "orders.full_context",
+    "total_count": 1,
+    "truncated": false
+  }
+}

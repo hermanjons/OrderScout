@@ -1,11 +1,33 @@
 # Listing Goals
 
-Updated: 2026-07-17
+Updated: 2026-10-23
 
 Parent contracts: `../../Core/docs/domain_goals_contract.md`,
 `../../AI/docs/goals.md`
 
 Parity evidence: `../../AI/docs/listing_agentic_parity_matrix.md`
+
+## 23 Ekim 2026 ortak ilan–stok eşleştirme
+
+Tek ilan/tek stok bağlantısı hazırlığı ortak `stock_bindings` önizlemesini ve
+manuel `set_listing_stock_items` işlemini kullanır. Model gerçek kayıtları seçer;
+domain tam ilan/hesap/ürün kimliğini, stok kartını, miktarı ve diğer bağlantıların
+korunmasını doğrular. Onay sonrası drift eski öneriyi durdurur; snapshot ve ana
+stok işaretçisi tek transaction'da yazılır, gerçek DB readback'i birlikte kontrol
+eder. Native hazırlık, typed ilan ref'i ve standart onay yürütücüsüne bağlıdır.
+Bozuk stok satırlarının yanlışlıkla bağlantıları temizlemesi engellendi; manuel
+açık `[]` temizleme sözleşmesi korunur. Kanıt ve sınırlar:
+`../../AI/docs/listing_stock_agent_2026_10_23.md`.
+
+## 20 Ekim 2026 ortak katalog işlemleri
+
+`catalog_queries` manuel katalog okumasının ve AI arama/özet/attention/lookup
+kaynağının sahibidir. Sıfır fiyat, kesirli miktar, bilinmeyen onay/fiyat, hesap
+kimlikleri ve tam kapsam/sayfa ayrımı korunur. 11 adlandırılmış AI read aracı bu
+işlemlere bağlandı; gerçek manuel ekranın mevcut snapshot zenginleştirmesi
+korundu. Yeni üç manuel read action aynı primitive'leri açar. Genel Listing
+kabulü açık; güncel kanıt
+`../../AI/docs/catalog_and_file_delivery_2026_10_20.md` altındadır.
 
 ## Ürün Sonucu ve Sahiplik
 
@@ -16,9 +38,9 @@ sahibidir. AI Listing pipeline'ını yeniden üretmez.
 ## Capability Sözleşmesi
 
 ```text
-read: 9
+read: 12
 write: 7
-total: 16
+total: 19
 ```
 
 ## Agentic Kabul

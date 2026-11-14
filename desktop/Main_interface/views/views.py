@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import os
 import sys
-from importlib import import_module
 from typing import Callable
 
-from PyQt6.QtCore import QSize, QThread, QTimer, pyqtSignal
+from PyQt6.QtCore import QSize, QTimer
 from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtWidgets import QMainWindow, QToolBar, QWidget
 
@@ -14,6 +13,7 @@ from settings import (
     ENABLE_AI_UI as DEFAULT_ENABLE_AI_UI,
     ENABLE_TEST_LAB_UI as DEFAULT_ENABLE_TEST_LAB_UI,
 )
+from AI.constants.ui_constants import AI_BRAND_ICON_NAME
 from Main_interface.constants import ui_text
 from Main_interface.constants import (
     MAIN_AI_TAB_ICON_SIZE,
@@ -28,11 +28,7 @@ from Main_interface.constants import (
 from Core.views.tab_widgets import GlowTabWidget
 from .lazy_tab_host import LazyTabHost
 
-_TAB_LOAD_DEBOUNCE_MS = 140
-_TAB_PRELOAD_INITIAL_DELAY_MS = 1600
-_TAB_PRELOAD_IDLE_DELAY_MS = 1200
-_TAB_PRELOAD_STEP_DELAY_MS = 260
-_TAB_PRELOAD_PRIORITY = ("logistics", "finance", "listing", "stock", "marketplaces", "orders", "ai")
+_TAB_LOAD_DEBOUNCE_MS = 70
 _MAIN_ICON_CACHE: dict[tuple[str, int, int], QIcon] = {}
 _UPDATE_CONTROLLER_CLASS = None
 
@@ -68,23 +64,6 @@ def _update_controller_class():
     return _UPDATE_CONTROLLER_CLASS
 
 
-class _TabModuleWarmupWorker(QThread):
-    warmed = pyqtSignal(str, bool, str)
-
-    def __init__(self, *, key: str, module_names: tuple[str, ...], parent=None) -> None:
-        super().__init__(parent)
-        self.key = str(key or "").strip()
-        self.module_names = tuple(str(name or "").strip() for name in tuple(module_names or ()) if str(name or "").strip())
-
-    def run(self) -> None:
-        try:
-            for module_name in self.module_names:
-                import_module(module_name)
-            self.warmed.emit(self.key, True, "")
-        except Exception as exc:
-            self.warmed.emit(self.key, False, str(exc))
-
-
 class MainInterface(QMainWindow):
     def __init__(self, *, defer_startup: bool = False, show_ai_ui: bool | None = None):
         super().__init__()
@@ -92,21 +71,12 @@ class MainInterface(QMainWindow):
         self._is_closing = False
         self._defer_startup = bool(defer_startup)
         self._deferred_work_started = False
+        self._business_refresh = None
         self._tab_hosts: dict[str, LazyTabHost] = {}
-        self._tab_import_modules: dict[str, tuple[str, ...]] = {}
-        self._tab_import_warmup_done: set[str] = set()
-        self._tab_import_warmup_worker: _TabModuleWarmupWorker | None = None
-        self._tab_import_warmup_active = False
-        self._tab_import_warmup_key = ""
-        self._tab_import_warmup_modules: tuple[str, ...] = ()
-        self._tab_deferred_load_key = ""
         self._tab_load_timer = QTimer(self)
         self._tab_load_timer.setSingleShot(True)
         self._tab_load_timer.setInterval(_TAB_LOAD_DEBOUNCE_MS)
         self._tab_load_timer.timeout.connect(self._load_current_tab_now)
-        self._tab_preload_timer = QTimer(self)
-        self._tab_preload_timer.setSingleShot(True)
-        self._tab_preload_timer.timeout.connect(self._preload_next_idle_tab)
         self.setWindowTitle(str(ui_text("main_interface.window_title", MAIN_WINDOW_TITLE)))
         self.resize(MAIN_WINDOW_GEOMETRY[2], MAIN_WINDOW_GEOMETRY[3])
         self.setMinimumSize(MAIN_WINDOW_GEOMETRY[2], MAIN_WINDOW_GEOMETRY[3])
@@ -160,10 +130,19 @@ class MainInterface(QMainWindow):
             return
         self._deferred_work_started = True
         self.set_bootstrap_pending(False)
-        self._tab_load_timer.start()
-        self._tab_preload_timer.start(_TAB_PRELOAD_INITIAL_DELAY_MS)
+        self._load_current_tab_now()
         self._post_update_timer.start(1500)
         self._startup_check_timer.start(2200)
+        from Core.services.business_refresh import BusinessRefreshService
+        from settings import DB_NAME
+
+        self._business_refresh = BusinessRefreshService(db_name=DB_NAME, parent=self)
+        self._business_refresh.stopped.connect(self._finish_background_close)
+        self._business_refresh.start()
+
+    def _finish_background_close(self) -> None:
+        if self._is_closing:
+            self.close()
 
     def init_toolbar(self):
         self.toolBar = QToolBar(MAIN_TOOLBAR_TITLE)
@@ -188,7 +167,7 @@ class MainInterface(QMainWindow):
         self.ai_ui = None
         self.ai_toolbar_action = None
         if self._show_ai_ui:
-            self.ai_toolbar_action = QAction(_main_icon(ASSETS_DIR / "ai-icon-search.png"), "AI", self)
+            self.ai_toolbar_action = QAction(_main_icon(ASSETS_DIR / AI_BRAND_ICON_NAME), "AI", self)
             self.ai_toolbar_action.setToolTip("OrderScout AI sohbet sekmesini aç")
             self.ai_toolbar_action.setIconText("AI")
             self.ai_toolbar_action.setIconVisibleInMenu(True)
@@ -258,7 +237,6 @@ class MainInterface(QMainWindow):
         label: str,
         icon_name: str,
         factory: Callable[[], QWidget],
-        import_module_name: str | tuple[str, ...] = "",
         visible: bool = True,
         animated_gif_name: str | None = None,
         fallback_icon_name: str | None = None,
@@ -272,12 +250,6 @@ class MainInterface(QMainWindow):
         icon = _main_icon(ASSETS_DIR / icon_name)
         index = self.tabs.addTab(host, icon, label)
         self._tab_hosts[key] = host
-        if isinstance(import_module_name, tuple):
-            module_names = tuple(str(name or "").strip() for name in import_module_name if str(name or "").strip())
-        else:
-            module_names = (str(import_module_name or "").strip(),) if str(import_module_name or "").strip() else ()
-        if module_names:
-            self._tab_import_modules[key] = module_names
         setattr(self, f"{key}_tab", host)
 
         if animated_gif_name:
@@ -308,71 +280,55 @@ class MainInterface(QMainWindow):
             label=str(ui_text("main_interface.tabs.orders", MAIN_TAB_LABELS["orders"])),
             icon_name="tab-orders-icon.png",
             factory=self._build_orders_tab,
-            import_module_name="Orders.views.views",
         )
         self._add_lazy_tab(
             key="stock",
             label=str(ui_text("main_interface.tabs.stock", MAIN_TAB_LABELS["stock"])),
             icon_name="tab-stock-icon.png",
             factory=self._build_stock_tab,
-            import_module_name="Stock.views.tab",
         )
         self._add_lazy_tab(
             key="listing",
             label=str(ui_text("main_interface.tabs.listing", MAIN_TAB_LABELS["listing"])),
             icon_name="tab-listing-icon.png",
             factory=self._build_listing_tab,
-            import_module_name="Listing.views.views",
         )
         self._add_lazy_tab(
             key="marketplaces",
             label=str(ui_text("main_interface.tabs.marketplaces", MAIN_TAB_LABELS["marketplaces"])),
             icon_name="tab-marketplaces-icon.png",
             factory=self._build_marketplaces_tab,
-            import_module_name="Marketplaces.views.views",
         )
         self._add_lazy_tab(
             key="finance",
             label=str(ui_text("main_interface.tabs.finance", MAIN_TAB_LABELS["finance"])),
             icon_name="tab-finance-icon.png",
             factory=self._build_finance_tab,
-            import_module_name=("Finance.views.views", "Finance.views.actions"),
         )
         self._add_lazy_tab(
             key="logistics",
             label=str(ui_text("main_interface.tabs.logistics", MAIN_TAB_LABELS["logistics"])),
             icon_name="tab-logistics-icon.png",
             factory=self._build_logistics_tab,
-            import_module_name=("Logistics.views.views", "Logistics.views.actions", "Finance.views.actions"),
         )
         self._add_lazy_tab(
             key="ai",
             label=MAIN_TAB_LABELS["ai"],
-            icon_name="ai-icon-search.png",
+            icon_name=AI_BRAND_ICON_NAME,
             factory=self._build_ai_tab,
-            import_module_name="AI.views.chat_tab",
             visible=self._show_ai_ui,
-            animated_gif_name="ai-icon.gif",
-            fallback_icon_name="ai-icon-search.png",
-            animated_size=MAIN_AI_TAB_ICON_SIZE,
         )
 
         self.tabs.currentChanged.connect(self._on_tab_changed)
         self._set_ai_tab_visible(self._show_ai_ui)
 
     def _on_tab_changed(self, _index: int) -> None:
-        if not self._deferred_work_started:
+        if not self._deferred_work_started or self._is_closing:
             return
-        if self._tab_preload_timer.isActive():
-            self._tab_preload_timer.stop()
-        self._tab_load_timer.start()
-        self._tab_preload_timer.start(_TAB_PRELOAD_IDLE_DELAY_MS)
-
-    def _key_for_tab_widget(self, widget: QWidget | None) -> str:
-        for key, host in self._tab_hosts.items():
-            if host is widget:
-                return key
-        return ""
+        self._tab_load_timer.stop()
+        host = self.tabs.currentWidget()
+        if isinstance(host, LazyTabHost) and not host.is_loaded():
+            self._tab_load_timer.start()
 
     def _index_for_tab_key(self, key: str) -> int:
         host = self._tab_hosts.get(str(key or "").strip())
@@ -400,104 +356,12 @@ class MainInterface(QMainWindow):
             self._load_current_tab_now()
 
     def _load_current_tab_now(self) -> None:
-        if self._tab_load_timer.isActive():
-            self._tab_load_timer.stop()
-        current_widget = self.tabs.currentWidget()
-        if isinstance(current_widget, LazyTabHost):
-            current_key = self._key_for_tab_widget(current_widget)
-            worker = self._tab_import_warmup_worker
-            if (
-                current_key
-                and (
-                    (
-                        worker is not None
-                        and worker.isRunning()
-                        and worker.key == current_key
-                    )
-                    or (
-                        self._tab_import_warmup_active
-                        and self._tab_import_warmup_key == current_key
-                    )
-                )
-            ):
-                self._tab_deferred_load_key = current_key
-                return
-            current_widget.request_load()
-
-    def _preload_next_idle_tab(self) -> None:
-        if self._tab_import_warmup_worker is not None or bool(getattr(self, "_tab_import_warmup_active", False)):
-            return
-        current_widget = self.tabs.currentWidget()
-        warmed_order = list(_TAB_PRELOAD_PRIORITY) + [
-            key for key in self._tab_hosts if key not in _TAB_PRELOAD_PRIORITY
-        ]
-        for key in warmed_order:
-            host = self._tab_hosts.get(key)
-            if host is current_widget or not isinstance(host, LazyTabHost):
-                continue
-            if key in self._tab_import_warmup_done or host.is_loaded():
-                self._tab_import_warmup_done.add(key)
-                continue
-            module_names = self._tab_import_modules.get(key, ())
-            if not module_names:
-                self._tab_import_warmup_done.add(key)
-                continue
-            index = self.tabs.indexOf(host)
-            if index < 0:
-                continue
-            try:
-                if not self.tabs.isTabVisible(index):
-                    continue
-            except Exception:
-                bar = self.tabs.tabBar()
-                if bar is not None and hasattr(bar, "isTabVisible") and not bar.isTabVisible(index):
-                    continue
-            self._start_tab_import_warmup(key, module_names)
-            return
-
-    def _start_tab_import_warmup(self, key: str, module_names: tuple[str, ...]) -> None:
-        if self._tab_import_warmup_worker is not None or bool(getattr(self, "_tab_import_warmup_active", False)):
-            return
-        self._tab_import_warmup_active = True
-        self._tab_import_warmup_key = str(key or "").strip()
-        self._tab_import_warmup_modules = tuple(module_names or ())
-        QTimer.singleShot(0, self._run_tab_import_warmup_on_gui_thread)
-
-    def _run_tab_import_warmup_on_gui_thread(self) -> None:
+        self._tab_load_timer.stop()
         if self._is_closing:
             return
-        key = self._tab_import_warmup_key
-        module_names = self._tab_import_warmup_modules
-        try:
-            for module_name in module_names:
-                import_module(module_name)
-            self._on_tab_import_warmed(key, True, "")
-        except Exception as exc:
-            self._on_tab_import_warmed(key, False, str(exc))
-        finally:
-            self._on_tab_import_warmup_finished()
-
-    def _on_tab_import_warmed(self, key: str, success: bool, message: str) -> None:
-        self._tab_import_warmup_done.add(str(key or ""))
-        if not success and message:
-            print(f"[main tabs] import warmup failed: {key}: {message}")
-
-    def _on_tab_import_warmup_finished(self) -> None:
-        worker = self._tab_import_warmup_worker
-        if worker is not None:
-            worker.deleteLater()
-        self._tab_import_warmup_worker = None
-        self._tab_import_warmup_active = False
-        self._tab_import_warmup_key = ""
-        self._tab_import_warmup_modules = ()
-        current_key = self._key_for_tab_widget(self.tabs.currentWidget())
-        if self._tab_deferred_load_key and self._tab_deferred_load_key == current_key:
-            self._tab_deferred_load_key = ""
-            QTimer.singleShot(0, self._load_current_tab_now)
-            return
-        self._tab_deferred_load_key = ""
-        if not self._is_closing and self._deferred_work_started:
-            self._tab_preload_timer.start(_TAB_PRELOAD_STEP_DELAY_MS)
+        current_widget = self.tabs.currentWidget()
+        if isinstance(current_widget, LazyTabHost):
+            current_widget.request_load()
 
     def _set_ai_tab_visible(self, visible: bool) -> None:
         index = self.tabs.indexOf(getattr(self, "ai_tab", None))
@@ -516,11 +380,9 @@ class MainInterface(QMainWindow):
     def closeEvent(self, event) -> None:
         self._is_closing = True
         self._tab_load_timer.stop()
-        self._tab_preload_timer.stop()
-        worker = self._tab_import_warmup_worker
-        if worker is not None and worker.isRunning():
-            worker.wait(1500)
-        self._tab_import_warmup_active = False
-        self._tab_import_warmup_key = ""
-        self._tab_import_warmup_modules = ()
+        self._post_update_timer.stop()
+        self._startup_check_timer.stop()
+        if self._business_refresh is not None and not self._business_refresh.stop():
+            event.ignore()
+            return
         super().closeEvent(event)

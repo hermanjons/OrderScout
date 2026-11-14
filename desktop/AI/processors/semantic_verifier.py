@@ -332,10 +332,12 @@ def verify_calculation_goal_semantics(state: AgentSessionState, *, verifier_clie
 _PREPARE_ACTION_BY_OPERATION = {
     "stock.item_create.prepare": "stock.item_create",
     "stock.item_update.prepare": "stock.item_update",
+    "stock.thresholds.prepare": "stock.item_update",
     "listing.update_price.prepare": "listing.update_price",
     "listing.update_stock.prepare": "listing.update_stock",
     "listing.content_update.prepare": "listing.content_update",
     "listing.content_optimize.prepare": "listing.content_optimize",
+    "listing.stock_link.prepare": "listing.action_set_listing_stock_items",
     "orders.fetch.prepare": "orders.get_orders_from_companies",
     "labels.create_from_orders.prepare": "labels.action_create_labels_from_selected_orders",
     "labels.mark_extracted.prepare": "labels.mark_orders_extracted_from_label_result",
@@ -1247,6 +1249,10 @@ def verify_plan_step_semantics(
 
 def _planned_target_ids(state: AgentSessionState, step: AgentTaskStep) -> tuple[str, list[str]]:
     arguments = dict(step.arguments or {})
+    if "listing.stock_link.prepare" in step.operation_candidates:
+        # Account IDs scope a listing; they are not the listing being changed.
+        listing_id = _configuration_arguments(state, step).get("listing_id")
+        return "listing", [str(listing_id)] if type(listing_id) is int and listing_id > 0 else []
     for record_type, plural_keys, single_keys in (
         ("order", ("order_numbers", "orders"), ("order_number",)),
         ("return_claim", ("claim_ids",), ("claim_id",)),
@@ -1305,10 +1311,38 @@ def _planned_target_ids(state: AgentSessionState, step: AgentTaskStep) -> tuple[
     return "", []
 
 
+def _listing_stock_link_contract_problems(
+    state: AgentSessionState, step: AgentTaskStep, action: dict[str, Any], *, db_name: str | None,
+) -> list[str]:
+    """Bind the native single-link proposal to the shared domain's exact preview."""
+    if not db_name:
+        return ["listing_stock_link_trusted_database_missing"]
+    from AI.runtime.listing_stock_contracts import listing_stock_link_prepare
+
+    try:
+        # Re-read through the same domain primitive using resolved model inputs
+        # and the caller's database. The proposal cannot select its own database,
+        # replacement links, stock identity or optimistic state tokens.
+        expected = listing_stock_link_prepare(**_configuration_arguments(state, step), db_name=db_name)
+        if not expected.success:
+            return ["listing_stock_link_domain_preview_invalid"]
+        canonical = expected.data["action"]
+        if (any(action.get(field) != canonical[field] for field in (
+                    "tool", "domain", "status", "api_call_performed", "db_write_performed"))
+                or action.get("record_refs") != canonical["record_refs"]
+                or _semantic_action_fingerprint(action) != _semantic_action_fingerprint(canonical)):
+            return ["listing_stock_link_prepared_contract_mismatch"]
+    except (TypeError, ValueError, KeyError, OverflowError):
+        return ["listing_stock_link_prepared_contract_invalid"]
+    return []
+
+
 def verify_prepared_action(
     state: AgentSessionState,
     step: AgentTaskStep,
     action: dict[str, Any],
+    *,
+    db_name: str | None = None,
 ) -> Result:
     operation_id = next(
         (_text(value) for value in step.operation_candidates if _text(value)),
@@ -1330,6 +1364,8 @@ def verify_prepared_action(
         problems.append("unregistered_prepare_action_mapping")
     if expected_action_type and action_type != expected_action_type:
         problems.append("prepared_action_type_mismatch")
+    if operation_id == "listing.stock_link.prepare":
+        problems.extend(_listing_stock_link_contract_problems(state, step, action, db_name=db_name))
     mode = _active_turn_mode(state)
     if plan is not None and plan.source in _MODEL_AUTHORED_DIRECT_PLAN_SOURCES and mode not in {"act", "correct"}:
         problems.append("prepared_action_without_typed_act_mode")

@@ -17,7 +17,8 @@ from AI.api.huggingface_api import (
     fetch_model_details,
     search_public_models,
 )
-from AI.processors.local_resources import build_local_resource_plan
+from AI.processors.local_resources import build_local_resource_plan, capture_resource_snapshot
+from AI.processors.local_storage import model_download_capacity
 from AI.processors.model_routing import build_free_model_test_route
 from AI.processors.provider_catalog_policy import (
     provider_free_model_quality_prior,
@@ -254,6 +255,22 @@ def _provider_model_to_dict(row: dict[str, Any], *, provider_code: str = "") -> 
         ],
         "reasoning": dict(row.get("reasoning") or {}) if isinstance(row.get("reasoning"), dict) else {},
     }
+    top_provider = row.get("top_provider") if isinstance(row.get("top_provider"), dict) else {}
+    limits = []
+    for value in (row.get("output_token_limit"), row.get("max_output_tokens"), top_provider.get("max_completion_tokens")):
+        if isinstance(value, bool):
+            continue
+        try:
+            limit = int(value or 0)
+        except (ValueError, TypeError, OverflowError):
+            continue
+        if limit > 0:
+            limits.append(limit)
+    if limits:
+        record["output_token_limit"] = min(limits)
+    if top_provider:
+        record["top_provider"] = {key: top_provider[key] for key in ("context_length", "max_completion_tokens")
+                                  if key in top_provider}
     record["reasoning_capabilities"] = provider_reasoning_capabilities(
         provider_code,
         model_id,
@@ -499,6 +516,7 @@ def get_hf_model_details(repo_id: str) -> Result:
         payload = dict((api_res.data or {}).get("json") or {})
         card_data = payload.get("cardData") if isinstance(payload.get("cardData"), dict) else {}
         siblings = _safe_list(payload.get("siblings"))
+        resources = capture_resource_snapshot(settings.get("download_root"))
         files: list[dict[str, Any]] = []
         for row in siblings:
             if not isinstance(row, dict):
@@ -515,6 +533,8 @@ def get_hf_model_details(repo_id: str) -> Result:
                     "size_bytes": size_bytes,
                     "size_text": _format_bytes(size_bytes),
                     "download_url": build_model_download_url(clean_repo_id, filename),
+                    "resource_plan": build_local_resource_plan({"repo_id": clean_repo_id, "filename": filename,
+                        "size_bytes": size_bytes}, snapshot=resources).to_dict(),
                 }
             )
 
@@ -531,6 +551,7 @@ def get_hf_model_details(repo_id: str) -> Result:
             "tags": [str(tag) for tag in _safe_list(payload.get("tags"))[:12]],
             "description": _compact_text(payload.get("description") or card_data.get("summary")),
             "files": files,
+            "resources": resources.to_dict(),
         }
 
         return Result.ok(
@@ -545,8 +566,8 @@ def get_hf_model_details(repo_id: str) -> Result:
 def _safe_repo_dir(repo_id: str) -> Path:
     clean = _compact_text(repo_id).strip("/")
     parts = [part for part in clean.split("/") if part]
-    if not parts:
-        parts = ["model"]
+    if len(parts) != 2 or any(not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", part) for part in parts):
+        raise ValueError("Geçerli bir Hugging Face depo adı gerekli: kullanıcı/model.")
     return Path(*parts)
 
 
@@ -576,7 +597,7 @@ def infer_local_model_capabilities(record: dict[str, Any]) -> dict[str, Any]:
         for key in ("repo_id", "filename", "display_name", "file_format", "quantization", "local_path")
     ).casefold()
     is_gguf = "gguf" in haystack or _compact_text(record.get("file_format")).casefold() == "gguf"
-    reasoning = any(token in haystack for token in ("gpt-oss", "reason", "deepseek-r1", "qwen", "r1"))
+    reasoning = any(token in haystack for token in ("gpt-oss", "reason", "deepseek-r1", "qwen", "r1", "gemma-4", "gemma4"))
     return {
         "supports_reasoning_effort": reasoning,
         "supports_gpu_layers": is_gguf,
@@ -590,8 +611,6 @@ def _default_runtime_config(record: dict[str, Any]) -> dict[str, Any]:
     capabilities = infer_local_model_capabilities(record)
     plan = build_local_resource_plan(record)
     reasoning_effort = "auto"
-    if capabilities.get("supports_reasoning_effort"):
-        reasoning_effort = "low" if str(plan.profile).startswith("disk_guarded") or float(plan.memory_pressure or 0) >= 0.55 else "medium"
     return {
         "performance_preset": "auto",
         "runtime_strategy": "llama_cpp",
@@ -614,7 +633,13 @@ def _merge_runtime_config(record: dict[str, Any], settings: dict[str, Any]) -> d
     saved = store.get(key)
     if not isinstance(saved, dict):
         saved = {}
-    return {**_default_runtime_config(record), **saved, "config_key": key}
+    merged = {**_default_runtime_config(record), **saved, "config_key": key}
+    # Old auto profiles persisted the old engine's tiny 512-token defaults.
+    # Auto is adaptive; explicit overrides remain available through a preset.
+    if merged.get("performance_preset") == "auto":
+        for field in ("num_ctx", "max_tokens", "num_thread", "num_batch", "num_gpu"):
+            merged.pop(field, None)
+    return merged
 
 
 def _bounded_int(value: Any, *, default: int, minimum: int, maximum: int) -> int:
@@ -630,7 +655,7 @@ def _sanitize_runtime_config(record: dict[str, Any], config: dict[str, Any]) -> 
     runtime_strategy = "llama_cpp"
 
     performance_preset = _compact_text(config.get("performance_preset") or defaults.get("performance_preset")).casefold()
-    if performance_preset not in {"auto", "eco", "balanced", "fast"}:
+    if performance_preset not in {"auto", "eco", "balanced", "fast", "quality"}:
         performance_preset = "auto"
 
     reasoning_effort = _compact_text(config.get("reasoning_effort") or defaults.get("reasoning_effort")).casefold()
@@ -647,8 +672,8 @@ def _sanitize_runtime_config(record: dict[str, Any], config: dict[str, Any]) -> 
         "performance_preset": performance_preset,
         "runtime_strategy": runtime_strategy,
         "reasoning_effort": reasoning_effort,
-        "num_ctx": _bounded_int(config.get("num_ctx"), default=int(defaults.get("num_ctx") or 2048), minimum=512, maximum=8192),
-        "max_tokens": _bounded_int(config.get("max_tokens"), default=int(defaults.get("max_tokens") or 384), minimum=64, maximum=2048),
+        "num_ctx": _bounded_int(config.get("num_ctx"), default=int(defaults.get("num_ctx") or 8192), minimum=2048, maximum=32768),
+        "max_tokens": _bounded_int(config.get("max_tokens"), default=int(defaults.get("max_tokens") or 2048), minimum=128, maximum=8192),
         "num_thread": _bounded_int(config.get("num_thread"), default=int(defaults.get("num_thread") or 2), minimum=1, maximum=max(1, os.cpu_count() or 1)),
         "num_batch": _bounded_int(config.get("num_batch"), default=int(defaults.get("num_batch") or 64), minimum=8, maximum=512),
         "num_gpu": _bounded_int(config.get("num_gpu"), default=int(defaults.get("num_gpu") or 0), minimum=0, maximum=99),
@@ -965,12 +990,13 @@ def list_installed_models(
             ).all()
         records = [_record_to_dict(row) for row in rows]
         if settings:
+            resources = capture_resource_snapshot(download_root or settings.get("download_root"))
             for record in records:
                 config = _merge_runtime_config(record, settings)
                 enriched = {**record, "runtime_config": config}
                 record["runtime_config"] = config
                 record["runtime_capabilities"] = infer_local_model_capabilities(record)
-                record["resource_plan"] = build_local_resource_plan(enriched).to_dict()
+                record["resource_plan"] = build_local_resource_plan(enriched, snapshot=resources).to_dict()
         return Result.ok(
             "Yüklü AI modelleri listelendi.",
             close_dialog=False,
@@ -1103,6 +1129,12 @@ def list_provider_models(
     accessibility: dict[str, dict[str, Any]] | None = None,
     quality: dict[str, dict[str, Any]] | None = None,
 ) -> Result:
+    """Return the current matching catalogue, complete unless a limit is given.
+
+    Model pickers need the complete catalogue for local search and price filters.
+    An explicit limit only bounds returned records; counts and routing evidence
+    still describe all matching models.
+    """
     try:
         clean_provider = _compact_text(provider_code).casefold()
         endpoint = _provider_models_endpoint(clean_provider, endpoint_url)
@@ -1168,13 +1200,15 @@ def list_provider_models(
             quality=quality_rows,
             generated_from_live_catalog=True,
         )
-        max_rows = max(1, min(int(limit or 120), 500))
+        returned_records = records if limit is None else records[:max(1, int(limit))]
         return Result.ok(
             "Provider modelleri listelendi.",
             close_dialog=False,
             data={
-                "records": records[:max_rows],
+                "records": returned_records,
                 "total": len(records),
+                "returned_count": len(returned_records),
+                "truncated": len(returned_records) < len(records),
                 "free_total": sum(1 for row in records if bool(row.get("is_free"))),
                 "free_model_test_route": free_model_test_route.to_dict(),
                 "endpoint": endpoint,
@@ -1370,11 +1404,15 @@ def download_hf_model_file(
             resolved_root = _normalize_dir(download_root)
 
         target_dir = resolved_root / _safe_repo_dir(clean_repo_id)
+        target_dir.resolve().relative_to(resolved_root.resolve())
         target_dir.mkdir(parents=True, exist_ok=True)
         target_path = target_dir / Path(clean_filename).name
         download_url = build_model_download_url(clean_repo_id, clean_filename)
 
         if target_path.exists() and target_path.is_file():
+            if clean_filename.casefold().endswith(".gguf"):
+                from AI.processors.gguf_metadata import read_gguf_metadata
+                read_gguf_metadata(target_path)
             record = _upsert_installed_model(
                 repo_id=clean_repo_id,
                 filename=clean_filename,
@@ -1399,14 +1437,19 @@ def download_hf_model_file(
 
         with requests.get(download_url, stream=True, timeout=(20, 120), headers=headers) as response:
             response.raise_for_status()
+            range_total = 0
+            if response.status_code == 206:
+                content_range = str(response.headers.get("Content-Range") or "")
+                match = re.fullmatch(r"bytes (\d+)-(\d+)/(\d+)", content_range)
+                if not match or int(match.group(1)) != resume_from:
+                    return Result.fail("İndirme kaldığı yerden doğrulanamadı; kısmi dosya korundu.", close_dialog=False)
+                range_total = int(match.group(3))
             if resume_from > 0 and response.status_code != 206:
                 resume_from = 0
             content_length = _optional_int(response.headers.get("Content-Length")) or 0
-            total_bytes = content_length + resume_from if resume_from > 0 else content_length
+            total_bytes = range_total or (content_length + resume_from if resume_from > 0 else content_length)
             if total_bytes > 0:
-                free_bytes = int(shutil.disk_usage(str(target_dir)).free)
-                needed_bytes = max(0, total_bytes - resume_from)
-                if free_bytes < needed_bytes + 2 * 1024 * 1024 * 1024:
+                if not model_download_capacity(target_dir, total_bytes, partial_bytes=resume_from)["allowed"]:
                     return Result.fail("Model icin yeterli bos disk alani yok.", close_dialog=False)
             etag = _compact_text(response.headers.get("ETag")) or None
             bytes_written = resume_from
@@ -1426,11 +1469,19 @@ def download_hf_model_file(
                         )
                     if not chunk:
                         continue
+                    if bytes_written % (64 * 1024 * 1024) < 1024 * 1024 and shutil.disk_usage(str(target_dir)).free < 512 * 1024 * 1024:
+                        return Result.fail("Disk alanı azaldığı için indirme durdu; kısmi dosya korundu.", close_dialog=False,
+                            data={"paused": True, "partial_path": str(temp_path)})
                     fh.write(chunk)
                     bytes_written += len(chunk)
                     if progress_callback is not None:
                         progress_callback(bytes_written, total_bytes, f"{clean_repo_id} indiriliyor...")
 
+        if total_bytes and bytes_written != total_bytes:
+            return Result.fail("Model dosyası eksik indi; kısmi dosya korundu. İndirmeyi sürdürebilirsiniz.", close_dialog=False)
+        if clean_filename.casefold().endswith(".gguf"):
+            from AI.processors.gguf_metadata import read_gguf_metadata
+            read_gguf_metadata(temp_path)
         os.replace(temp_path, target_path)
 
         record = _upsert_installed_model(

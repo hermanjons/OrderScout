@@ -124,6 +124,10 @@ class TestMarketplacesViews(TestCase):
         self.assertTrue(window.bulk_panel.isVisible())
         self.assertTrue(window.list_widget._guide_select_animation_enabled)
         self.assertTrue(window.list_widget._active_border_timer.isActive())
+        window.hide()
+        self.assertFalse(window.list_widget._active_border_timer.isActive())
+        window.show()
+        self.assertTrue(window.list_widget._active_border_timer.isActive())
 
     def test_edit_mode_enables_active_card_animation(self) -> None:
         window = marketplaces_manager_window.MarketplacesWindow()

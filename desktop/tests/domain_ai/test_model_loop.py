@@ -138,6 +138,10 @@ def test_full_year_report_binds_all_rows_then_exact_approval_creates_verified_xl
         assert str(output) in widget.transcript.toPlainText()
         widget._append_verified_artifact_links(approved.data)
         assert len(widget._delivered_artifacts) == 1
+        widget._conversation_state = approved.data["state"]
+        anchors = widget.transcript.toHtml().count('href="orderscout://artifact/open/')
+        widget._append_chat_message("assistant", f"Dosyan hazır: **`{output}`**")
+        assert widget.transcript.toHtml().count('href="orderscout://artifact/open/') == anchors + 1
         widget._on_transcript_anchor_clicked(QUrl("orderscout://artifact/open/unknown"))
         assert opened == []
         widget._on_transcript_anchor_clicked(QUrl("orderscout://artifact/open/" + token))

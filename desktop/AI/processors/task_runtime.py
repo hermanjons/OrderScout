@@ -104,7 +104,7 @@ from AI.processors.turn_evidence import (
 ChatClient = Callable[[str], str]
 ProgressCallback = Callable[[int, str], None]
 
-_REASONING_EFFORTS = {"auto", "off", "low", "medium", "high"}
+_REASONING_EFFORTS = {"auto", "off", "none", "minimal", "low", "medium", "high", "xhigh", "max"}
 _TRANSIENT_STEP_FAILURE_MARKERS = (
     "timeout",
     "timed out",
@@ -13107,6 +13107,15 @@ def _safe_runtime_model_metadata(value: Any) -> dict[str, Any]:
     for key in ("streaming", "usage_reporting", "quota_reporting"):
         if key in metadata:
             safe[key] = bool(metadata.get(key))
+    top_provider = metadata.get("top_provider")
+    if isinstance(top_provider, dict):
+        try:
+            provider_limit = int(top_provider.get("max_completion_tokens") or 0)
+        except (ValueError, TypeError, OverflowError):
+            provider_limit = 0
+        if provider_limit > 0:
+            safe["output_token_limit"] = min(provider_limit, safe.get("output_token_limit", provider_limit),
+                                             safe.get("max_output_tokens", provider_limit), 100_000_000)
     reasoning = (
         dict(metadata.get("reasoning") or {})
         if isinstance(metadata.get("reasoning"), dict)
@@ -13249,8 +13258,8 @@ def _runtime_route_model_metadata(value: Any, model_name: Any) -> dict[str, Any]
             )
         if row.get("context_tokens"):
             metadata.setdefault("context_length", int(row["context_tokens"]))
-        if row.get("output_tokens"):
-            metadata.setdefault("output_token_limit", int(row["output_tokens"]))
+        # Route output_tokens can be a host ranking default, not catalogue proof.
+        # Keep only explicit model metadata as the provider's completion cap.
         if row.get("reasoning") is not None and "reasoning" not in metadata:
             metadata["reasoning"] = {"supported": bool(row.get("reasoning"))}
         return _safe_runtime_model_metadata(metadata)
@@ -14057,7 +14066,7 @@ def _run_remaining_steps(
         ):
             from AI.processors.semantic_verifier import verify_prepared_action
 
-            prepared_verification = verify_prepared_action(state, step, pending)
+            prepared_verification = verify_prepared_action(state, step, pending, db_name=db_name)
             if not prepared_verification.success:
                 from AI.processors.semantic_verifier import configuration_schema_rejection_repairable
                 configuration_schema_repairable = configuration_schema_rejection_repairable(state, step, prepared_verification)

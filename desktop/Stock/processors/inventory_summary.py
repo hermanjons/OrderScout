@@ -2,6 +2,7 @@
 from __future__ import annotations
 from typing import Any
 from Feedback.processors.pipeline import Result, map_error_to_message
+from Stock.processors.policy_rules import low_stock_policy_metadata
 
 
 def _text(value):
@@ -54,6 +55,12 @@ def read_low_stock_summary(*, db_name: str | None = None, limit: int = 10) -> Re
                 "total_low_stock": len(rows),
                 "items": rows[:limit],
                 "threshold_rule": "stock_minimum_or_zero_balance",
+                "low_stock_policy": low_stock_policy_metadata(),
+                "threshold_comparison": "less_than_or_equal",
+                "rule_description": (
+                    "Minimum tanımlıysa bakiye <= minimum; minimuma eşit bakiye de dahildir. "
+                    "Minimum tanımından bağımsız olarak sıfır ve negatif bakiyeler de düşük/kritiktir."
+                ),
             },
         )
     except Exception as exc:

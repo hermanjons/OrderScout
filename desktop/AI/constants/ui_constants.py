@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 
+AI_BRAND_ICON_NAME = "orderscout-ai-v2.png"
+
+
 AI_MANAGER_DIALOG_TITLE = "AI Model Hub"
 AI_MANAGER_ACTION_TEXT = "AI"
 AI_MANAGER_ACTION_DATA = "ai_manager"

@@ -178,7 +178,7 @@ class ObservedCloudClient:
 
     def __getattr__(self, name: str) -> Any:
         value = getattr(self._client, name)
-        if name in {"invoke_structured", "invoke_tools", "invoke_json_text", "invoke_final_text"} and callable(value):
+        if name in {"invoke_structured", "invoke_tools", "invoke_json_text", "invoke_final_text", "invoke_completion_review"} and callable(value):
             @wraps(value)
             def observed(*args, **kwargs):
                 return self._invoke(name, value, *args, **kwargs)

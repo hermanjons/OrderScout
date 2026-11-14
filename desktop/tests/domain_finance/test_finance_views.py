@@ -539,8 +539,8 @@ class TestFinanceViews(TestCase):
         self.assertIsInstance(tab.cost_items_btn.parentWidget().layout(), core_views.FlowLayout)
         self.assertIs(tab.invoices_btn.parentWidget(), tab.cost_items_btn.parentWidget())
         self.assertIs(tab.transactions_btn.parentWidget(), tab.cost_items_btn.parentWidget())
-        self.assertTrue(tab.invoices_btn.isHidden())
-        self.assertTrue(tab.transactions_btn.isHidden())
+        self.assertEqual(tab.invoices_btn.isHidden(), not finance_views.ENABLE_FINANCE_INVOICES_UI)
+        self.assertEqual(tab.transactions_btn.isHidden(), not finance_views.ENABLE_FINANCE_TRANSACTIONS_UI)
         self.assertFalse(tab.cost_items_btn.isHidden())
         self.assertFalse(tab.brands_btn.isHidden())
         self.assertFalse(tab.companies_btn.isHidden())
@@ -552,26 +552,16 @@ class TestFinanceViews(TestCase):
         tab.deleteLater()
         self._app.processEvents()
 
-    def test_finance_tab_fetch_panel_has_auto_fetch_controls(self) -> None:
+    def test_finance_tab_uses_application_background_refresh(self) -> None:
         tab = finance_views.FinanceTab()
         self.addCleanup(tab.close)
         self.addCleanup(tab.deleteLater)
-
-        self.assertFalse(tab.auto_fetch_minutes.isEnabled())
-
-        tab.auto_fetch_minutes.setValue(5)
-        tab.auto_fetch_toggle.setChecked(True)
-        tab._toggle_auto_fetch()
-
-        self.assertTrue(tab.auto_fetch_minutes.isEnabled())
-        self.assertEqual(tab._auto_fetch_interval, 300)
-        self.assertTrue(tab.fetch_button._repeat_enabled)
-
-        tab.auto_fetch_toggle.setChecked(False)
-        tab._toggle_auto_fetch()
-
-        self.assertFalse(tab.auto_fetch_minutes.isEnabled())
-        self.assertFalse(tab.fetch_button._repeat_enabled)
+        self.assertFalse(hasattr(tab, "fetch_button"))
+        self.assertFalse(hasattr(tab, "auto_fetch_toggle"))
+        tab._on_background_status("finance", "Yerel kayıtlar yenilendi. Son kontrol: 10:20:30")
+        self.assertIn("10:20:30", tab.status_label.text())
+        tab._on_background_status("orders", "Başka alan")
+        self.assertIn("10:20:30", tab.status_label.text())
 
     def test_finance_tab_opens_invoice_window_from_quick_access(self) -> None:
         tab = finance_views.FinanceTab()

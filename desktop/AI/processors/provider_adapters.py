@@ -385,6 +385,13 @@ def normalize_provider_error(
     if turn_deadline:
         category = "turn_deadline"
         quota_scope = "runtime"
+    elif getattr(exc, "provider_response_incomplete", False):
+        # Only a bounded retry of this exact request may recover a partial
+        # generation. It is never evidence that a different model is needed.
+        category = "incomplete_response"
+        retryable = getattr(exc, "reason", "") in {
+            "connection_closed", "invalid_frame", "tool_arguments", "output_limit",
+        }
     elif openrouter_spending_limit:
         category = "billing"
         quota_scope = "key_limit" if limit_source in {"", "openrouter_key_limit"} else "account"
@@ -528,6 +535,7 @@ def normalize_provider_error(
         "auth": "Provider kimlik doğrulaması başarısız oldu.",
         "policy": "Provider erişim politikası isteği engelledi.",
         "turn_deadline": "Cloud sohbet turunun süre bütçesi doldu.",
+        "incomplete_response": "Model yanıtı tamamlanmadan kesildi; eksik araç çağrısı çalıştırılmadı.",
         "provider_error": "Provider isteği başarısız oldu.",
     }.get(category, "Provider isteği başarısız oldu.")
     if openrouter_spending_limit:
@@ -790,6 +798,9 @@ def guarded_json_prompt(prompt: str, schema: dict[str, Any] | None) -> str:
         "Return exactly one JSON object, without markdown or prose, that conforms to every type, enum, required field and additionalProperties rule in this schema:",
         json.dumps(schema, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
     ])
+    from AI.runtime.prompt import ModelPrompt
+    if isinstance(prompt, ModelPrompt):
+        return prompt if prompt.to_messages()[0]["content"].endswith(suffix) else prompt.with_instructions(suffix)
     return prompt if prompt.endswith(suffix) else prompt.rstrip() + suffix
 
 
@@ -806,16 +817,21 @@ def invoke_provider_planner(
     Capability metadata alone never selects a native path. The built client must
     expose the corresponding callable and its effective runtime profile must say
     that the path is enabled. Otherwise planning stays on the guarded text path.
+    Explicit tools=[] keeps the native conversation contract with no available
+    operations; tools=None leaves the caller's text/structured contract intact.
     """
 
     profile = runtime_capability_profile(planner_client, None)
     native_method = getattr(planner_client, "invoke_tools", None)
     if (
-        tools
+        tools is not None
         and profile.get("native_tool_runtime_enabled") is True
         and callable(native_method)
     ):
-        return str(native_method(prompt, tools=list(tools)) or "")
+        response = native_method(prompt, tools=list(tools))
+        # Provider text carries an in-process marker so literal JSON examples
+        # cannot become native tool calls. Preserve string subclasses here.
+        return response if isinstance(response, str) else str(response or "")
 
     guarded_json_method = getattr(planner_client, "invoke_json_text", None)
 

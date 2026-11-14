@@ -70,6 +70,9 @@ class ProviderCatalogPolicyTests(unittest.TestCase):
         )
         self.assertEqual(gemini_best["quality_score"], 0.0)
         self.assertEqual(openrouter_best["quality_tier"], 100)
+        minimax = provider_free_model_quality_prior("openrouter", "minimax/minimax-m3.1-flash:free")
+        self.assertGreater(minimax["quality_tier"], openrouter_best["quality_tier"])
+        self.assertEqual(minimax["quality_score"], 0.0)
         self.assertEqual(unknown["quality_tier"], 0)
         self.assertEqual(unknown["quality_source"], "unmeasured")
 

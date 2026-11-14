@@ -43,6 +43,13 @@ def approval_reply_protocol(message: str, session_state=None) -> str:
         if not target or target.casefold() != prefix.group(1):
             return ""
         normalized = normalized[prefix.end():]
+    # Everyday acknowledgements belong to the conversation unless there is a
+    # current approval to answer. An explicit action identity remains a control
+    # request even when stale so the dispatcher can refuse that exact target.
+    if not prefix and normalized in {"evet", "yes", "tamam", "olur", "ok", "hayir", "dur"}:
+        state = session_state if isinstance(session_state, AgentSessionState) else AgentSessionState.from_dict(session_state or {})
+        if state.active_pending_action() is None:
+            return ""
     if normalized in {
         "evet", "yes", "tamam", "olur", "ok", "onayla", "onayliyorum",
         "tamam onayliyorum", "evet onayliyorum", "kabul et", "calistir",

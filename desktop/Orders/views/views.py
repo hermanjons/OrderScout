@@ -1,35 +1,31 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QLabel, QHBoxLayout, QFrame, QSizePolicy,
+    QWidget,
+    QVBoxLayout,
+    QLabel,
+    QHBoxLayout,
+    QFrame,
 )
-from PyQt6.QtCore import Qt, QSignalBlocker, QTimer
+from PyQt6.QtCore import Qt, QTimer
 
-from Core.views import CircularProgressButton, BadgeButton, SwitchButton, NumberStepper, ActionPulseButton, ResettableSplitter
+from Core.views import BadgeButton, ActionPulseButton, ResettableSplitter
 from Orders.constants import ui_text
 from Core.views.tab_widgets import DashboardHeroCard, QuickAccessSection, SplitPanelSidebar
 from Core.threads.sync_worker import SyncWorker
 
 from Feedback.processors.pipeline import MessageHandler, Result, map_error_to_message
 
+from Core.services.business_refresh import business_refresh_signals
 from Account.signals.signals import account_signals
 from Orders.signals.signals import order_signals
 from Orders.constants import (
-    ORDERS_AUTO_FETCH_ACTIVE_TEMPLATE,
-    ORDERS_AUTO_FETCH_LABEL,
-    ORDERS_AUTO_FETCH_STOPPED_TEXT,
-    ORDERS_AUTO_FETCH_UNIT_TEXT,
     ORDERS_BADGE_BUTTON_TEXT,
-    ORDERS_FETCH_BUTTON_TEXT,
-    ORDERS_FETCH_PANEL_TITLE,
     ORDERS_QUICK_ACCESS_SUBTITLE,
     ORDERS_QUICK_ACCESS_TITLE,
     ORDERS_RETURNS_BUTTON_TEXT,
-    ORDERS_STATUS_FETCHING_TEXT,
-    ORDERS_STATUS_IDLE_TEXT,
-    ORDERS_STATUS_OPERATION_FAILED_TEXT,
     ORDERS_STATUS_SAVED_BOTH_TEXT,
     ORDERS_STATUS_SAVED_ORDERS_TEXT,
     ORDERS_STATUS_SAVED_RETURNS_TEXT,
@@ -39,7 +35,6 @@ from Orders.constants import (
     ORDERS_STATUS_WARNING_TEMPLATE,
     ORDERS_STYLE,
     ORDERS_TAB_ACTION_TEXT,
-    ORDERS_TAB_HERO_SUBTITLE,
     ORDERS_TAB_HERO_TITLE,
     ORDERS_WORKSPACE_LEFT_COLLAPSE_TRIGGER,
     ORDERS_WORKSPACE_LEFT_STICK_SIZE,
@@ -74,7 +69,7 @@ class OrdersTab(QWidget):
 
         hero = DashboardHeroCard(
             title=ORDERS_TAB_HERO_TITLE,
-            subtitle=ORDERS_TAB_HERO_SUBTITLE,
+            subtitle="Kayıtlar arka planda otomatik güncellenir.",
             action_text=ORDERS_TAB_ACTION_TEXT,
         )
         if hero.action_button is not None:
@@ -90,7 +85,7 @@ class OrdersTab(QWidget):
         self._panel_sidebar.add_panel_button(
             "fetch",
             "",
-            tooltip=str(ui_text("orders.sidebar.fetch_tooltip", "Veri çekme paneli")),
+            tooltip=str(ui_text("orders.sidebar.fetch_tooltip", "Otomatik güncelleme durumu")),
             icon_path=str(ORDERS_FETCH_PANEL_ICON_PATH),
             shape="circular",
             icon_scale=1.28,
@@ -116,7 +111,7 @@ class OrdersTab(QWidget):
         left_layout.setContentsMargins(14, 12, 14, 12)
         left_layout.setSpacing(10)
 
-        left_layout.addWidget(QLabel(ORDERS_FETCH_PANEL_TITLE, objectName="SectionTitle"))
+        left_layout.addWidget(QLabel("Otomatik Güncelleme", objectName="SectionTitle"))
 
         self.no_company_card = QFrame()
         self.no_company_card.setObjectName("QuickCard")
@@ -153,51 +148,11 @@ class OrdersTab(QWidget):
         self.company_list.companies_loaded.connect(lambda *_args: self._refresh_company_list_state())
         left_layout.addWidget(self.company_list)
 
-        self.fetch_button = CircularProgressButton(ORDERS_FETCH_BUTTON_TEXT, size_scale=1.2)
-        self.fetch_button.clicked.connect(self.get_orders)
-        left_layout.addWidget(self.fetch_button, alignment=Qt.AlignmentFlag.AlignHCenter)
-
-        auto_card = QFrame()
-        auto_card.setObjectName("QuickCard")
-        auto_card.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
-        auto_card_layout = QHBoxLayout(auto_card)
-        auto_card_layout.setContentsMargins(10, 8, 10, 8)
-        auto_card_layout.setSpacing(10)
-
-        auto_label = QLabel(ORDERS_AUTO_FETCH_LABEL, objectName="Muted")
-        self.auto_fetch_toggle = SwitchButton()
-        self.auto_fetch_toggle.setChecked(False)
-        self.auto_fetch_toggle.clicked.connect(self._toggle_auto_fetch)
-
-        self.auto_fetch_minutes = NumberStepper(minimum=2, maximum=120, step=1)
-        self.auto_fetch_minutes.setValue(2)
-        self.auto_fetch_minutes.setEnabled(False)
-        self.auto_fetch_minutes.setFixedWidth(90)
-        self.auto_fetch_minutes.valueChanged.connect(self._on_auto_fetch_minutes_changed)
-
-        unit_label = QLabel(ORDERS_AUTO_FETCH_UNIT_TEXT, objectName="Muted")
-        unit_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
-
-        time_inline = QHBoxLayout()
-        time_inline.setContentsMargins(0, 0, 0, 0)
-        time_inline.setSpacing(6)
-        time_inline.addWidget(self.auto_fetch_minutes)
-        time_inline.addWidget(unit_label)
-
-        auto_card_layout.addWidget(auto_label)
-        auto_card_layout.addLayout(time_inline)
-        auto_card_layout.addWidget(self.auto_fetch_toggle)
-        auto_card_layout.addStretch(1)
-        left_layout.addWidget(auto_card)
-        self.auto_fetch_card = auto_card
-
-        self.status_label = QLabel(ORDERS_STATUS_IDLE_TEXT)
+        self.status_label = QLabel("Otomatik güncelleme hazır.")
         self.status_label.setObjectName("Muted")
         self.status_label.setWordWrap(True)
         left_layout.addWidget(self.status_label)
 
-        self._auto_fetch_interval = 120
-        self.fetch_button.setRepeatInterval(self._auto_fetch_interval)
         account_signals.company_changed.connect(self._on_companies_changed)
 
         splitter.addWidget(left_card)
@@ -247,6 +202,9 @@ class OrdersTab(QWidget):
         self.returns_window = None
         self._order_stock_sync_workers: list[SyncWorker] = []
         self._bind_order_stock_sync()
+        business_refresh_signals.status_changed.connect(self._on_background_status)
+        business_refresh_signals.refreshed.connect(self._on_background_refreshed)
+        self.status_label.setText(business_refresh_signals.statuses.get("orders", "Otomatik güncelleme hazır."))
 
     def _bind_order_stock_sync(self) -> None:
         try:
@@ -295,6 +253,29 @@ class OrdersTab(QWidget):
             self._order_stock_sync_workers.remove(worker)
         except ValueError:
             pass
+
+    def _refresh_company_list_state(self, *, reload_companies: bool = False):
+        if reload_companies:
+            self.company_list.reload_companies()
+            return
+        has_companies = self.company_list.count() > 0
+        self.no_company_card.setVisible(not has_companies)
+        self.company_list.setVisible(has_companies)
+        for index in range(self.company_list.count()):
+            widget = self.company_list.itemWidget(self.company_list.item(index))
+            control = getattr(widget, "right_widget", None)
+            if control is not None:
+                control.hide()
+
+    def _on_background_status(self, domain: str, message: str) -> None:
+        if domain == "orders":
+            self.status_label.setText(message)
+
+    def _on_background_refreshed(self, domain: str, payload: object) -> None:
+        if domain != "orders":
+            return
+        if isinstance(payload, dict) and payload.get("changed"):
+            self.on_orders_fetched(Result.ok("", data=payload, close_dialog=False))
 
     def _release_splitter_guard(self):
         self._splitter_guard = False
@@ -377,37 +358,6 @@ class OrdersTab(QWidget):
         self._sync_sidebar_state_from_splitter()
 
 
-    def get_orders(self):
-        from Orders.views.actions import get_orders_from_companies
-
-        if self.company_list.count() == 0:
-            self._refresh_company_list_state(reload_companies=True)
-            MessageHandler.show(
-                self,
-                Result.fail(
-                    str(ui_text("orders.fetch_panel.no_company_error", "Kayıtlı şirket bulunamadı. Önce şirket eklemelisin.")),
-                    close_dialog=False,
-                ),
-                only_errors=True,
-            )
-            return
-
-        if not self.fetch_button.isEnabled():
-            return
-
-        self.fetch_button.setEnabled(False)
-        self.status_label.setText(ORDERS_STATUS_FETCHING_TEXT)
-        if hasattr(self.fetch_button, "setRunningText"):
-            self.fetch_button.setRunningText("Hazırlanıyor...")
-        self.fetch_button.start()
-
-        res = get_orders_from_companies(self, self.company_list, self.fetch_button)
-        if not res.success:
-            self.fetch_button.fail()
-            self.fetch_button.setEnabled(True)
-            MessageHandler.show(self, res, only_errors=True)
-            self.status_label.setText(f"⚠️ Orders verileri alınırken hata oluştu: {res.message}")
-
     def open_orders_window(self):
         try:
             from Orders.views.orders_manager_window import OrdersManagerWindow
@@ -465,12 +415,6 @@ class OrdersTab(QWidget):
         except Exception:
             pass
 
-    def on_orders_failed(self, result: Result, button: CircularProgressButton):
-        button.fail()
-        button.setEnabled(True)
-        MessageHandler.show(self, result, only_errors=True)
-
-        self.status_label.setText(ORDERS_STATUS_OPERATION_FAILED_TEXT)
 
     def on_orders_fetched(self, result: Result):
         # butona dokunma yok; pipeline finalize zaten ayor
@@ -534,30 +478,6 @@ class OrdersTab(QWidget):
         except Exception:
             pass
 
-    def _toggle_auto_fetch(self):
-        try:
-            if self.auto_fetch_toggle.isChecked():
-                self.auto_fetch_minutes.setEnabled(True)
-                self._on_auto_fetch_minutes_changed(self.auto_fetch_minutes.value())
-                self.fetch_button.enableRepeat(True)
-                mins = self.auto_fetch_minutes.value()
-                self.status_label.setText(ORDERS_AUTO_FETCH_ACTIVE_TEMPLATE.format(mins=mins))
-            else:
-                self.auto_fetch_minutes.setEnabled(False)
-                self.fetch_button.stopRepeat()
-                self.status_label.setText(ORDERS_AUTO_FETCH_STOPPED_TEXT)
-        except Exception:
-            pass
-
-    def _on_auto_fetch_minutes_changed(self, value: int):
-        try:
-            mins = max(2, int(value))
-            self._auto_fetch_interval = mins * 60
-            self.fetch_button.setRepeatInterval(self._auto_fetch_interval)
-            if self.auto_fetch_toggle.isChecked():
-                self.status_label.setText(ORDERS_AUTO_FETCH_ACTIVE_TEMPLATE.format(mins=mins))
-        except Exception:
-            pass
 
     def _on_companies_changed(self):
         QTimer.singleShot(0, self._refresh_company_list_state)
@@ -576,51 +496,6 @@ class OrdersTab(QWidget):
             MessageHandler.show(self, Result.fail(map_error_to_message(e), error=e), only_errors=True)
         finally:
             self._refresh_company_list_state(reload_companies=True)
-
-    def _refresh_company_list_state(self, *, reload_companies: bool = False):
-        try:
-            if reload_companies:
-                self.company_list.reload_companies()
-                return
-
-            has_companies = self.company_list.count() > 0
-            self.no_company_card.setVisible(not has_companies)
-            self.company_list.setVisible(has_companies)
-            self.fetch_button.setVisible(has_companies)
-            self.auto_fetch_card.setVisible(has_companies)
-            self.fetch_button.setEnabled(has_companies)
-
-            if not has_companies:
-                if self.auto_fetch_toggle.isChecked():
-                    with QSignalBlocker(self.auto_fetch_toggle):
-                        self.auto_fetch_toggle.setChecked(False)
-                self.auto_fetch_minutes.setEnabled(False)
-                self.fetch_button.stopRepeat()
-                self.status_label.setText(
-                    str(
-                        ui_text(
-                            "orders.fetch_panel.no_company_status",
-                            "Henüz ekli şirket yok. Şirket ekleyerek sipariş çekmeye başlayabilirsin."
-                        )
-                    )
-                )
-                return
-
-            if self.auto_fetch_toggle.isChecked():
-                self.auto_fetch_minutes.setEnabled(True)
-            else:
-                self.auto_fetch_minutes.setEnabled(False)
-
-            empty_status = str(
-                ui_text(
-                    "orders.fetch_panel.no_company_status",
-                    "Henüz ekli şirket yok. Şirket ekleyerek sipariş çekmeye başlayabilirsin."
-                )
-            )
-            if self.status_label.text().strip() == empty_status:
-                self.status_label.setText(str(ui_text("orders.fetch_panel.idle_status", ORDERS_STATUS_IDLE_TEXT)))
-        except Exception:
-            pass
 
 
 _WINDOW_EXPORTS = {

@@ -233,6 +233,27 @@ def test_final_evidence_revalidates_original_sources_and_core_arithmetic():
     assert verified_derived_calculations(state) == projected
 
 
+@pytest.mark.parametrize("prefix", ["tool_result.", "/tool_result/", "/tool_result."])
+def test_final_evidence_uses_the_same_operand_path_rules_as_the_calculator(prefix):
+    from AI.processors.observation_analysis_evidence import verified_observation_calculations
+
+    sources = [_source("current", 3000), _source("previous", 800)]
+    calculated = _difference(sources, operands=[
+        {"source_id": "current", "path": prefix + "total"},
+        {"source_id": "previous", "path": prefix + "total"},
+    ])
+    assert calculated.success, calculated.data
+    state = _analysis_state()
+    state.completed_steps[-1].result_data["tool_result"] = calculated.data
+    verified = verified_observation_calculations(state)
+    assert len(verified) == 1 and verified[0]["result"] == "2200.00"
+    assert verified[0]["unit"] == "TRY"
+    assert verified[0]["operands"][0]["path"] == prefix + "total"
+    # An accepted syntactic alias never relaxes source identity/hash checks.
+    state.completed_steps[0].result_data["tool_result"]["total"] = 9999
+    assert verified_observation_calculations(state) == []
+
+
 def test_independent_calculate_steps_all_remain_available_to_goal_completion():
     from AI.processors.observation_analysis_evidence import verified_observation_calculations
     from AI.processors.session_state import AgentTaskStep

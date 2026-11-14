@@ -7,6 +7,7 @@ import tempfile
 
 _sandbox: tempfile.TemporaryDirectory | None = None
 _previous: dict[str, str | None] = {}
+_qt_application = None
 
 
 def pytest_configure(config):
@@ -26,6 +27,13 @@ def pytest_configure(config):
 
 
 def pytest_sessionstart(session):
+    global _qt_application
+    from PyQt6.QtWidgets import QApplication
+
+    # Keep one owning reference for the complete mixed-domain test session.
+    # A function-local app can otherwise be destroyed between AI and Listing
+    # tests, invalidating imported domain signal objects still used by the UI.
+    _qt_application = QApplication.instance() or QApplication([])
     # UI tests can load the default application database asynchronously.
     # Materialize its schema in the sandbox before any UI is constructed.
     from Core.db.bootstrap import init_database

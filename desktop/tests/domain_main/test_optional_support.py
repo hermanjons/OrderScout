@@ -2,19 +2,18 @@ from __future__ import annotations
 
 import os
 import unittest
-from types import SimpleNamespace
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtTest import QTest
-from PyQt6.QtWidgets import QApplication, QLabel
+from PyQt6.QtWidgets import QApplication
 from sqlmodel import SQLModel
 
 import Core.db.model_registry  # noqa: F401
 from AI.processors.manual_capabilities import list_manual_capabilities
-from Feedback.processors.pipeline import Result
+from Core.services.business_refresh import business_refresh_signals
 from Orders.views.views import OrdersTab
 from Support.views.support_dialog import SupportDialog
 from Support.views.views import SupportButton
@@ -84,27 +83,15 @@ class TestOptionalSupport(unittest.TestCase):
         self.assertTrue(capabilities)
         self.assertFalse(any(cap.domain == "license" for cap in capabilities))
 
-    def test_order_fetch_starts_without_license_validation(self):
-        button = Mock()
-        button.isEnabled.return_value = True
-        companies = Mock()
-        companies.count.return_value = 1
-        tab = SimpleNamespace(company_list=companies, fetch_button=button, status_label=QLabel())
-        with patch("Orders.views.actions.get_orders_from_companies", return_value=Result.ok()) as fetch:
-            OrdersTab.get_orders(tab)
-        fetch.assert_called_once_with(tab, companies, button)
-        button.start.assert_called_once()
-        self.assertNotIn("Lisans", tab.status_label.text())
-
-    def test_order_fetch_failure_restores_button(self):
-        button = Mock()
-        button.isEnabled.return_value = True
-        companies = Mock()
-        companies.count.return_value = 1
-        tab = SimpleNamespace(company_list=companies, fetch_button=button, status_label=QLabel())
-        with patch("Orders.views.actions.get_orders_from_companies", return_value=Result.fail("Test error")), \
-             patch("Orders.views.views.MessageHandler.show"):
-            OrdersTab.get_orders(tab)
-        button.fail.assert_called_once()
-        button.setEnabled.assert_called_with(True)
-        self.assertIn("Test error", tab.status_label.text())
+    def test_automatic_order_refresh_reports_retry_and_recovery_in_the_dashboard(self):
+        tab = OrdersTab()
+        self.addCleanup(tab.deleteLater)
+        self.addCleanup(tab.close)
+        with patch.dict(business_refresh_signals.statuses):
+            retry = "Pazaryeri güncellenemedi; yeniden denenecek."
+            business_refresh_signals.publish_status("orders", retry)
+            business_refresh_signals.publish_status("finance", "Finans güncellendi.")
+            self.assertEqual(tab.status_label.text(), retry)
+            self.assertTrue(tab.order_btn.isEnabled())
+            business_refresh_signals.publish_status("orders", "Pazaryeri kayıtları otomatik güncellendi.")
+            self.assertIn("otomatik güncellendi", tab.status_label.text())

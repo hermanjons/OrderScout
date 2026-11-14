@@ -1150,7 +1150,9 @@ class RecordWorkspaceListWidget(QListView):
         self.selection_state_changed.emit()
 
     def _sync_border_animation_timer(self) -> None:
-        should_tick = self._active_border_animation_enabled or self._guide_select_animation_enabled
+        should_tick = self.isVisible() and (
+            self._active_border_animation_enabled or self._guide_select_animation_enabled
+        )
         if should_tick:
             if not self._active_border_timer.isActive():
                 self._active_border_timer.start()
@@ -1160,7 +1162,16 @@ class RecordWorkspaceListWidget(QListView):
             self._delegate.reset_spin_phase()
         if not self._guide_select_animation_enabled:
             self._delegate.reset_guide_phase()
-        self._update_animation_rows()
+        if self.isVisible():
+            self._update_animation_rows()
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        self._sync_border_animation_timer()
+
+    def hideEvent(self, event) -> None:
+        self._active_border_timer.stop()
+        super().hideEvent(event)
 
     def _tick_active_border_animation(self) -> None:
         if self._active_border_animation_enabled:

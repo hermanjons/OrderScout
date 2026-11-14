@@ -4,22 +4,21 @@ from Feedback.processors.pipeline import Result
 
 
 def _load_stock_overview_payload(*, warehouse_id=None) -> Result:
-    items_res = action_list_items()
-    if not items_res.success:
-        return items_res
     wh_res = action_list_warehouses()
     if not wh_res.success:
         return wh_res
     balances_res = action_list_item_balances(warehouse_id=warehouse_id, only_active=True)
     if not balances_res.success:
         return balances_res
+    balances = balances_res.data["records"]
+    items = sorted((row["item"] for row in balances), key=lambda item: (item.name or "", item.sku or "", item.pk))
     return Result.ok(
         "Stok ozeti hazirlandi.",
         close_dialog=False,
         data={
-            "items": (items_res.data or {}).get("records", []) or [],
+            "items": items,
             "warehouses": (wh_res.data or {}).get("records", []) or [],
-            "balances": (balances_res.data or {}).get("records", []) or [],
+            "balances": balances,
         },
     )
 
@@ -105,6 +104,8 @@ class StockOverviewDialog(FullscreenDialog):
         QTimer.singleShot(0, self.refresh)
 
     def refresh(self):
+        if self._dialog_closing:
+            return
         worker = self._refresh_worker
         if worker is not None and worker.isRunning():
             return
@@ -114,20 +115,20 @@ class StockOverviewDialog(FullscreenDialog):
         self._refresh_worker = worker
 
         def _on_loaded(res: Result):
-            if not res.success:
+            if self._dialog_closing or not res.success:
                 return
             data = res.data or {}
             with QSignalBlocker(self.cb_item):
                 self.cb_item.clear()
                 for it in data.get("items", []) or []:
-                    self.cb_item.addItem(f"{it.name} ({it.sku})", getattr(it, "id", None))
+                    self.cb_item.addItem(f"{it.name} ({it.sku})", it.pk)
                 self.cb_item.setCurrentIndex(0)
 
             with QSignalBlocker(self.cb_wh):
                 self.cb_wh.clear()
                 self.cb_wh.addItem("Tüm", None)
                 for wh in data.get("warehouses", []) or []:
-                    self.cb_wh.addItem(wh.name, getattr(wh, "id", None))
+                    self.cb_wh.addItem(wh.name, wh.pk)
                 self.cb_wh.setCurrentIndex(0)
 
             self._summary_cache = data.get("balances", []) or []
@@ -159,6 +160,8 @@ class StockOverviewDialog(FullscreenDialog):
             self.lbl.setText("Stok: (hesaplanamadı)")
 
     def refresh_summary(self):
+        if self._dialog_closing:
+            return
         self._summary_seq += 1
         seq = self._summary_seq
         worker = self._summary_worker
@@ -171,7 +174,7 @@ class StockOverviewDialog(FullscreenDialog):
         self._summary_worker = worker
 
         def _on_summary(res: Result):
-            if seq != self._summary_seq:
+            if seq != self._summary_seq or self._dialog_closing:
                 return
             if not res.success:
                 return

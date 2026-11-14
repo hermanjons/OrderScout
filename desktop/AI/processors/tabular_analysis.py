@@ -22,7 +22,10 @@ TABULAR_ANALYSIS_SCHEMA = {
             }, "required": ["source_id", "source_step_id", "operation_id", "result"], "additionalProperties": False,
         }},
         "source_id": {"type": "string", "minLength": 1},
-        "rows_path": {"type": "string", "minLength": 1},
+        "rows_path": {"type": "string", "minLength": 1,
+            "description": "Exact path to an ARRAY of record objects in source_id. A count map (for example "
+                "status_counts) is not a row array: calculate its numeric fields directly with analysis.calculate. "
+                "Only source_id supplies rows; listing other sources does not merge their arrays."},
         "group_by": {"type": "array", "maxItems": 8, "items": {"type": "string", "minLength": 1}},
         "measures": {"type": "array", "minItems": 1, "maxItems": 32, "items": {
             "type": "object", "properties": {

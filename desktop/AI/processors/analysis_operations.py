@@ -24,7 +24,7 @@ _REFERENCE_SCHEMA = {
     "type": "object", "properties": {
         "source_id": {"type": "string", "minLength": 1},
         "path": {"type": "string", "minLength": 1,
-                 "description": "Exact observed NUMERIC field path. Both calculations and comparisons require numeric values. Currency/unit labels are metadata, not arithmetic operands; do not compare strings. Quantity needs an observed unit; an unavailable unit cannot be invented."},
+                 "description": "Exact observed NUMERIC field path, preferably relative to sources.result, e.g. count or status_counts.Delivered. An optional leading tool_result. or /tool_result/ is accepted only when result has no literal tool_result key; exact existing keys take precedence. Both calculations and comparisons require numeric values. Currency/unit labels are metadata, not arithmetic operands; do not compare strings. Quantity needs an observed unit; an unavailable unit cannot be invented."},
     }, "required": ["source_id", "path"], "additionalProperties": False,
 }
 OBSERVATION_ANALYSIS_SCHEMA = {
@@ -86,15 +86,67 @@ _SCOPE_KEYS = (
 _PERIOD_KEYS = ("period", "start_ms", "end_ms", "start_date_ms", "end_date_ms", "start_date", "end_date")
 
 
-def _tokens(path: str) -> list[str]:
-    return path.split(".") if not path.startswith("/") else [
+def _tokens(path: str, *, result: Mapping[str, Any] | None = None) -> list[str]:
+    tokens = path.split(".") if not path.startswith("/") else [
         part.replace("~1", "/").replace("~0", "~") for part in path[1:].split("/")
     ]
+    # Match source_path_value's dotted-pointer alias only when its literal key
+    # is absent. A real pointer key containing dots always takes precedence.
+    if (result is not None and path.startswith("/") and "/" not in path[1:]
+            and "." in path and path != "/." and tokens[0] not in result):
+        return path[1:].split(".")
+    return tokens
 
 
-def _unit(result: Mapping[str, Any], path: str, parents: list[Mapping[str, Any]], operation_id: str) -> str:
-    tokens = _tokens(path)
+def resolve_observed_operand(result: Mapping[str, Any], path: str) -> tuple[Any, list[str]]:
+    """Resolve one operand's exact value and tokens with the documented aliases.
+
+    A literal tool_result key or dotted pointer key retains its precedence.
+    Numeric/unit validation and source authority remain with the caller.
+    """
+    resolved_path = path
+    if "tool_result" not in result:
+        if path.startswith("tool_result."):
+            resolved_path = path[len("tool_result."):]
+        elif path.startswith("/tool_result/"):
+            resolved_path = path[len("/tool_result"):]
+        elif path.startswith("/"):
+            # A dotted-pointer alias may include the same optional prefix.
+            # Its exact literal key must still win over alias expansion.
+            alias_tokens = _tokens(path, result=result)
+            if len(alias_tokens) > 1 and alias_tokens[0] == "tool_result":
+                resolved_path = ".".join(alias_tokens[1:])
+    return source_path_value(result, resolved_path), _tokens(resolved_path, result=result)
+
+
+def _contract_unit(operation_id: str, tokens: list[str], schemas: dict) -> str:
+    """Only registered output declarations supply units for arbitrary map keys.
+
+    The source identity/result is checked at the runtime boundary; a model's
+    operand or an untrusted payload cannot declare its own measurement unit.
+    """
+    if not schemas:
+        from AI.processors.tools import registered_tools
+        schemas.update({name: tool.result_schema or {} for name, tool in registered_tools().items()})
+    node = schemas.get(operation_id, {})
+    for token in tokens:
+        if not isinstance(node, dict):
+            return ""
+        if node.get("type") == "array" and token.isdigit():
+            node = node.get("items")
+        else:
+            node = (node.get("properties") or {}).get(token, node.get("additionalProperties"))
+    unit = node.get("x-measure-unit") if isinstance(node, dict) else None
+    return unit if isinstance(unit, str) and re.fullmatch(r"[A-Za-z%][A-Za-z0-9%/_-]{0,31}", unit) else ""
+
+
+def _unit(result: Mapping[str, Any], path: str, parents: list[Mapping[str, Any]], operation_id: str,
+          *, schemas: dict, wrapper_depth: int = 0, tokens: list[str] | None = None) -> str:
+    tokens = _tokens(path) if tokens is None else tokens
     leaf = tokens[-1]
+    declared = _contract_unit(operation_id, tokens[wrapper_depth:], schemas)
+    if declared:
+        return declared
     # Currency maps carry their unit in the observed map key.
     if len(tokens) > 1 and tokens[-2].endswith("by_currency"):
         if re.fullmatch(r"[A-Z]{3}", leaf) and leaf != "XXX":
@@ -135,7 +187,7 @@ def _unit(result: Mapping[str, Any], path: str, parents: list[Mapping[str, Any]]
     raise ValueError(f"analysis_measure_unit_unknown:{path}")
 
 
-def _operand(ref: Mapping[str, Any], bound: dict[str, dict[str, Any]]) -> tuple[Any, dict[str, Any]]:
+def _operand(ref: Mapping[str, Any], bound: dict[str, dict[str, Any]], schemas: dict) -> tuple[Any, dict[str, Any]]:
     if not isinstance(ref, Mapping) or set(ref) != {"source_id", "path"}:
         raise ValueError("analysis_operand_requires_source_reference")
     source_id, path = ref.get("source_id"), ref.get("path")
@@ -144,20 +196,20 @@ def _operand(ref: Mapping[str, Any], bound: dict[str, dict[str, Any]]) -> tuple[
     source = bound[source_id]
     result = source["result"]
     try:
-        value = source_path_value(result, path)
+        value, tokens = resolve_observed_operand(result, path)
         if isinstance(value, bool) or not isinstance(value, (int, float, Decimal)):
             raise ValueError("analysis_operand_not_observed_numeric")
         normalized = normalize_projection_value(value)
         parents = [result]
-        tokens = _tokens(path)
         for end in range(1, len(tokens)):
             parent = source_path_value(result, "/" + "/".join(
                 token.replace("~", "~0").replace("/", "~1") for token in tokens[:end]
             ))
             if isinstance(parent, Mapping):
                 parents.append(parent)
-        producer, original, _ = observed_source_payload(result, source["operation_id"])
-        unit = _unit(original, path, parents, producer)
+        producer, original, provenance = observed_source_payload(result, source["operation_id"])
+        unit = _unit(original, path, parents, producer, schemas=schemas,
+                     wrapper_depth=len(provenance.get("artifact_chain", [])), tokens=tokens)
     except ValueError as exc:
         exc.operand_context = {"source_id": source_id, "source_step_id": source["source_step_id"],
                                "operation_id": source["operation_id"], "path": path}
@@ -239,6 +291,7 @@ def calculate_observations(*, sources: list[dict[str, Any]],
                 **({"source_provenance": provenance} if provenance else {}),
             })
         verified_calculations, verified_comparisons, operand_receipts, expression_ids = [], [], [], set()
+        schemas = {}
         for expression in [*calculations, *comparisons]:
             is_calculation = "calculation_id" in expression
             expression_id = expression.get("calculation_id" if is_calculation else "comparison_id")
@@ -252,7 +305,7 @@ def calculate_observations(*, sources: list[dict[str, Any]],
             references = expression.get("operands") if is_calculation else [expression.get("left"), expression.get("right")]
             if not isinstance(references, list) or not 2 <= len(references) <= 16:
                 raise ValueError("analysis_operand_count_invalid")
-            resolved = [_operand(ref, bound) for ref in references]
+            resolved = [_operand(ref, bound, schemas) for ref in references]
             values, receipts = [row[0] for row in resolved], [row[1] for row in resolved]
             _assert_same_entity_scope(receipts, bound)
             unit = _result_unit(operator if is_calculation else "compare", receipts)

@@ -43,13 +43,20 @@ ChatClient = Callable[[str], str]
 
 
 class _CapturedClient:
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name in {"_client", "responses"}:
+            object.__setattr__(self, name, value)
+        else:
+            setattr(self._client, name, value)
+
     def __init__(self, client: ChatClient) -> None:
         self._client = client
         self.responses: list[dict[str, Any]] = []
 
     def _invoke(self, contract: str, method: Callable[..., Any], *args: Any, **kwargs: Any) -> str:
         prompt = _compact_text(args[0] if args else kwargs.get("prompt"))
-        response = _compact_text(method(*args, **kwargs))
+        raw_response = method(*args, **kwargs)
+        response = _compact_text(raw_response)
         plan = _runtime_plan(self._client)
         provenance = provider_invocation_provenance(plan)
         self.responses.append(
@@ -69,14 +76,16 @@ class _CapturedClient:
                 "fallback_used": bool(provenance.get("final_fallback_used")),
             }
         )
-        return response
+        # Diagnostic recording must not erase native text provenance. Otherwise
+        # literal JSON in a normal message becomes a callable control decision.
+        return raw_response if isinstance(raw_response, str) else response
 
     def __call__(self, prompt: str) -> str:
         return self._invoke("text", self._client, prompt)
 
     def __getattr__(self, name: str) -> Any:
         attribute = getattr(self._client, name)
-        if name in {"invoke_tools", "invoke_structured", "invoke_json_text"} and callable(attribute):
+        if name in {"invoke_tools", "invoke_structured", "invoke_json_text", "invoke_final_text", "invoke_completion_review"} and callable(attribute):
             return lambda *args, **kwargs: self._invoke(name, attribute, *args, **kwargs)
         return attribute
 
