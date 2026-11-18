@@ -33,7 +33,7 @@ from AI.processors.task_runtime import (
     run_model_conversation_turn,
     safe_agent_runtime_context,
 )
-from AI.processors.turn_service import approval_reply_protocol, run_interpreted_turn, resume_reply_interpretation
+from AI.processors.turn_service import model_turn_control_mode, run_interpreted_turn, resume_reply_interpretation
 from AI.processors.operation_catalog import build_operation_catalog
 from AI.processors.tools import available_tools
 from Feedback.processors.pipeline import Result
@@ -637,7 +637,7 @@ def run_contextual_conversation_turn(
     history_count_before = len(history)
     history_hash_before = stable_state_hash({"history": history})
     from AI.processors.model_loop import run_model_loop, project_runtime_result
-    if not approval_reply_protocol(message, session_state) and not resume_reply_interpretation(message, session_state):
+    if not model_turn_control_mode(message, session_state) and not resume_reply_interpretation(message, session_state):
         begin_provider_chat_turn(client, timeout=getattr(client, "turn_timeout_seconds", 180.0))
         result = run_model_loop(message, client=captured_client, session_state=session_state, history=history,
             db_name=db_name, persist=persist, task_store_root=task_store_root, max_steps=max_steps or 32,
@@ -688,7 +688,7 @@ def run_contextual_conversation_turn(
             },
         )
     else:
-        control_mode = approval_reply_protocol(message, session_state)
+        control_mode = model_turn_control_mode(message, session_state)
         control_interpretation = ({"valid": True, "mode": control_mode, "domain": "general",
                                    "objective": message, "intent_kind": "approval_control", "planner_invoked": False,
                                    "decision_path": "explicit_typed_approval_protocol"} if control_mode else None)

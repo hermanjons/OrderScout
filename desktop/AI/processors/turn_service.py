@@ -15,7 +15,9 @@ from typing import Any, Callable
 from AI.processors.session_state import (
     AgentSessionState, PendingActionSnapshot, has_explicit_action_id_reference, referenced_action_id_from_text,
 )
-from AI.processors.task_runtime import TASK_DOMAIN_STEP_CATALOGS, record_conversation_exchange
+from AI.processors.task_runtime import (
+    TASK_DOMAIN_STEP_CATALOGS, _trim_typed_conversation_state, record_conversation_exchange,
+)
 from AI.processors.turn_evidence import clarification_question
 from Feedback.processors.pipeline import Result
 
@@ -76,6 +78,21 @@ def approval_reply_protocol(message: str, session_state=None) -> str:
     }:
         return "cancel"
     return ""
+
+
+def model_turn_control_mode(message: str, session_state=None) -> str:
+    """Return the host control that must run instead of a model-owned turn.
+
+    A cancel phrase has host meaning only for a current proposal or an explicit
+    action identity. Without one, "vazgeçtim" or "iptal" is conversation and
+    belongs to the selected model. Approval phrases keep the host refusal so a
+    repeated approval never re-issues an already executed task.
+    """
+    mode = approval_reply_protocol(message, session_state)
+    if mode != "cancel" or has_explicit_action_id_reference(message):
+        return mode
+    state = session_state if isinstance(session_state, AgentSessionState) else AgentSessionState.from_dict(session_state or {})
+    return mode if state.active_pending_action() is not None else ""
 
 
 def resume_reply_interpretation(message: str, session_state: AgentSessionState | dict[str, Any] | None) -> dict[str, Any] | None:
@@ -143,6 +160,32 @@ def _run_typed_resume_turn(message: str, *, state: AgentSessionState, client: Ca
     return result
 
 
+def _record_approval_exchange(state: AgentSessionState, *, known_turn_ids: set[str], message: str,
+                              answer: str) -> AgentSessionState:
+    """Record the typed approval once, before the continuation it started.
+
+    A model-owned approval continuation already records its own answer. Appending
+    the approval text and that answer again would place the user's approval after
+    its result and repeat the answer in the model's conversation memory.
+    """
+    fresh = [turn for turn in state.conversation_turns if turn.turn_id not in known_turn_ids]
+    if not fresh:
+        return record_conversation_exchange(
+            session_state=state, user_message=message, assistant_message=answer,
+            mode="approve", objective=state.goal, active_domain=state.active_domain,
+        )
+    if not any(turn.role == "user" for turn in fresh):
+        approval = state.record_turn(role="user", content=_text(message), mode="approve", objective=state.goal)
+        state.conversation_turns.pop()
+        position = next(index for index, turn in enumerate(state.conversation_turns)
+                        if turn.turn_id == fresh[0].turn_id)
+        state.conversation_turns.insert(position, approval)
+    if answer and not any(turn.role == "assistant" and turn.content == answer for turn in fresh):
+        state.record_turn(role="assistant", content=answer, mode="approve", objective=state.goal)
+    _trim_typed_conversation_state(state)
+    return state
+
+
 def run_typed_control_turn(
     message: str, *, mode: str, session_state: AgentSessionState | dict[str, Any] | None,
     client: Callable[..., Any] | None, db_name: str, persist: bool = False,
@@ -206,16 +249,14 @@ def run_typed_control_turn(
             options["task_store_root"] = task_store_root
         if task_control is not None:
             options["task_control"] = task_control
+        known_turn_ids = {turn.turn_id for turn in state.conversation_turns}
         result = approval_runner(state.to_dict(), **options)
         data = dict(result.data or {})
         returned_state = data.get("session_state") or data.get("state")
         if isinstance(returned_state, dict):
             state = AgentSessionState.from_dict(returned_state)
         answer = _text(data.get("answer") or result.message)
-        state = record_conversation_exchange(
-            session_state=state, user_message=message, assistant_message=answer,
-            mode="approve", objective=state.goal, active_domain=state.active_domain,
-        )
+        state = _record_approval_exchange(state, known_turn_ids=known_turn_ids, message=message, answer=answer)
         execute = data.get("execute")
         outcome = "paused" if state.status == "paused" and not isinstance(execute, dict) else "approved" if result.success else "approval_failed"
         data.update({"answer": answer, "state": state.to_dict(), "session_state": state.to_dict(),

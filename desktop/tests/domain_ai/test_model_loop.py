@@ -260,6 +260,60 @@ def test_actual_ui_entrypoint_bypasses_legacy_interpreter(population, monkeypatc
     assert result.data["answer"] == "Buradayım, siparişlerine birlikte bakabiliriz."
 
 
+@pytest.mark.parametrize("message", ["vazgeçtim", "İptal et."])
+def test_ui_cancel_word_without_a_proposal_reaches_the_model(message, population, monkeypatch):
+    from AI.views import chat_tab
+    from Feedback.processors.pipeline import Result
+    def legacy(*args, **kwargs):
+        raise AssertionError("A conversational cancel word must not receive a host template")
+    state = AgentSessionState(goal="Rapor", active_domain="general", status="complete")
+    state.record_turn(role="user", content="Geçen ayın raporunu konuşalım.", mode="model_loop")
+    state.record_turn(role="assistant", content="Hangi mağaza için bakayım?", mode="model_loop")
+    client = ScriptedModel([{"answer": "Tamam, raporu bırakıyorum."}])
+    monkeypatch.setattr(chat_tab, "interpret_agent_turn", legacy)
+    monkeypatch.setattr(chat_tab, "run_interpreted_turn", legacy)
+    monkeypatch.setattr(chat_tab, "DB_NAME", population)
+    monkeypatch.setattr(chat_tab.ai_actions, "action_get_provider_account", lambda *a: Result.ok("ok", data={"record": {
+        "id": 1, "provider_code": "openrouter", "default_model": "unit-model"}}))
+    monkeypatch.setattr(chat_tab, "build_provider_chat_client", lambda *a, **k: client)
+    result = chat_tab._run_chat_turn_with_runtime(message, source="cloud", runtime_record={"id": 1}, history=[],
+                                                  session_state=state.to_dict())
+    assert result.data["decision_path"] == model_loop.ENGINE
+    assert result.data["answer"] == "Tamam, raporu bırakıyorum."
+
+
+def test_typed_text_approval_keeps_the_approval_before_its_result_once(population, tmp_path):
+    from AI.processors.turn_service import run_typed_control_turn
+    store = str(tmp_path / "tasks")
+    prepared = model_loop.run_model_loop("Stok kartını hazırla", db_name=population, persist=True, task_store_root=store,
+        client=ScriptedModel([call("stock.item_create.prepare", sku="TEXT-APPROVAL", name="Metin Onayı"),
+                              {"answer": "Stok kartını onayına hazırladım."}]))
+    approved = run_typed_control_turn("evet", mode="approve", session_state=prepared.data["state"],
+        client=ScriptedModel([{"answer": "Stok kartı oluşturuldu."}]), db_name=population, persist=True,
+        allow_approval_execute=True, task_store_root=store)
+    assert approved.success, approved.message
+    turns = [(row["role"], row["content"]) for row in approved.data["session_state"]["conversation_turns"]]
+    assert turns[-3:] == [("assistant", "Stok kartını onayına hazırladım."), ("user", "evet"),
+                          ("assistant", "Stok kartı oluşturuldu.")]
+    assert load_agent_task_state(approved.data["session_state"]["session_id"], root=store).conversation_turns[-2].content == "evet"
+
+
+def test_tool_exception_is_logged_with_traceback_but_model_sees_only_its_type(tmp_path, monkeypatch, caplog):
+    from Feedback.processors.logging_support import logger
+    def broken(*args, **kwargs):
+        raise KeyError("missing_business_field")
+    monkeypatch.setattr(model_loop, "_dispatch", broken)
+    monkeypatch.setattr(logger, "propagate", True)
+    client = ScriptedModel([call("conversation.read"), {"answer": "Aracı çalıştıramadım."}])
+    with caplog.at_level("ERROR", logger=logger.name):
+        result = model_loop.run_model_loop("geçmişe bak", client=client, db_name=str(tmp_path / "unused.db"))
+    failure = result.data["direct_tool_results"][0]
+    assert failure["success"] is False and failure["data"]["error_type"] == "KeyError"
+    assert "missing_business_field" not in json.dumps(failure, ensure_ascii=False)
+    logged = [record for record in caplog.records if record.exc_info and record.exc_info[0] is KeyError]
+    assert logged, "Tool exception traceback must reach the local log"
+
+
 def test_headless_entrypoint_uses_same_loop(population, monkeypatch):
     from AI.processors import conversation_runtime
     monkeypatch.setattr(conversation_runtime, "interpret_agent_turn", lambda *a, **k: pytest.fail("Legacy intent invoked"))

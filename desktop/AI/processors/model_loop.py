@@ -612,7 +612,8 @@ def run_model_loop(message, *, client, session_state=None, history=None, db_name
                         response = _dispatch(state, step, tool, db_name=db_name, client=client, persist=persist,
                             root=task_store_root, progress_callback=progress_callback, task_control=task_control)
                     except Exception as error:
-                        response = Result.fail("Araç çağrısı tamamlanamadı.", close_dialog=False,
+                        # The model only receives the error type; the local log keeps the traceback.
+                        response = Result.fail("Araç çağrısı tamamlanamadı.", error=error, close_dialog=False,
                             data={"tool": name, "error_type": type(error).__name__})
                     data = dict(response.data or {})
                     phase = "proposal_validation"
@@ -696,6 +697,10 @@ def run_model_loop(message, *, client, session_state=None, history=None, db_name
                 if isinstance(value, str) and re.fullmatch(r"[A-Za-z0-9_-]{1,64}", value):
                     diagnostic[key] = value
         state.active_entities["model_loop"]["last_error"] = diagnostic
+        # Exception text can carry provider URLs or business values; log the
+        # same safe diagnostic that the saved state keeps.
+        from Feedback.processors.logging_support import logger
+        logger.error("[model_loop] %s during %s; frames=%s", diagnostic["type"], phase, diagnostic["frames"])
         state.set_goal_plan_status(state.status)
         state.record_turn(role="assistant", content=answer, mode="runtime_error", objective=state.goal)
         failed = _result(state, answer, success=False, calls=calls, results=results, persist=persist, root=task_store_root)

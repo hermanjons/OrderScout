@@ -54,7 +54,6 @@ MAX_EXACT_MODEL_RATE_LIMIT_WAIT_SECONDS = 60
 GEMINI_FALLBACK_MODELS = gemini_safe_fallback_models()
 GEMINI_VALIDATED_FREE_MODEL = GEMINI_FALLBACK_MODELS[0]
 GEMINI_MODEL_CATALOG_LIMIT = 24
-OPENROUTER_VALIDATED_FREE_MODEL = "openai/gpt-oss-20b:free"
 
 OPENAI_COMPATIBLE_PROVIDERS = {
     "openai",
@@ -74,17 +73,6 @@ DEFAULT_BASE_URLS = {
     "anthropic": "https://api.anthropic.com/v1",
     "gemini": "https://generativelanguage.googleapis.com/v1beta",
 }
-
-OPENROUTER_FALLBACK_MODELS = (
-    OPENROUTER_VALIDATED_FREE_MODEL,
-    "openai/gpt-oss-120b:free",
-    "qwen/qwen3-next-80b-a3b-instruct:free",
-    "meta-llama/llama-3.3-70b-instruct:free",
-    "google/gemma-4-31b-it:free",
-    "google/gemma-4-26b-a4b-it:free",
-    "nvidia/nemotron-3-super-120b-a12b:free",
-    "nvidia/nemotron-3-nano-30b-a3b:free",
-)
 
 _GEMINI_MODEL_PRIORITY = GEMINI_FALLBACK_MODELS
 
@@ -1631,12 +1619,16 @@ def build_openai_compatible_client(
             if not capability_compatible:
                 reason = f"capability_incompatible:{required_capability}"
                 fallback_attempts.append({"model": candidate, "reason": reason})
-                last_error = RuntimeError(
-                    f"Cloud model gerekli yetenegi desteklemiyor: {candidate} ({required_capability})"
-                )
                 plan = getattr(_client, "resource_plan", {})
+                # A skipped alternative must not hide the selected model's
+                # actual provider failure (for example a transient HTTP 503).
+                if last_error is None:
+                    last_error = RuntimeError(
+                        f"Cloud model gerekli yetenegi desteklemiyor: {candidate} ({required_capability})"
+                    )
+                    if isinstance(plan, dict):
+                        plan["invocation_error_reason"] = reason
                 if isinstance(plan, dict):
-                    plan["invocation_error_reason"] = reason
                     plan["fallback_attempts"] = list(fallback_attempts)
                     setattr(_client, "resource_plan", plan)
                 continue
@@ -1736,7 +1728,10 @@ def build_openai_compatible_client(
                             request_attempt + 1
                             < exact_model_request_attempt_limit
                             and (incomplete_retry_allowed or (
-                                not incomplete and not protocol_retry_used and len(invocation_models) == 1
+                                # The user's selected model gets one transient
+                                # retry before any configured alternative.
+                                not incomplete and not protocol_retry_used
+                                and (len(invocation_models) == 1 or candidate == invocation_requested_model)
                                 and retry_error.retryable and (
                                     retry_error.category == "transport"
                                     or retry_error.status_code in {500, 502, 503, 504}
@@ -3145,7 +3140,9 @@ def _openai_compatible_adapter_client(record: dict[str, Any], timeout: float) ->
     configured_route = _configured_fallback_models(record)
     fallback_models: list[str] | tuple[str, ...] | None = None
     if allow_fallback and provider_code == "openrouter":
-        fallback_models = configured_route or OPENROUTER_FALLBACK_MODELS
+        # Only a configured route carries current catalog metadata. A built-in
+        # model list goes stale and silently switches the user's model.
+        fallback_models = configured_route or None
     advertised = _adapter_capability_profile(record)
     return build_openai_compatible_client(
         base_url=_compact_text(record.get("endpoint_url")) or DEFAULT_BASE_URLS.get(provider_code, ""),

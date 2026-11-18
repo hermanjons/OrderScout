@@ -40,7 +40,9 @@ from PyQt6.QtWidgets import (
 )
 
 from settings import DB_NAME
-from AI.processors.turn_service import approval_reply_protocol, run_interpreted_turn, resume_reply_interpretation
+from AI.processors.turn_service import (
+    approval_reply_protocol, model_turn_control_mode, run_interpreted_turn, resume_reply_interpretation,
+)
 from AI.views.model_picker import (ModelChoiceDelegate, PRESENTATION_ROLE, SEARCH_ROLE,
                                   model_identity, model_presentation, search_text)
 from AI.views.reasoning_control import ReasoningControl
@@ -392,7 +394,7 @@ def _run_chat_turn_with_runtime(
 
     # Normal model-backed conversation has one decision owner. Legacy typed
     # routing remains only for already-saved controls and unavailable runtimes.
-    control_mode = approval_reply_protocol(text, session_state)
+    control_mode = model_turn_control_mode(text, session_state)
     if planner_client is not None and not control_mode and not resume_reply_interpretation(text, session_state):
         try:
             result = run_model_loop(text, client=planner_client, session_state=session_state, history=history,

@@ -14999,7 +14999,7 @@ class TestAiPipeline(IsolatedDbTestCase):
 
         self.assertEqual(calls[0].get("reasoning"), {"effort": "low", "exclude": True})
 
-    def test_openrouter_client_falls_back_to_validated_free_model_on_transient_failure(self) -> None:
+    def test_openrouter_client_falls_back_to_configured_route_on_transient_failure(self) -> None:
         failed = _FakeProviderResponse(
             {"error": {"message": "model rate limit reached"}},
             status_code=429,
@@ -15015,6 +15015,7 @@ class TestAiPipeline(IsolatedDbTestCase):
                     "endpoint_url": "https://openrouter.ai/api/v1",
                     "api_key": "sk-or-test",
                     "default_model": "weak-free-model:free",
+                    "fallback_models": ["configured/backup:free"],
                     "is_enabled": True,
                 }
             )
@@ -15022,11 +15023,11 @@ class TestAiPipeline(IsolatedDbTestCase):
             self.assertEqual(client("Merhaba"), "Yedek model cevabi.")
 
         models = [call.kwargs["json"]["model"] for call in post_mock.call_args_list]
-        self.assertEqual(models, ["weak-free-model:free", cloud_runtime.OPENROUTER_VALIDATED_FREE_MODEL])
-        self.assertEqual(getattr(client, "model_name", ""), cloud_runtime.OPENROUTER_VALIDATED_FREE_MODEL)
+        self.assertEqual(models, ["weak-free-model:free", "configured/backup:free"])
+        self.assertEqual(getattr(client, "model_name", ""), "configured/backup:free")
         plan = getattr(client, "resource_plan", {}) or {}
         self.assertEqual(plan.get("requested_model"), "weak-free-model:free")
-        self.assertEqual(plan.get("actual_model"), cloud_runtime.OPENROUTER_VALIDATED_FREE_MODEL)
+        self.assertEqual(plan.get("actual_model"), "configured/backup:free")
         self.assertTrue(plan.get("fallback_used"))
 
     def test_openrouter_client_retries_fallback_when_model_returns_empty_content(self) -> None:
@@ -15040,6 +15041,7 @@ class TestAiPipeline(IsolatedDbTestCase):
                     "endpoint_url": "https://openrouter.ai/api/v1",
                     "api_key": "sk-or-test",
                     "default_model": "weak-free-model:free",
+                    "fallback_models": ["configured/first:free", "configured/second:free"],
                     "is_enabled": True,
                 }
             )
@@ -15051,17 +15053,17 @@ class TestAiPipeline(IsolatedDbTestCase):
             models,
             [
                 "weak-free-model:free",
-                cloud_runtime.OPENROUTER_VALIDATED_FREE_MODEL,
-                "openai/gpt-oss-120b:free",
+                "configured/first:free",
+                "configured/second:free",
             ],
         )
         plan = getattr(client, "resource_plan", {}) or {}
-        self.assertEqual(plan.get("actual_model"), "openai/gpt-oss-120b:free")
+        self.assertEqual(plan.get("actual_model"), "configured/second:free")
         self.assertEqual(
             plan.get("fallback_attempts"),
             [
                 {"model": "weak-free-model:free", "reason": "empty_response"},
-                {"model": cloud_runtime.OPENROUTER_VALIDATED_FREE_MODEL, "reason": "empty_response"},
+                {"model": "configured/first:free", "reason": "empty_response"},
             ],
         )
 
@@ -15144,12 +15146,10 @@ class TestAiPipeline(IsolatedDbTestCase):
         )
 
     def test_openrouter_client_raises_when_every_fallback_returns_empty_content(self) -> None:
+        route = ["configured/first:free", "configured/second:free"]
         empty_responses = [
             _FakeProviderResponse({"choices": [{"message": {"content": "  "}}]})
-            for _candidate in (
-                "weak-free-model:free",
-                *cloud_runtime.OPENROUTER_FALLBACK_MODELS,
-            )
+            for _candidate in ("weak-free-model:free", *route)
         ]
         with patch.object(cloud_runtime.requests, "post", side_effect=empty_responses):
             client = cloud_runtime.build_provider_chat_client(
@@ -15158,6 +15158,7 @@ class TestAiPipeline(IsolatedDbTestCase):
                     "endpoint_url": "https://openrouter.ai/api/v1",
                     "api_key": "sk-or-test",
                     "default_model": "weak-free-model:free",
+                    "fallback_models": route,
                     "is_enabled": True,
                 }
             )
